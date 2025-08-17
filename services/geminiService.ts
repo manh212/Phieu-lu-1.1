@@ -1030,10 +1030,12 @@ export async function generateCopilotResponse(
     userQuestionAndTask: string,
     latestGameplayPrompt: string,
     userPrompts: string[],
-    onPromptConstructed?: (prompt: string) => void
+    onPromptConstructed?: (prompt: string) => void,
+    copilotModelOverride?: string
 ): Promise<{response: ParsedAiResponse, rawText: string, constructedPrompt: string}> {
     const { model } = getApiSettings();
+    const modelToUse = copilotModelOverride || model;
     const prompt = PROMPT_FUNCTIONS.copilot(knowledgeBaseSnapshot, last20Messages, copilotChatHistory, userQuestionAndTask, latestGameplayPrompt, userPrompts);
     incrementApiCallCount('AI_COPILOT');
-    return generateContentWithRateLimit(prompt, model, onPromptConstructed);
+    return generateContentWithRateLimit(prompt, modelToUse, onPromptConstructed);
 }

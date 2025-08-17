@@ -813,6 +813,9 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
             }).join('\n');
 
             const latestGameplayPrompt = props.sentPromptsLog[0] || "";
+
+            const activeCopilotConfig = knowledgeBase.aiCopilotConfigs.find(c => c.id === knowledgeBase.activeAICopilotConfigId);
+            const copilotModel = activeCopilotConfig?.model || getGeminiApiSettings().model;
     
             const { response: copilotResponse, constructedPrompt } = await generateCopilotResponse(
                 kbSnapshot,
@@ -820,7 +823,9 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
                 copilotChatHistory,
                 userMessageContent,
                 latestGameplayPrompt,
-                userPrompts || []
+                userPrompts || [],
+                (prompt) => props.setSentCopilotPromptsLog(prev => [prompt, ...prev].slice(0, 10)),
+                copilotModel
             );
             
             props.setSentCopilotPromptsLog(prev => [constructedPrompt, ...prev].slice(0, 10));

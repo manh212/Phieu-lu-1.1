@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useGame } from '../../hooks/useGame';
 import OffCanvasPanel from '../ui/OffCanvasPanel';
 import Button from '../ui/Button';
@@ -6,6 +6,8 @@ import InputField from '../ui/InputField';
 import { GameMessage } from '../../types';
 import Spinner from '../ui/Spinner';
 import Modal from '../ui/Modal';
+import { AVAILABLE_MODELS } from '../../constants';
+import { getApiSettings } from '../../services/geminiService';
 
 interface AICopilotPanelProps {
   isOpen: boolean;
@@ -30,10 +32,45 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Ensure there's a default copilot config if one doesn't exist on older saves
+    if (isOpen && (!knowledgeBase.aiCopilotConfigs || knowledgeBase.aiCopilotConfigs.length === 0)) {
+        const DEFAULT_COPILOT_CONFIG_ID = 'default-copilot';
+        const { model: defaultModel } = getApiSettings();
+        const newDefaultConfig = {
+            id: DEFAULT_COPILOT_CONFIG_ID,
+            name: 'Siêu Trợ Lý Mặc Định',
+            model: defaultModel,
+            systemInstruction: ''
+        };
+        setKnowledgeBase(prevKb => ({
+            ...prevKb,
+            aiCopilotConfigs: [newDefaultConfig],
+            activeAICopilotConfigId: DEFAULT_COPILOT_CONFIG_ID
+        }));
+    }
+  }, [isOpen, knowledgeBase.aiCopilotConfigs, setKnowledgeBase]);
+
+  useEffect(() => {
     if (isOpen) {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [aiCopilotMessages, isOpen]);
+
+  const activeCopilotConfig = useMemo(() => {
+    return knowledgeBase.aiCopilotConfigs.find(c => c.id === knowledgeBase.activeAICopilotConfigId);
+  }, [knowledgeBase.aiCopilotConfigs, knowledgeBase.activeAICopilotConfigId]);
+
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newModel = e.target.value;
+      if (activeCopilotConfig) {
+          setKnowledgeBase(prevKb => {
+              const newConfigs = prevKb.aiCopilotConfigs.map(c => 
+                  c.id === activeCopilotConfig.id ? { ...c, model: newModel } : c
+              );
+              return { ...prevKb, aiCopilotConfigs: newConfigs };
+          });
+      }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +139,20 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
             <Button variant="ghost" size="sm" onClick={() => handleQuickAction("Phân tích các lựa chọn của tôi.")} disabled={isLoadingApi}>🔍 Phân Tích</Button>
             <Button variant="ghost" size="sm" onClick={() => { setMode('promptEditor'); setUserInput(''); }}>📝 Sửa Lời Nhắc</Button>
             <Button variant="ghost" size="sm" onClick={() => setShowLastPrompt(true)} disabled={isLoadingApi || (sentCopilotPromptsLog || []).length === 0} className="col-span-2">ℹ️ Xem Bối Cảnh AI Nhận Được</Button>
+        </div>
+        <div className="flex items-center gap-2 text-xs pt-2 border-t border-gray-700/50">
+            <label htmlFor="copilot-model-select" className="text-gray-400 flex-shrink-0">Model:</label>
+            <select
+                id="copilot-model-select"
+                value={activeCopilotConfig?.model || ''}
+                onChange={handleModelChange}
+                disabled={!activeCopilotConfig || isLoadingApi}
+                className="flex-grow p-1 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white text-xs"
+            >
+                {AVAILABLE_MODELS.map(model => (
+                    <option key={model.id} value={model.id}>{model.name}</option>
+                ))}
+            </select>
         </div>
         <form onSubmit={handleSubmit} className="flex gap-2">
           <textarea
