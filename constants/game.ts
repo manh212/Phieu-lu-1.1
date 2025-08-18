@@ -1,5 +1,5 @@
 export const GAME_TITLE = "Phiêu lưu cùng AI";
-export const APP_VERSION = "1.1.0";
+export const APP_VERSION = "1.2.0";
 export const TURNS_PER_PAGE = 20;
 export const MAX_TURN_HISTORY_LENGTH = 5;
 export const KEYFRAME_INTERVAL = 20;
