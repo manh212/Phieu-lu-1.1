@@ -457,7 +457,7 @@ export interface KnowledgeBase {
 }
 
 export interface AiChoice { text: string; actionTag?: string; }
-export interface GameMessage { id: string; type: 'narration' | 'choice' | 'system' | 'player_action' | 'error' | 'page_summary' | 'event_summary'; content: string; timestamp: number; choices?: AiChoice[]; isPlayerInput?: boolean; turnNumber: number; }
+export interface GameMessage { id: string; type: 'narration' | 'choice' | 'system' | 'player_action' | 'error' | 'page_summary' | 'event_summary'; content: string; timestamp: number; choices?: AiChoice[]; isPlayerInput?: boolean; turnNumber: number; actionTags?: string[]; }
 export interface ParsedAiResponse { narration: string; choices: AiChoice[]; tags: string[]; systemMessage?: string; }
 export interface SafetySetting { category: HarmCategory; threshold: HarmBlockThreshold; }
 

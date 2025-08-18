@@ -1,8 +1,9 @@
 
+
 import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
-import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty } from './../types';
+import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation } from './../types';
 import { VIETNAMESE } from './../constants';
-import * as GameTemplates from '../templates'; // Import GameTemplates
+import * as GameTemplates from './../templates'; // Import GameTemplates
 
 // Import Layout Components
 import GameHeader from './gameplay/layout/GameHeader';
@@ -29,7 +30,7 @@ import { parseAndHighlightText as parseAndHighlightTextUtil } from '../utils/tex
 import { useGame } from '../hooks/useGame'; // Using useGame to get context
 import Button from './ui/Button'; // Import Button
 
-const GameplayScreen: React.FC = () => {
+export const GameplayScreen: React.FC = () => {
     const game = useGame(); // Get all props from context
     const storyLogRef = useRef<HTMLDivElement>(null);
 
@@ -41,7 +42,8 @@ const GameplayScreen: React.FC = () => {
         playerInput, setPlayerInput, currentActionType, setCurrentActionType,
         selectedResponseLength, setSelectedResponseLength,
         isResponseLengthDropdownOpen, setIsResponseLengthDropdownOpen, showAiSuggestions, setShowAiSuggestions,
-        responseLengthDropdownRef, handleChoiceClick, handleSubmit, handleRefresh
+        responseLengthDropdownRef, handleChoiceClick, handleSubmit, handleRefresh,
+        isStrictMode, setIsStrictMode
     } = usePlayerInput({
         onPlayerAction: game.handlePlayerAction,
         onRefreshChoices: game.handleRefreshChoices,
@@ -163,6 +165,30 @@ const GameplayScreen: React.FC = () => {
         );
     }, [currentLocation, game.knowledgeBase.discoveredLocations]);
 
+    const handleEconomyLocationClick = useCallback((location: GameLocation) => {
+        if (isLoadingUi || isSummarizingUi || !!game.messageIdBeingEdited) return;
+
+        switch(location.locationType) {
+            case GameTemplates.EconomyLocationType.MARKETPLACE:
+                game.setActiveEconomyModal({ type: 'marketplace', locationId: location.id });
+                break;
+            case GameTemplates.EconomyLocationType.SHOPPING_CENTER:
+                game.setActiveEconomyModal({ type: 'shopping_center', locationId: location.id });
+                break;
+            case GameTemplates.EconomyLocationType.AUCTION_HOUSE:
+                game.handleStartAuction(location.id);
+                break;
+            case GameTemplates.EconomyLocationType.SLAVE_MARKET:
+                game.setActiveSlaveMarketModal({ locationId: location.id });
+                break;
+            case GameTemplates.EconomyLocationType.SLAVE_AUCTION:
+                game.handleStartSlaveAuction(location.id);
+                break;
+            default:
+                console.warn("Unknown economy location type clicked:", location.locationType);
+        }
+    }, [isLoadingUi, isSummarizingUi, game]);
+
     const parseAndHighlightText = useCallback((text: string) => {
         return parseAndHighlightTextUtil(text, game.knowledgeBase, game.styleSettings, handleKeywordClick);
     }, [game.knowledgeBase, game.styleSettings, handleKeywordClick]);
@@ -211,43 +237,6 @@ const GameplayScreen: React.FC = () => {
                 />
                  {!isReaderMode && (
                     <div className="flex-shrink-0">
-                       {economySubLocations.length > 0 && game.isCurrentlyActivePage && !game.knowledgeBase.pendingCombat && !game.knowledgeBase.postCombatState && (
-                            <div className="p-2 border-t border-gray-700 bg-gray-800 flex flex-wrap gap-2 justify-center">
-                                {economySubLocations.map(loc => {
-                                    let buttonLabel = loc.name;
-                                    let action = () => {};
-                                    if (loc.locationType === GameTemplates.EconomyLocationType.MARKETPLACE) {
-                                        buttonLabel = VIETNAMESE.openMarketplaceButton || loc.name;
-                                        action = () => game.setActiveEconomyModal({ type: 'marketplace', locationId: loc.id });
-                                    } else if (loc.locationType === GameTemplates.EconomyLocationType.SHOPPING_CENTER) {
-                                        buttonLabel = VIETNAMESE.openShoppingCenterButton || loc.name;
-                                        action = () => game.setActiveEconomyModal({ type: 'shopping_center', locationId: loc.id });
-                                    } else if (loc.locationType === GameTemplates.EconomyLocationType.AUCTION_HOUSE) {
-                                        buttonLabel = VIETNAMESE.openAuctionHouseButton || loc.name;
-                                        action = () => game.handleStartAuction(loc.id);
-                                    } else if (loc.locationType === GameTemplates.EconomyLocationType.SLAVE_MARKET) {
-                                        buttonLabel = VIETNAMESE.openSlaveMarketButton || loc.name;
-                                        action = () => game.setActiveSlaveMarketModal({ locationId: loc.id });
-                                    } else if (loc.locationType === GameTemplates.EconomyLocationType.SLAVE_AUCTION) {
-                                        buttonLabel = VIETNAMESE.openSlaveAuctionButton || loc.name;
-                                        action = () => game.handleStartSlaveAuction(loc.id);
-                                    }
-                                    
-                                    return (
-                                        <Button
-                                            key={loc.id}
-                                            variant="secondary"
-                                            size="sm"
-                                            className="text-xs border-amber-500 text-amber-300 hover:bg-amber-700 hover:text-white"
-                                            onClick={action}
-                                            disabled={isLoadingUi || isSummarizingUi || !!game.messageIdBeingEdited}
-                                        >
-                                            {buttonLabel}
-                                        </Button>
-                                    );
-                                })}
-                            </div>
-                        )}
                         {game.knowledgeBase.pendingCombat ? (
                             <div className="p-4 bg-red-900/50 border-t-2 border-red-500 flex flex-col items-center justify-center gap-4">
                                 <p className="text-lg font-bold text-red-300 animate-pulse">Một trận chiến sắp bắt đầu!</p>
@@ -282,6 +271,10 @@ const GameplayScreen: React.FC = () => {
                                     onPrev={game.onGoToPrevPage}
                                     onNext={game.onGoToNextPage}
                                     onJump={game.onJumpToPage}
+                                    economySubLocations={economySubLocations}
+                                    onEconomyLocationClick={handleEconomyLocationClick}
+                                    isStrictMode={isStrictMode}
+                                    setIsStrictMode={setIsStrictMode}
                                 />
                             </>
                         )}
@@ -346,7 +339,7 @@ const GameplayScreen: React.FC = () => {
                 onStartDebugCombat={()=>{}} 
                 onProcessDebugTags={game.handleProcessDebugTags} 
                 isLoading={isLoadingUi} 
-                onCheckTokenCount={game.handleCheckTokenCount} // Pass the new function
+                onCheckTokenCount={game.handleCheckTokenCount}
                 sentCombatSummaryPromptsLog={game.sentCombatSummaryPromptsLog}
                 receivedCombatSummaryResponsesLog={game.receivedCombatSummaryResponsesLog}
                 sentVictoryConsequencePromptsLog={game.sentVictoryConsequencePromptsLog}
@@ -355,5 +348,3 @@ const GameplayScreen: React.FC = () => {
         </div>
     );
 };
-
-export default GameplayScreen;

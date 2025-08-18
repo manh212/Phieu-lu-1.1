@@ -77,7 +77,8 @@ export const useMainGameLoop = ({
         action: string, 
         isChoice: boolean,
         inputType: PlayerActionInputType,
-        responseLength: ResponseLength
+        responseLength: ResponseLength,
+        isStrictMode: boolean // NEW
     ) => {
         setIsLoadingApi(true);
         resetApiError();
@@ -157,6 +158,7 @@ export const useMainGameLoop = ({
                 responseLength,
                 currentPageMessagesLog,
                 previousPageSummariesContent,
+                isStrictMode, // NEW
                 lastNarrationFromPreviousPage,
                 retrievedContext, // Pass combined context to generateNextTurn
                 logSentPromptCallback
@@ -232,6 +234,13 @@ export const useMainGameLoop = ({
                             finalKbForThisTurn = kbAfterSubGenTags;
                             systemMessagesForThisTurn.push(...subGenSystemMessages);
                         }
+                         systemMessagesForThisTurn.push({
+                            id: `gen-details-success-${Date.now()}`,
+                            type: 'system',
+                            content: `Các cửa hàng và khu vực mới tại ${targetLocation.name} đã được làm mới/khám phá.`,
+                            timestamp: Date.now(),
+                            turnNumber: turnOfPlayerAction
+                        });
                     }
                 }
             }

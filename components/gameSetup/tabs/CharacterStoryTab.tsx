@@ -1,10 +1,11 @@
+
 import React, { ChangeEvent, useState, useEffect } from 'react';
 import { WorldSettings } from '../../../types';
 import InputField from '../../ui/InputField';
 import Button from '../../ui/Button';
 import Spinner from '../../ui/Spinner';
 import { VIETNAMESE, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL, CLOUDINARY_CLOUD_NAME } from '../../../constants';
-import { generateImageUnified } from '../../../services/ImageGenerator'; 
+import { generateImageUnified } from '../../../services/geminiService'; 
 import { uploadImageToCloudinary } from '../../../services/cloudinaryService';
 import { isValidImageUrl } from '../../../utils/imageValidationUtils';
 

@@ -3,21 +3,7 @@ import { KnowledgeBase, GameMessage, GameLocation, VectorMetadata } from '../../
 import * as GameTemplates from '../../templates';
 import { handleLocationEntryEvents } from '../locationEvents';
 import { formatLocationForEmbedding } from '../ragUtils';
-
-// Helper function for fuzzy matching location IDs by normalizing their name part.
-const normalizeForIdComparison = (str: string): string => {
-    if (!str) return '';
-    return str
-        .toLowerCase()
-        // Decompose accented letters into base letters and combining marks
-        .normalize("NFD")
-        // Remove combining diacritical marks
-        .replace(/[\u0300-\u036f]/g, "")
-        // Special case for the letter 'đ'
-        .replace(/đ/g, "d")
-        // Remove all non-alphanumeric characters (spaces, hyphens, etc.)
-        .replace(/[^a-z0-9]/g, '');
-};
+import { normalizeStringForComparison } from '../questUtils';
 
 export const processMainLocation = (
     currentKb: KnowledgeBase,
@@ -87,24 +73,23 @@ export const processSubLocation = (
 
     if (!parentLocation) {
         let correctedParentFound = false;
+        // Attempt to parse name from AI-provided ID. e.g., "loc-Than-Do-12345" -> "Than-Do"
         const aiIdParts = parentLocationId.split('-');
         if (aiIdParts.length > 2) {
             const aiNamePart = aiIdParts.slice(1, -1).join('-');
-            const normalizedAiName = normalizeForIdComparison(aiNamePart);
-            for (const potentialParent of newKb.discoveredLocations) {
-                const existingIdParts = potentialParent.id.split('-');
-                if (existingIdParts.length > 2) {
-                    const existingNamePart = existingIdParts.slice(1, -1).join('-');
-                    const normalizedExistingName = normalizeForIdComparison(existingNamePart);
+            const normalizedAiName = normalizeStringForComparison(aiNamePart.replace(/-/g, ' '));
 
-                    if (normalizedAiName === normalizedExistingName) {
-                        const originalIdFromAI = parentLocationId;
-                        parentLocationId = potentialParent.id;
-                        parentLocation = potentialParent;
-                        correctedParentFound = true;
-                        console.log(`[DEBUG] Đã tự động sửa lỗi ID của địa điểm cha cho "${name}". ID gốc từ AI: "${originalIdFromAI}", ID đã sửa: "${parentLocationId}".`);
-                        break;
-                    }
+            for (const potentialParent of newKb.discoveredLocations) {
+                // Fuzzy match against the location's actual name first, it's more reliable.
+                const normalizedExistingName = normalizeStringForComparison(potentialParent.name);
+                
+                if (normalizedAiName === normalizedExistingName) {
+                    const originalIdFromAI = parentLocationId;
+                    parentLocationId = potentialParent.id; // Correct the ID
+                    parentLocation = potentialParent;
+                    correctedParentFound = true;
+                    console.log(`[DEBUG] Đã tự động sửa lỗi ID của địa điểm cha cho "${name}". ID gốc từ AI: "${originalIdFromAI}", ID đã sửa: "${parentLocationId}".`);
+                    break;
                 }
             }
         }

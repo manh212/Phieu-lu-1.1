@@ -22,6 +22,8 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
     setKnowledgeBase,
     isLoadingApi,
     sentCopilotPromptsLog,
+    handleProcessDebugTags,
+    showNotification,
   } = useGame();
 
   const [mode, setMode] = useState<'chat' | 'promptEditor'>('chat');
@@ -84,6 +86,13 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
     handleCopilotQuery(question, context);
   };
 
+  const handleApplyChanges = async (tags: string[]) => {
+    const narrationForProcessing = "Thay đổi được áp dụng từ Siêu Trợ Lý AI.";
+    const tagsString = tags.join('\n');
+    await handleProcessDebugTags(narrationForProcessing, tagsString);
+    showNotification("Các thay đổi từ Siêu Trợ Lý đã được áp dụng!", "success");
+  };
+
   // Prompt Editor Handlers
   const handleAddPrompt = () => {
     if (userInput.trim()) {
@@ -116,10 +125,28 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
   const renderChatMode = () => (
     <div className="flex flex-col h-full">
       <div className="flex-grow overflow-y-auto custom-scrollbar p-2 space-y-4">
+        <p className="text-xs text-center text-gray-400 bg-gray-700/50 p-2 rounded-md">Đây là Siêu Trợ Lý AI. Bạn có thể hỏi về trạng thái game, debug prompt, hoặc yêu cầu AI **trực tiếp thay đổi game** (ví dụ: "thêm một NPC mới", "cho tôi một thanh kiếm").</p>
         {(aiCopilotMessages || []).map((msg, index) => (
           <div key={msg.id || index} className={`flex ${msg.isPlayerInput ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.type === 'error' ? 'bg-red-800 text-red-100' : (msg.isPlayerInput ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200')}`}>
               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              {msg.actionTags && msg.actionTags.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-500/50">
+                  <p className="text-xs text-amber-300 mb-2">AI đề xuất các thay đổi sau:</p>
+                  <pre className="text-xs bg-gray-800 p-2 rounded max-h-24 overflow-y-auto custom-scrollbar">
+                      {msg.actionTags.join('\n')}
+                  </pre>
+                  <Button 
+                      variant="primary" 
+                      size="sm" 
+                      className="w-full mt-2 bg-green-600 hover:bg-green-700"
+                      onClick={() => handleApplyChanges(msg.actionTags!)}
+                      disabled={isLoadingApi}
+                  >
+                      Áp Dụng Thay Đổi
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -158,7 +185,7 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
           <textarea
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Hỏi AI điều gì đó..."
+            placeholder="Hỏi AI hoặc yêu cầu thay đổi game..."
             className="flex-grow p-2 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white placeholder-gray-400 resize-none text-sm"
             rows={2}
             disabled={isLoadingApi}

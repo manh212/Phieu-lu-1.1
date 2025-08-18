@@ -1,7 +1,8 @@
 import React, { ChangeEvent, useState, useRef, useEffect } from 'react';
-import { GameMessage, PlayerActionInputType, ResponseLength } from '../../../types';
+import { GameMessage, PlayerActionInputType, ResponseLength, GameLocation } from '../../../types';
 import Button from '../../ui/Button';
 import { VIETNAMESE } from '../../../constants';
+import * as GameTemplates from '../../../templates';
 
 interface PlayerInputAreaProps {
   latestMessageWithChoices: GameMessage | undefined;
@@ -24,12 +25,16 @@ interface PlayerInputAreaProps {
   handleSubmit: (e: React.FormEvent) => void;
   handleRefresh: () => void;
   choiceButtonStyles: React.CSSProperties;
-  // New props for pagination
   currentPage: number;
   totalPages: number;
   onPrev: () => void;
   onNext: () => void;
   onJump: (page: number) => void;
+  economySubLocations: GameLocation[];
+  onEconomyLocationClick: (location: GameLocation) => void;
+  // NEW PROPS FOR STRICT MODE
+  isStrictMode: boolean;
+  setIsStrictMode: (isStrict: boolean) => void;
 }
 
 const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
@@ -58,11 +63,19 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
   onPrev,
   onNext,
   onJump,
+  economySubLocations,
+  onEconomyLocationClick,
+  isStrictMode, // NEW
+  setIsStrictMode, // NEW
 }) => {
-    // New state and refs for pagination menu
     const [isPaginationMenuOpen, setIsPaginationMenuOpen] = useState(false);
     const paginationMenuRef = useRef<HTMLDivElement | null>(null);
     const [jumpToPageInput, setJumpToPageInput] = useState<string>(currentPage.toString());
+    
+    // New state for location menu
+    const [isLocationMenuOpen, setIsLocationMenuOpen] = useState(false);
+    const locationMenuRef = useRef<HTMLDivElement | null>(null);
+
 
     useEffect(() => {
         setJumpToPageInput(currentPage.toString());
@@ -72,6 +85,9 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
         const handleClickOutside = (event: MouseEvent) => {
             if (paginationMenuRef.current && !paginationMenuRef.current.contains(event.target as Node)) {
                 setIsPaginationMenuOpen(false);
+            }
+            if (locationMenuRef.current && !locationMenuRef.current.contains(event.target as Node)) {
+                setIsLocationMenuOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -89,7 +105,7 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
         const pageNum = parseInt(jumpToPageInput, 10);
         if (!isNaN(pageNum)) {
             onJump(pageNum);
-            setIsPaginationMenuOpen(false); // Close menu on action
+            setIsPaginationMenuOpen(false);
         }
     };
     
@@ -131,7 +147,7 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
                   onClick={() => handleChoiceClick(choice.text)} 
                   disabled={isLoadingUi || isSummarizingUi || !isCurrentlyActivePage || !!messageIdBeingEdited} 
                   title={choice.text}
-                  customStyles={choiceButtonStyles} // Apply styles
+                  customStyles={choiceButtonStyles}
                 >
                   {index + 1}. {choice.text}
                 </Button>
@@ -143,7 +159,6 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
 
       <form onSubmit={handleSubmit} className="mt-2">
         <div className="flex flex-col sm:flex-row gap-2 items-stretch">
-            {/* Action Type Toggle Button */}
             <Button
                 type="button"
                 variant="ghost"
@@ -159,7 +174,6 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
                 </span>
             </Button>
 
-            {/* Response Length Dropdown */}
             <div ref={responseLengthDropdownRef} className="relative flex-shrink-0">
                  <Button
                     type="button"
@@ -195,6 +209,29 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
             className="flex-grow w-full p-2 sm:p-2.5 text-sm sm:text-base bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-100 placeholder-gray-400"
             disabled={isLoadingUi || isSummarizingUi || !isCurrentlyActivePage || !!messageIdBeingEdited}
             />
+            
+            {/* NEW: Strict Mode Toggle Button */}
+            <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsStrictMode(!isStrictMode)}
+                disabled={isLoadingUi || isSummarizingUi || !isCurrentlyActivePage || !!messageIdBeingEdited}
+                title={isStrictMode ? "Tắt Chế độ Nghiêm ngặt (AI sẽ diễn giải và hành động tự do hơn)" : "Bật Chế độ Nghiêm ngặt (AI chỉ thực hiện hành động vật lý bạn yêu cầu)"}
+                className={`h-full px-3 transition-colors ${isStrictMode ? 'bg-blue-600 text-white border-blue-500' : 'text-gray-400'}`}
+            >
+                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    {isStrictMode ? (
+                        <path fillRule="evenodd" d="M10 1a3 3 0 00-3 3v1H6a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-1V4a3 3 0 00-3-3zM9 4a1 1 0 012 0v1H9V4z" clipRule="evenodd" />
+                    ) : (
+                        <>
+                            <path fillRule="evenodd" d="M10 4a3 3 0 00-3 3v1h6V7a3 3 0 00-3-3zM7 7v1h6V7a3 3 0 00-6 0z" clipRule="evenodd" />
+                            <path d="M5 10a2 2 0 012-2h6a2 2 0 012 2v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7z" />
+                        </>
+                    )}
+                </svg>
+            </Button>
+
             <div className="flex flex-col gap-1 sm:gap-2">
                 <Button type="submit" variant="primary" size="sm" className="px-3 sm:px-4 w-full flex-grow" disabled={isLoadingUi || isSummarizingUi || playerInput.trim() === "" || !isCurrentlyActivePage || !!messageIdBeingEdited} isLoading={isLoadingUi && !isSummarizingUi} loadingText={VIETNAMESE.sendingAction}>
                     {VIETNAMESE.sendInputButton}
@@ -213,53 +250,96 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
                     </svg>
                 </Button>
             </div>
-
-
-            {/* MOVED Pagination Menu Button & Dropdown */}
-            <div ref={paginationMenuRef} className="relative flex-shrink-0">
-                <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="w-full sm:w-auto h-full justify-center px-3"
-                    onClick={() => setIsPaginationMenuOpen(!isPaginationMenuOpen)}
-                    disabled={isLoadingUi || isSummarizingUi || !!messageIdBeingEdited}
-                    title="Mở Menu Trang"
-                    aria-haspopup="true"
-                    aria-expanded={isPaginationMenuOpen}
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-                </Button>
-                {isPaginationMenuOpen && (
-                    <div className="absolute bottom-full right-0 mb-2 w-72 bg-gray-600 rounded-lg shadow-lg z-20 p-3 border border-gray-500 space-y-3">
-                        <div className="flex items-center justify-between">
-                            <Button onClick={handlePrevClick} disabled={currentPage <= 1 || isSummarizingUi} size="sm" variant="ghost" className="text-xs px-2 py-1">
-                                {VIETNAMESE.previousPage}
-                            </Button>
-                            <span className="text-sm text-gray-200 mx-2 font-semibold">
-                                {VIETNAMESE.pageIndicator(currentPage, totalPages)}
-                            </span>
-                            <Button onClick={handleNextClick} disabled={currentPage >= totalPages || isSummarizingUi} size="sm" variant="ghost" className="text-xs px-2 py-1">
-                                {VIETNAMESE.nextPage}
-                            </Button>
-                        </div>
-                        <form onSubmit={handleJumpSubmit} className="flex items-center gap-2 border-t border-gray-500 pt-3">
-                            <input
-                                type="number"
-                                value={jumpToPageInput}
-                                onChange={handleJumpInputChange}
-                                min="1"
-                                max={totalPages}
-                                className="w-full p-2 text-sm text-center bg-gray-800 border border-gray-700 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-100"
-                                aria-label="Nhập số trang"
-                                disabled={isSummarizingUi}
-                            />
-                            <Button type="submit" size="sm" variant="primary" className="h-full px-3" disabled={isSummarizingUi}>
-                                {VIETNAMESE.goToPage}
-                            </Button>
-                        </form>
+            
+            {/* New Group for Location and Pagination Menus */}
+            <div className="flex gap-2">
+                {economySubLocations.length > 0 && (
+                    <div ref={locationMenuRef} className="relative flex-shrink-0">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="w-full sm:w-auto h-full justify-center px-3"
+                            onClick={() => setIsLocationMenuOpen(!isLocationMenuOpen)}
+                            disabled={isLoadingUi || isSummarizingUi || !!messageIdBeingEdited}
+                            title="Mở Menu Địa Điểm Phụ"
+                            aria-haspopup="true"
+                            aria-expanded={isLocationMenuOpen}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" /></svg>
+                        </Button>
+                        {isLocationMenuOpen && (
+                            <div className="absolute bottom-full right-0 mb-2 w-max max-w-xs bg-gray-600 rounded-lg shadow-lg z-20 p-2 border border-gray-500 space-y-2">
+                                {economySubLocations.map(loc => {
+                                    let buttonLabel = loc.name;
+                                    if (loc.locationType === GameTemplates.EconomyLocationType.MARKETPLACE) buttonLabel = VIETNAMESE.openMarketplaceButton || loc.name;
+                                    else if (loc.locationType === GameTemplates.EconomyLocationType.SHOPPING_CENTER) buttonLabel = VIETNAMESE.openShoppingCenterButton || loc.name;
+                                    else if (loc.locationType === GameTemplates.EconomyLocationType.AUCTION_HOUSE) buttonLabel = VIETNAMESE.openAuctionHouseButton || loc.name;
+                                    else if (loc.locationType === GameTemplates.EconomyLocationType.SLAVE_MARKET) buttonLabel = VIETNAMESE.openSlaveMarketButton || loc.name;
+                                    else if (loc.locationType === GameTemplates.EconomyLocationType.SLAVE_AUCTION) buttonLabel = VIETNAMESE.openSlaveAuctionButton || loc.name;
+                                    
+                                    return (
+                                        <Button
+                                            key={loc.id}
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full text-left justify-start text-sm hover:bg-indigo-600"
+                                            onClick={() => { onEconomyLocationClick(loc); setIsLocationMenuOpen(false); }}
+                                        >
+                                            {buttonLabel}
+                                        </Button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
+                
+                <div ref={paginationMenuRef} className="relative flex-shrink-0">
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="w-full sm:w-auto h-full justify-center px-3"
+                        onClick={() => setIsPaginationMenuOpen(!isPaginationMenuOpen)}
+                        disabled={isLoadingUi || isSummarizingUi || !!messageIdBeingEdited}
+                        title="Mở Menu Trang"
+                        aria-haspopup="true"
+                        aria-expanded={isPaginationMenuOpen}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                    </Button>
+                    {isPaginationMenuOpen && (
+                        <div className="absolute bottom-full right-0 mb-2 w-72 bg-gray-600 rounded-lg shadow-lg z-20 p-3 border border-gray-500 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <Button onClick={handlePrevClick} disabled={currentPage <= 1 || isSummarizingUi} size="sm" variant="ghost" className="text-xs px-2 py-1">
+                                    {VIETNAMESE.previousPage}
+                                </Button>
+                                <span className="text-sm text-gray-200 mx-2 font-semibold">
+                                    {VIETNAMESE.pageIndicator(currentPage, totalPages)}
+                                </span>
+                                <Button onClick={handleNextClick} disabled={currentPage >= totalPages || isSummarizingUi} size="sm" variant="ghost" className="text-xs px-2 py-1">
+                                    {VIETNAMESE.nextPage}
+                                </Button>
+                            </div>
+                            <form onSubmit={handleJumpSubmit} className="flex items-center gap-2 border-t border-gray-500 pt-3">
+                                <input
+                                    type="number"
+                                    value={jumpToPageInput}
+                                    onChange={handleJumpInputChange}
+                                    min="1"
+                                    max={totalPages}
+                                    className="w-full p-2 text-sm text-center bg-gray-800 border border-gray-700 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-100"
+                                    aria-label="Nhập số trang"
+                                    disabled={isSummarizingUi}
+                                />
+                                <Button type="submit" size="sm" variant="primary" className="h-full px-3" disabled={isSummarizingUi}>
+                                    {VIETNAMESE.goToPage}
+                                </Button>
+                            </form>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
       </form>

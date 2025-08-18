@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { GameScreen } from '../types';
 import { useGame } from '../hooks/useGame';
@@ -5,7 +6,7 @@ import { useGame } from '../hooks/useGame';
 // Import all screen components
 import InitialScreen from './InitialScreen';
 import GameSetupScreen from './GameSetupScreen';
-import GameplayScreen from './GameplayScreen';
+import { GameplayScreen } from './GameplayScreen';
 import EquipmentScreen from './gameplay/equipment/EquipmentScreen';
 import { CraftingScreen } from './gameplay/crafting/CraftingScreen';
 import ApiSettingsScreen from './ApiSettingsScreen';

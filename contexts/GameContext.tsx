@@ -85,7 +85,7 @@ export interface GameContextType {
     setGameMessages: React.Dispatch<React.SetStateAction<GameMessage[]>>;
     setStyleSettings: (newSettings: StyleSettings) => void;
     handleSetupComplete: (settings: WorldSettings, rawAvatarData?: string | null) => Promise<void>;
-    handlePlayerAction: (action: string, isChoice: boolean, inputType: PlayerActionInputType, responseLength: ResponseLength) => Promise<void>;
+    handlePlayerAction: (action: string, isChoice: boolean, inputType: PlayerActionInputType, responseLength: ResponseLength, isStrictMode: boolean) => Promise<void>;
     handleRefreshChoices: (playerHint: string) => Promise<void>; // NEW
     handleFindLocation: (params: FindLocationParams) => Promise<void>;
     handleNonCombatDefeat: (kbStateAtDefeat: KnowledgeBase, fatalNarration: string) => Promise<void>;
@@ -259,8 +259,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .filter(Boolean) // Filter out null entries
         .join("\n---\n");
 
-    const previousPageNumbers = knowledgeBase.currentPageHistory?.slice(0, -1) || [];
-    const previousPageSummariesContent: string[] = previousPageNumbers
+    const previousPageSummariesContent: string[] = (knowledgeBase.currentPageHistory?.slice(0, -1) || [])
         .map((_, index) => knowledgeBase.pageSummaries?.[index + 1])
         .filter((summary): summary is string => !!summary);
     // --- End: Compute context strings ---
@@ -549,7 +548,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (actionToTake) {
                 autoPlayTimeoutId = window.setTimeout(async () => {
                     if (isAutoPlaying && !isLoadingApi && !isSummarizingNextPageTransition && !isSummarizingOnLoad && currentScreen === GameScreen.Gameplay && currentPageDisplay === totalPages) {
-                        await gameActions.handlePlayerAction(actionToTake!, true, actionType, 'default');
+                        await gameActions.handlePlayerAction(actionToTake!, true, actionType, 'default', false);
                     }
                 }, 1000);
             }

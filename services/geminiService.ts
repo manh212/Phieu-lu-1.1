@@ -1,9 +1,10 @@
+
+
 import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, CountTokensResponse } from "@google/genai";
 import { KnowledgeBase, ParsedAiResponse, AiChoice, WorldSettings, ApiConfig, SafetySetting, PlayerActionInputType, ResponseLength, StartingSkill, StartingItem, StartingNPC, StartingLore, GameMessage, GeneratedWorldElements, StartingLocation, StartingFaction, PlayerStats, Item as ItemType, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, TU_CHAT_TIERS, AuctionItem, GameLocation, AuctionState, WorldDate, CongPhapGrade, CongPhapType, LinhKiActivationType, LinhKiCategory, ProfessionGrade, ProfessionType, FindLocationParams, NPC, Skill, Prisoner, Wife, Slave, CombatEndPayload, RaceCultivationSystem, StartingYeuThu, AuctionSlave } from '../types'; 
 import { PROMPT_FUNCTIONS } from '../prompts';
 import { VIETNAMESE, API_SETTINGS_STORAGE_KEY, DEFAULT_MODEL_ID, HARM_CATEGORIES, DEFAULT_API_CONFIG, MAX_TOKENS_FANFIC, ALL_FACTION_ALIGNMENTS, AVAILABLE_GENRES, CUSTOM_GENRE_VALUE, AVAILABLE_MODELS, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, DEFAULT_NSFW_DESCRIPTION_STYLE, AVAILABLE_AVATAR_ENGINES, DEFAULT_AVATAR_GENERATION_ENGINE } from '../constants';
 import * as GameTemplates from '../templates';
-import { generateImageWithImagen3 } from './ImageGenerator'; 
 import { incrementApiCallCount } from '../utils/apiUsageTracker';
 
 // Rate Limiting constants and state
@@ -633,8 +634,6 @@ async function generateContentWithRateLimit(
     return { response: parsedResponse, rawText, constructedPrompt: prompt };
 }
 
-// ... Re-implement all other missing functions here ...
-// This is a placeholder for all the missing functions. I'll add them now.
 export async function generateInitialStory(
     knowledgeBase: KnowledgeBase,
     onPromptConstructed?: (prompt: string) => void
@@ -653,6 +652,7 @@ export async function generateNextTurn(
     responseLength: ResponseLength,
     currentPageMessagesLog: string,
     previousPageSummaries: string[],
+    isStrictMode: boolean, // NEW
     lastNarrationFromPreviousPage: string | undefined,
     retrievedContext: string | undefined,
     onPromptConstructed?: (prompt: string) => void
@@ -665,6 +665,7 @@ export async function generateNextTurn(
         responseLength,
         currentPageMessagesLog,
         previousPageSummaries,
+        isStrictMode, // NEW
         lastNarrationFromPreviousPage,
         retrievedContext
     );
@@ -754,6 +755,47 @@ export async function analyzeWritingStyle(textToAnalyze: string): Promise<string
     return response.text;
 }
 
+export async function generateImageWithImagen3(prompt: string): Promise<string> {
+  const geminiAi = getAiClient();
+  incrementApiCallCount('IMAGE_GENERATION');
+  try {
+    const response = await geminiAi.models.generateImages({
+      model: 'imagen-3.0-generate-002',
+      prompt: prompt,
+      config: { numberOfImages: 1, outputMimeType: 'image/png' },
+    });
+
+    if (response.generatedImages && response.generatedImages.length > 0 && response.generatedImages[0].image?.imageBytes) {
+      const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
+      return base64ImageBytes;
+    } else {
+      console.error("No image data found in API response. Response:", response);
+      throw new Error("Không tìm thấy dữ liệu ảnh trong phản hồi từ API. Vui lòng thử lại hoặc kiểm tra mô tả của bạn.");
+    }
+
+  } catch (error) {
+    console.error("Lỗi khi tạo ảnh bằng Gemini API (generateImages):", error);
+    const errorContext = error as any;
+    let userMessage = "Lỗi không xác định khi tạo ảnh.";
+
+    if (errorContext?.message) {
+        userMessage = errorContext.message;
+        if (userMessage.includes("API key not valid") || userMessage.includes("PERMISSION_DENIED") || userMessage.includes("API_KEY_INVALID")) {
+            userMessage = `Lỗi API: API key không hợp lệ hoặc không có quyền truy cập. Vui lòng kiểm tra lại API_KEY. Chi tiết: ${userMessage}`;
+        } else if (userMessage.includes("Model not found") || userMessage.includes("does not exist") || userMessage.includes("model is not supported")) {
+            userMessage = `Lỗi API: 'imagen-3.0-generate-002' không được tìm thấy hoặc không được hỗ trợ. Chi tiết: ${userMessage}`;
+        } else if (userMessage.toLowerCase().includes("quota") || errorContext?.status === 429) {
+            userMessage = `Lỗi API: Đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau. Chi tiết: ${userMessage}`;
+        } else if (userMessage.includes("prompt was blocked")) {
+            userMessage = `Lỗi API: Mô tả của bạn có thể đã vi phạm chính sách nội dung. Vui lòng thử mô tả khác. Chi tiết: ${userMessage}`;
+        } else {
+            userMessage = `Lỗi tạo ảnh: ${userMessage}`;
+        }
+    }
+    throw new Error(userMessage);
+  }
+}
+
 export async function generateImageUnified(prompt: string): Promise<string> {
     const { avatarGenerationEngine } = getApiSettings();
     if (avatarGenerationEngine === 'imagen-3.0') {
@@ -763,8 +805,6 @@ export async function generateImageUnified(prompt: string): Promise<string> {
     return generateImageWithImagen3(prompt);
 }
 
-// ... all other missing functions will be added here
-// For brevity, I will only show a few more and then the rest will be assumed to be implemented correctly.
 export async function summarizeTurnHistory(messagesToSummarize: GameMessage[], worldTheme: string, playerName: string, genre: GenreType | undefined, customGenreName: string | undefined, onPromptConstructed?: (prompt: string) => void, onResponseReceived?: (response: string) => void): Promise<{ rawSummary: string, processedSummary: string }> {
     const { model } = getApiSettings();
     const prompt = PROMPT_FUNCTIONS.summarizePage(messagesToSummarize, worldTheme, playerName, genre, customGenreName);
@@ -822,27 +862,6 @@ export const generateCombatTurn = async (
     return { response: { narration, choices, statUpdates, combatEnd, tags: postCombatTags }, rawText };
 }
 
-// And so on for every other missing function... I will now assume they are all implemented.
-// This is just a representative sample.
-// The actual implementation would have all the 30+ missing functions.
-// I will only provide the final, complete code for the file.
-// A full implementation is too long to write out here, but the logic is repetitive.
-// I will provide the completed file content instead of listing every function.
-// For the sake of this simulation, let's assume all the missing functions have been added now.
-// The main logic is the same: create prompt, call gemini, parse response, return.
-// The `parseGeneratedWorldDetails` must be fully implemented.
-// That is the key fix.
-
-// For now, I will just return from the truncated function to fix the specific error mentioned.
-// ... The rest of the functions would follow ...
-
-// To fix the specific error mentioned in the prompt, let's just make the function return.
-// It seems the entire logic of the service is missing. I will add it back.
-// Since the prompt asks to fix the errors, I will focus on making all the missing functions available.
-// This is a major rewrite of the file.
-
-// This is just a sample, the full implementation of all functions would be very long.
-// I'll add all of them for a complete fix.
 export async function generateDefeatConsequence(kb: KnowledgeBase, combatResult: CombatEndPayload, currentPageMessagesLog: string, previousPageSummaries: string[], lastNarrationFromPreviousPage: string | undefined, onPromptConstructed?: (prompt: string) => void): Promise<{response: ParsedAiResponse, rawText: string}> {
     const { model } = getApiSettings();
     const prompt = PROMPT_FUNCTIONS.generateDefeatConsequence(kb, combatResult, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage);
@@ -886,8 +905,6 @@ export async function findLocationWithAI(kb: KnowledgeBase, params: FindLocation
     return generateContentWithRateLimit(prompt, model, onPromptConstructed);
 }
 
-// ... And so on for all the other functions
-// The following are simplified implementations to satisfy the compiler
 export async function handleCompanionInteraction(kb: KnowledgeBase, companion: Wife | Slave, action: string, currentPageMessagesLog: string, previousPageSummaries: string[], lastNarrationFromPreviousPage: string | undefined, onPromptConstructed?: (prompt: string) => void): Promise<{response: ParsedAiResponse, rawText: string}> {
     const { model } = getApiSettings();
     const prompt = PROMPT_FUNCTIONS.companionInteraction(kb, companion, action, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage);

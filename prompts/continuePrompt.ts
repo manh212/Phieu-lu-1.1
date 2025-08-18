@@ -1,3 +1,4 @@
+
 import { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, DIALOGUE_MARKER, TuChatTier, AIContextConfig } from '../types';
 import { SUB_REALM_NAMES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, NSFW_DESCRIPTION_STYLES, TU_CHAT_TIERS, SPECIAL_EVENT_INTERVAL_TURNS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
 import * as GameTemplates from '../templates';
@@ -12,6 +13,7 @@ export const generateContinuePrompt = (
   responseLength: ResponseLength,
   currentPageMessagesLog: string,
   previousPageSummaries: string[],
+  isStrictMode: boolean, // NEW
   lastNarrationFromPreviousPage?: string,
   retrievedContext?: string // NEW: For RAG
 ): string => {
@@ -177,17 +179,19 @@ Lượt chơi hiện tại là ${playerStats.turn}, đây là một mốc quan t
       }
   }
   // END NEW LOGIC
-
-  const userPromptsSection = (aiContextConfig.sendUserPrompts && userPrompts && userPrompts.length > 0)
-    ? `
-**LỜI NHẮC TỪ NGƯỜI CHƠI (QUY TẮC BẮT BUỘC TUÂN THỦ):**
-Đây là những quy tắc do người chơi đặt ra. Bạn **BẮT BUỘC PHẢI** tuân theo những lời nhắc này một cách nghiêm ngặt trong mọi phản hồi.
-${userPrompts.map(p => `- ${p}`).join('\n')}
-`
-    : '';
-
-  const mainRealms = (coreContext.worldState.realmProgressionSystemForPlayerRace || '').split(' - ').map(s => s.trim()).filter(Boolean);
   
+  const strictModeInstruction = isStrictMode ? `
+**CHẾ ĐỘ NGHIÊM NGẶT ĐANG BẬT (QUY TẮC CỰC KỲ QUAN TRỌNG):**
+Sau khi mô tả kết quả trực tiếp của hành động từ người chơi, bạn phải tuân thủ các quy tắc sau:
+1.  **NHÂN VẬT CHÍNH:** TUYỆT ĐỐI KHÔNG được thực hiện bất kỳ **hành động vật lý** nào tiếp theo. Nhân vật chính phải dừng lại và chờ lệnh.
+2.  **NỘI TÂM & CẢM XÚC:** Bạn **ĐƯỢỢC PHÉP** và **ĐƯỢỢC KHUYẾN KHÍCH** mô tả suy nghĩ, cảm xúc, hoặc ký ức của nhân vật chính khi họ dừng lại.
+3.  **NPC & MÔI TRƯỜNG:** Các NPC khác và môi trường xung quanh **ĐƯỢỢC PHÉP** và **NÊN** tiếp tục hành động và phản ứng một cách tự nhiên.
+4.  **LỰA CHỌN:** Các lựa chọn [CHOICE: "..."] bạn đưa ra PHẢI là những hành động vật lý mà nhân vật chính có thể thực hiện tiếp theo.
+**Mục tiêu của chế độ này là trao toàn quyền kiểm soát hành động vật lý cho người chơi.**` : '';
+
+  const playerRaceSystem = worldConfig?.raceCultivationSystems.find(s => s.raceName === (worldConfig?.playerRace || 'Nhân Tộc'));
+  const mainRealms = (playerRaceSystem?.realmSystem || '').split(' - ').map(s => s.trim()).filter(Boolean);
+
   const writingStyleGuideSection = (aiContextConfig.sendWritingStyle && writingStyleGuide) ? `
 **HƯỚNG DẪN BẮT CHƯỚC VĂN PHONG NGƯỜI DÙNG (CỰC KỲ QUAN TRỌNG):**
 Mục tiêu hàng đầu của bạn là tái hiện một cách trung thực nhất văn phong của người dùng dựa vào đoạn văn mẫu sau. Đừng chỉ sao chép từ ngữ, mà hãy nắm bắt và áp dụng đúng **nhịp điệu**, **cách lựa chọn từ vựng**, và **thái độ/cảm xúc** đặc trưng của họ. Lời kể của bạn phải khiến người đọc tin rằng nó do chính người dùng viết ra. TUYỆT ĐỐI không pha trộn giọng văn AI hoặc làm "mềm hóa" văn phong gốc.
@@ -198,129 +202,125 @@ ${writingStyleGuide}
 """
 ` : '';
 
-const ragContextSection = aiContextConfig.sendRagContext ? `
+  const userPromptsSection = (aiContextConfig.sendUserPrompts && userPrompts && userPrompts.length > 0)
+    ? `
+**LỜI NHẮC TỪ NGƯỜI CHƠI (QUY TẮC BẮT BUỘC TUÂN THỦ):**
+Đây là những quy tắc do người chơi đặt ra. Bạn **BẮT BUỘC PHẢI** tuân theo những lời nhắc này một cách nghiêm ngặt trong mọi phản hồi.
+${userPrompts.map(p => `- ${p}`).join('\n')}
+`
+    : '';
+
+  const ragContextSection = aiContextConfig.sendRagContext ? `
 **A. BỐI CẢNH TRUY XUẤT (RAG CONTEXT - LONG-TERM MEMORY):**
 Dưới đây là một số thông tin liên quan từ các sự kiện trong quá khứ có thể hữu ích cho lượt này. Hãy sử dụng nó để đảm bảo tính nhất quán của câu chuyện.
 ${retrievedContext ? `\`\`\`\n${retrievedContext}\n\`\`\`` : "Không có bối cảnh truy xuất nào."}` : '';
-
-const coreContextSection = aiContextConfig.sendCoreContext ? `
+  
+  const coreContextSection = aiContextConfig.sendCoreContext ? `
 **B. BỐI CẢNH CỐT LÕI (CORE CONTEXT - PLAYER'S CURRENT STATE):**
-Đây là trạng thái hiện tại của người chơi và những yếu tố trực tiếp liên quan đến họ. Thông tin này LUÔN ĐÚNG và phải được ưu tiên hàng đầu. Các thông tin khác về thế giới (NPC khác, địa điểm khác,...) sẽ được cung cấp trong BỐI CẢNH TRUY XUẤT nếu có liên quan.
+Đây là trạng thái hiện tại của người chơi và những yếu tố trực tiếp liên quan đến họ. Thông tin này LUÔN ĐÚNG và phải được ưu tiên hàng đầu.
 \`\`\`json
 ${JSON.stringify(coreContext, null, 2)}
 \`\`\`` : '';
 
-const conversationalContextSection = aiContextConfig.sendConversationalContext ? `
+  const conversationalContextSection = aiContextConfig.sendConversationalContext ? `
 **C. BỐI CẢNH HỘI THOẠI (CONVERSATIONAL CONTEXT - SHORT-TERM MEMORY):**
 - **Tóm tắt các diễn biến trang trước:**
-${previousPageSummaries.length > 0 ? previousPageSummaries.join("\n\n") : "Không có tóm tắt từ các trang trước."}
+${previousPageSummaries.length > 0 ? previousPageSummaries.map((summary, index) => {
+    const pageNumberForSummary = index + 1;
+    const startTurnOfSummaryPage = knowledgeBase.currentPageHistory?.[pageNumberForSummary - 1];
+    const endTurnOfSummaryPage = (knowledgeBase.currentPageHistory?.[pageNumberForSummary] || playerStats.turn + 1) - 1;
+    return `Tóm tắt Trang ${pageNumberForSummary} (Lượt ${startTurnOfSummaryPage}-${endTurnOfSummaryPage}):\n${summary}`;
+  }).join("\n\n") : "Không có tóm tắt từ các trang trước."}
 - **Diễn biến gần nhất (lượt trước - Lượt ${playerStats.turn}):**
 ${lastNarrationFromPreviousPage || "Chưa có."}
 - **Diễn biến chi tiết trang hiện tại (từ lượt đầu trang đến lượt ${playerStats.turn}):**
 ${currentPageMessagesLog || "Chưa có diễn biến nào trong trang này."}` : '';
 
-const narrationAndVividnessRulesParts: string[] = [];
-
-if (aiContextConfig.sendShowDontTellRule) {
-    narrationAndVividnessRulesParts.push(`*   **A.1. MỆNH LỆNH TỐI THƯỢỢNG: PHONG CÁCH KỂ CHUYỆN ("Tả, đừng kể")**
+  const narrationAndVividnessRules = aiContextConfig.sendShowDontTellRule ? `
+*   **A.1. MỆNH LỆNH TỐI THƯỢỢNG: PHONG CÁCH KỂ CHUYỆN ("Tả, đừng kể")**
     *   **Sử dụng Ngũ quan:** Mô tả những gì nhân vật chính **nhìn thấy**, **nghe thấy**, **ngửi thấy**, **cảm nhận**, và **nếm**.
     *   **"Tả", không "Kể":** Thay vì dùng những từ ngữ chung chung, hãy mô tả chi tiết để người chơi tự cảm nhận.
-        *   **SAI (Kể):** "Cô gái đó rất xinh đẹp."
-        *   **ĐÚNG (Tả):** "Nàng có làn da trắng như tuyết, đôi mắt phượng cong cong ẩn chứa một làn sương mờ ảo, và đôi môi đỏ mọng như quả anh đào chín. Mỗi khi nàng khẽ cười, hai lúm đồng tiền nhỏ xinh lại hiện lên bên má, khiến người đối diện bất giác ngẩn ngơ."
-        *   **SAI (Kể):** "Hắn ta rất tức giận."
-        *   **ĐÚNG (Tả):** "Hai tay hắn siết chặt thành nắm đấm, những đường gân xanh nổi rõ trên mu bàn tay. Hắn nghiến chặt răng, quai hàm bạnh ra, và đôi mắt đỏ ngầu nhìn chằm chằm vào kẻ thù như muốn ăn tươi nuốt sống."
-    *   **Nội tâm nhân vật:** Mô tả những suy nghĩ, cảm xúc, ký ức thoáng qua của nhân vật chính để làm cho họ trở nên sống động và có chiều sâu.`);
-}
+    *   **Nội tâm nhân vật:** Mô tả những suy nghĩ, cảm xúc, ký ức thoáng qua của nhân vật chính.` : '';
 
-if (aiContextConfig.sendLivingWorldRule) {
-    narrationAndVividnessRulesParts.push(`*   **A.2. MỆNH LỆNH "THẾ GIỚI SỐNG ĐỘNG"**
-    *   Làm cho thế giới cảm thấy đang "sống" và tự vận hành, không chỉ xoay quanh người chơi.
-    *   **QUY TRÌNH KỂ CHUYỆN:** Trong mỗi phản hồi, trước khi mô tả kết quả hành động của người chơi, hãy **luôn mô tả ngắn gọn một sự kiện nền** đang diễn ra xung quanh mà không liên quan trực tiếp đến người chơi.
-    *   **Ví dụ:**
-        *   **Cách làm cũ (SAI):** Người chơi bước vào quán rượu. Bạn mô tả: "Quán rượu đông đúc, ồn ào."
-        *   **Cách làm mới (ĐÚNG):** Người chơi bước vào quán rượu. Bạn mô tả: "**Hai thương nhân ở góc phòng đang lớn tiếng tranh cãi về giá cả của lô vải lụa mới. Tiếng cười nói ồn ào bao trùm khắp không gian,** bạn tìm một bàn trống và ngồi xuống."`);
-}
+  const livingWorldRules = aiContextConfig.sendLivingWorldRule ? `
+*   **A.2. MỆNH LỆNH "THẾ GIỚI SỐNG ĐỘNG"**
+    *   Làm cho thế giới cảm thấy đang "sống" và tự vận hành.
+    *   **QUY TRÌNH:** Trong mỗi phản hồi, hãy **luôn mô tả ngắn gọn một sự kiện nền** đang diễn ra xung quanh không liên quan trực tiếp đến người chơi.` : '';
+  
+  const proactiveNpcRule = aiContextConfig.sendProactiveNpcRule ? `
+*   **A.3. GIAO THỨC "NPC CHỦ ĐỘNG"**
+    *   Trong mỗi cảnh, **BẮT BUỘC có ít nhất MỘT NPC thực hiện một hành động chủ động**.` : '';
 
-if (aiContextConfig.sendProactiveNpcRule) {
-    narrationAndVividnessRulesParts.push(`*   **A.3. GIAO THỨC "NPC CHỦ ĐỘNG"**
-    *   Trong mỗi cảnh có sự xuất hiện của các NPC, **BẮT BUỘC phải có ít nhất MỘT NPC thực hiện một hành động chủ động.**
-    *   **Các hành động chủ động bao gồm:** Chủ động tiếp cận và bắt chuyện với người chơi; Bàn tán với một NPC khác về một tin đồn/sự kiện; Đưa ra một lời đề nghị, mời gọi, hoặc giao một nhiệm vụ nhỏ; Thể hiện cảm xúc rõ rệt; Tự mình thực hiện một hành động (lau bàn, rời đi...).
-    *   **TUYỆT ĐỐI KHÔNG** để tất cả NPC chỉ đứng yên và chờ người chơi tương tác.`);
-}
+  const rumorMillRule = aiContextConfig.sendRumorMillRule ? `
+*   **A.4. CHỈ THỊ "CỐI XAY TIN ĐỒN"**
+    *   Nội dung hội thoại của NPC phải đa dạng.
+    *   **ĐỘ TIN CẬY:** Tin đồn có thể là **chính xác**, **bị phóng đại**, hoặc **hoàn toàn sai lệch**.` : '';
 
-if (aiContextConfig.sendRumorMillRule) {
-    narrationAndVividnessRulesParts.push(`*   **A.4. CHỈ THỊ "CỐI XAY TIN ĐỒN"**
-    *   Khi các NPC nói chuyện, nội dung của họ phải đa dạng về thế giới: chính trị, kinh tế, sự kiện, nhân vật nổi tiếng, chuyện lạ/siêu nhiên.
-    *   **ĐỘ TIN CẬY CỦA TIN ĐỒN:** Các tin đồn mà NPC nói ra có thể là **chính xác**, **bị phóng đại**, hoặc **hoàn toàn sai lệch**. Hãy linh hoạt sử dụng cả ba loại để tạo ra sự mơ hồ và chiều sâu cho thông tin.`);
-}
-
-let narrationAndVividnessRules = "";
-if (narrationAndVividnessRulesParts.length > 0) {
-    narrationAndVividnessRules = `
+  const storytellingRulesSection = (narrationAndVividnessRules || livingWorldRules || proactiveNpcRule || rumorMillRule) ? `
 **A. QUY TẮC VỀ LỜI KỂ & SỰ SỐNG ĐỘNG (ƯU TIÊN CAO NHẤT)**
-Nhiệm vụ của bạn là vẽ nên những bức tranh sống động và tạo ra một thế giới tự vận hành.
-
-${narrationAndVividnessRulesParts.join('\n\n')}
-`;
-}
-
+${narrationAndVividnessRules}
+${livingWorldRules}
+${proactiveNpcRule}
+${rumorMillRule}` : '';
 
   return `
-**YÊU CẦU CỐT LÕI:** Nhiệm vụ của bạn là tiếp tục câu chuyện game nhập vai thể loại "${effectiveGenre}" bằng tiếng Việt một cách liền mạch và hấp dẫn.
-**QUY TẮC QUAN TRỌNG NHẤT:** Bắt đầu phản hồi của bạn bằng cách đi thẳng vào lời kể về những gì xảy ra do hành động của người chơi. **TUYỆT ĐỐI KHÔNG** bắt đầu bằng cách bình luận về lựa chọn của người chơi (ví dụ: KHÔNG dùng "Tốt lắm, ngươi đã chọn...", "Đây là một lựa chọn thú vị..."). Hãy kể trực tiếp kết quả.
+**YÊU CẦU CỐT LÕI:** Nhiệm vụ của bạn là tiếp tục câu chuyện game nhập vai thể loại "${effectiveGenre}" bằng tiếng Việt.
+**QUY TẮC QUAN TRỌNG NHẤT:** Bắt đầu phản hồi của bạn bằng cách đi thẳng vào lời kể về những gì xảy ra do hành động của người chơi. **TUYỆT ĐỐI KHÔNG** bình luận về lựa chọn của người chơi. Hãy kể trực tiếp kết quả.
 
 ---
 **PHẦN 1: BỐI CẢNH (CONTEXT)**
 Đây là thông tin nền để bạn hiểu câu chuyện.
 
 ${ragContextSection}
-
 ${coreContextSection}
-
 ${conversationalContextSection}
 
 ---
 **PHẦN 2: HƯỚNG DẪN HÀNH ĐỘNG**
-
 ${writingStyleGuideSection}
-
 ${userPromptsSection}
 
-**HÀNH ĐỘNG CỦA NGƯỜI CHƠI (CHO LƯỢT TIẾP THEO - LƯỢT ${playerStats.turn + 1}):**
-- **Loại hướng dẫn:** ${inputType === 'action' ? 'Hành động trực tiếp của nhân vật' : 'Gợi ý/Mô tả câu chuyện (do người chơi cung cấp)'}
-- **Nội dung hướng dẫn:** "${playerActionText}"
+**HƯỚNG DẪN TỪ NGƯỜI CHƠI (CHO LƯỢT TIẾP THEO - LƯỢT ${playerStats.turn + 1}):**
+- Loại hướng dẫn: ${inputType === 'action' ? 'Hành động trực tiếp của nhân vật' : 'Gợi ý/Mô tả câu chuyện (do người chơi cung cấp)'}
+- Nội dung hướng dẫn: "${playerActionText}"
+${strictModeInstruction}
 
-${eventGuidance}
 ${specialEventInstruction}
+${eventGuidance}
 
 **HƯỚNG DẪN XỬ LÝ DÀNH CHO AI:**
 ${inputType === 'action'
-    ? `Xử lý nội dung trên như một hành động mà nhân vật chính đang thực hiện. Mô tả kết quả của hành động này và các diễn biến tiếp theo một cách chi tiết và hấp dẫn, dựa trên TOÀN BỘ BỐI CẢNH. Kết quả thành công hay thất bại PHẢI dựa trên Tỉ Lệ Thành Công bạn đã thiết lập cho lựa chọn đó (nếu là lựa chọn của AI) hoặc một tỉ lệ hợp lý do bạn quyết định (nếu là hành động tự do), có tính đến Độ Khó của game. Mô tả rõ ràng phần thưởng/lợi ích khi thành công hoặc tác hại/rủi ro khi thất bại.`
-    : `Nội dung trên là một gợi ý, mô tả, hoặc mong muốn của người chơi để định hướng hoặc làm phong phú thêm câu chuyện. Đây KHÔNG phải là hành động trực tiếp của nhân vật chính. **NHIỆM VỤ CỦA BẠN LÀ BẮT BUỘC PHẢI LÀM CHO DIỄN BIẾN NÀY XẢY RA TRONG LƯỢT TIẾP THEO.** Hãy tìm một cách tự nhiên và hợp lý nhất để hợp thức hóa sự kiện này trong bối cảnh hiện tại. Sau khi mô tả sự kiện này đã xảy ra, hãy cung cấp các lựa chọn [CHOICE: "..."] để người chơi phản ứng với tình huống mới.`
+    ? `Xử lý nội dung trên như một hành động mà nhân vật chính (${worldConfig?.playerName}) đang thực hiện. Mô tả kết quả của hành động này và các diễn biến tiếp theo một cách chi tiết và hấp dẫn, dựa trên TOÀN BỘ BỐI CẢNH.`
+    : `Nội dung trên là một gợi ý, mô tả, hoặc mong muốn của người chơi để định hướng hoặc làm phong phú thêm câu chuyện. Đây KHÔNG phải là hành động trực tiếp của nhân vật chính (${worldConfig?.playerName}). **NHIỆM VỤ CỦA BẠN LÀ BẮT BUỘC PHẢI LÀM CHO DIỄN BIẾN NÀY XẢY RA TRONG LƯỢT TIẾP THEO.** Hãy tìm một cách tự nhiên và hợp lý nhất để hợp thức hóa sự kiện này trong bối cảnh hiện tại. Sau khi mô tả sự kiện này đã xảy ra, hãy cung cấp các lựa chọn [CHOICE: "..."] để người chơi phản ứng với tình huống mới.`
   }
+*   **VIẾT LỜI KỂ:** Mô tả chi tiết và hợp lý kết quả của hành động. Phản ứng của các NPC và môi trường xung quanh phải logic. Tuân thủ nghiêm ngặt **CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH** đã chọn.
+*   **SỬ DỤNG TAGS HỆ THỐNG:** Tạo ra các tag để cập nhật trạng thái game. Mỗi tag trên một dòng riêng.
 
 ---
 **PHẦN 3: QUY TẮC VÀ HƯỚNG DẪN CHI TIẾT**
 Đây là các quy tắc bạn phải tuân theo để tạo ra phản hồi hợp lệ.
 
-${narrationAndVividnessRules}
+${storytellingRulesSection}
 
-**B. HƯỚN DẪN VỀ ĐỘ KHÓ:**
-${aiContextConfig.sendDifficultyGuidance ? `- **Dễ:** ${difficultyGuidanceText} Tỉ lệ thành công cho lựa chọn thường CAO (ví dụ: 70-95%).
-- **Thường:** ${difficultyGuidanceText} Tỉ lệ thành công cho lựa chọn TRUNG BÌNH (ví dụ: 50-80%).
-- **Khó:** ${difficultyGuidanceText} Tỉ lệ thành công cho lựa chọn THẤP (ví dụ: 30-65%).
-- **Ác Mộng:** ${difficultyGuidanceText} Tỉ lệ thành công cho lựa chọn CỰC KỲ THẤP (ví dụ: 15-50%).
-**Độ khó hiện tại:** **${currentDifficultyName}**. Hãy điều chỉnh các lựa chọn [CHOICE: "..."] và kết quả cho phù hợp.` : ''}
+**B. HƯỚNG DẪN VỀ ĐỘ KHÓ:**
+${aiContextConfig.sendDifficultyGuidance ? `- **Dễ:** ${VIETNAMESE.difficultyGuidanceEasy}
+- **Thường:** ${VIETNAMESE.difficultyGuidanceNormal}
+- **Khó:** ${VIETNAMESE.difficultyGuidanceHard}
+- **Ác Mộng:** ${VIETNAMESE.difficultyGuidanceNightmare}
+Hiện tại người chơi đang ở độ khó: **${currentDifficultyName}**. Hãy điều chỉnh tỉ lệ thành công, lợi ích và rủi ro trong các lựa chọn [CHOICE: "..."] của bạn cho phù hợp với hướng dẫn độ khó này.` : ''}
 
 **C. CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH:**
 ${nsfwGuidanceCombined}
 
 **D. ĐỘ DÀI PHẢN HỒI MONG MUỐN:**
-- Người chơi yêu cầu độ dài phản hồi: ${responseLength === 'short' ? 'Ngắn (2-3 đoạn)' : responseLength === 'medium' ? 'Trung bình (3-6 đoạn)' : responseLength === 'long' ? 'Dài (8+ đoạn)' : 'Mặc định'}.
+- Người chơi yêu cầu độ dài phản hồi: ${responseLength === 'short' ? 'Ngắn (khoảng 2-3 đoạn văn súc tích)' :
+    responseLength === 'medium' ? 'Trung bình (khoảng 3-6 đoạn văn vừa phải)' :
+      responseLength === 'long' ? 'Dài (khoảng 8+ đoạn văn chi tiết)' :
+        'Mặc định (linh hoạt theo diễn biến)'
+  }.
+Hãy cố gắng điều chỉnh độ dài của lời kể và mô tả cho phù hợp với yêu cầu này của người chơi, nhưng vẫn đảm bảo tính tự nhiên và logic của câu chuyện.
 
 **E. CÁC QUY TẮC SỬ DỤNG TAG (CỰC KỲ QUAN TRỌNG):**
 ${continuePromptSystemRules(worldConfig, mainRealms, aiContextConfig)}
-
-**TIẾP TỤC CÂU CHUYỆN:** Dựa trên **HƯỚNG DẪN TỪ NGƯỜI CHƠI**, **ĐỘ DÀI PHẢN HỒI MONG MUỐN** và **TOÀN BỘ BỐI CẢNH GAME**, hãy tiếp tục câu chuyện cho thể loại "${effectiveGenre}". Tuân thủ nghiêm ngặt các quy tắc ở **PHẦN 3**, mô tả kết quả, cập nhật trạng thái game bằng tags, và cung cấp các lựa chọn hành động mới.
 `;
 };

@@ -830,12 +830,30 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
             
             props.setSentCopilotPromptsLog(prev => [constructedPrompt, ...prev].slice(0, 10));
 
+            let narration = copilotResponse.narration;
+            let actionTags: string[] = [];
+
+            const changesMatch = narration.match(/<GAME_CHANGES>([\s\S]*?)<\/GAME_CHANGES>/);
+            if (changesMatch && changesMatch[1]) {
+                const tagsBlock = changesMatch[1].trim();
+                const tagRegex = /\[[^\]]+\]/g;
+                let match;
+                while ((match = tagRegex.exec(tagsBlock)) !== null) {
+                    actionTags.push(match[0]);
+                }
+                narration = narration.replace(/<GAME_CHANGES>[\s\S]*?<\/GAME_CHANGES>/, '').trim();
+                if (!narration) {
+                    narration = "Tôi đã chuẩn bị các thay đổi bạn yêu cầu. Nhấn 'Áp Dụng Thay Đổi' để xác nhận.";
+                }
+            }
+    
             const aiMessage: GameMessage = {
                 id: `copilot-ai-${Date.now()}`,
                 type: 'narration',
-                content: copilotResponse.narration,
+                content: narration,
                 timestamp: Date.now(),
                 turnNumber: knowledgeBase.playerStats.turn,
+                actionTags: actionTags.length > 0 ? actionTags : undefined,
             };
     
             props.setAiCopilotMessages(prev => [...prev, aiMessage]);
