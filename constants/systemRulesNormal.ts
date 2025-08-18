@@ -193,14 +193,33 @@ export const continuePromptSystemRules = (worldConfig: WorldSettings | null, mai
     }
 
     if (config.sendChoiceRules) {
-        rules.push(`**17. LỰA CHỌN HÀNH ĐỘNG MỚI (QUAN TRỌNG):**
-    *   Luôn cung cấp 3 đến 4 lựa chọn hành động mới.
-    *   **ĐỊNH DẠNG BẮT BUỘC CHO MỖI LỰA CHỌN:** \\\`[CHOICE: "Nội dung lựa chọn (Thành công: X% - Độ khó '${worldConfig?.difficulty || 'Thường'}', Lợi ích: Mô tả lợi ích khi thành công. Rủi ro: Mô tả rủi ro khi thất bại)"]\`\\\`.
-    *   \`X%\`: Tỉ lệ thành công ước tính. PHẢI phản ánh Độ Khó của game (xem hướng dẫn ở trên).
-    *   \`Lợi ích\`: Mô tả rõ ràng những gì người chơi có thể nhận được nếu hành động thành công (ví dụ: vật phẩm, kinh nghiệm, thông tin, thay đổi thiện cảm NPC, tiến triển nhiệm vụ).
-    *   \`Rủi ro\`: Mô tả rõ ràng những hậu quả tiêu cực nếu hành động thất bại (ví dụ: mất máu, bị phát hiện, nhiệm vụ thất bại, giảm thiện cảm).
-    *   **Ví dụ (Độ khó 'Thường'):** \`[CHOICE: "Thử thuyết phục lão nông (Thành công: 65% - Độ khó 'Thường', Lợi ích: Biết được lối vào bí mật, +10 thiện cảm. Rủi ro: Bị nghi ngờ, -5 thiện cảm, lão nông báo quan)"]\`
-    *   **Ví dụ (Độ khó 'Ác Mộng'):** \`[CHOICE: "Một mình đối đầu Hắc Long (Thành công: 20% - Độ khó 'Ác Mộng', Lợi ích: Nếu thắng, nhận danh hiệu 'Diệt Long Giả', vô số bảo vật. Rủi ro: Gần như chắc chắn tử vong, mất toàn bộ vật phẩm không khóa)"]\``);
+        rules.push(`**17. LỰA CHỌN HÀNH ĐỘNG MỚI (PHONG CÁCH TƯỜNG THUẬT & SÁNG TẠO - CỰC KỲ QUAN TRỌNG):**
+Nhiệm vụ của bạn là cung cấp tổng cộng 5-6 lựa chọn hành động mới, được chia thành hai loại sau:
+
+*   **Phần A: 3-4 LỰA CHỌN CỐT LÕI (Logic & Tinh Tế)**
+    *   Đây là những hành động hợp lý, trực tiếp và bám sát vào tình hình hiện tại.
+    *   Chúng phải tuân thủ nghiêm ngặt quy tắc "gợi ý tinh tế": lồng ghép những gợi ý về kết quả tiềm năng vào văn bản một cách tự nhiên, **TUYỆT ĐỐI KHÔNG** dùng 'Thành công: X%', 'Lợi ích:', 'Rủi ro:'.
+    *   Mục tiêu của các lựa chọn này là để thúc đẩy câu chuyện tiến về phía trước một cách hợp lý.
+    *   **Ví dụ (Cốt Lõi):**
+        *   \\\`[CHOICE: "Thử thuyết phục lão nông, dù trông ông ta có vẻ đa nghi."]\`\\\`
+        *   \\\`[CHOICE: "Rút kiếm ra và chuẩn bị chiến đấu với con sói."]\`\\\`
+
+*   **Phần B: 2-3 LỰA CHỌN SÁNG TẠO (Bất Ngờ & Phá Cách)**
+    *   Đây là những hành động bất ngờ, không theo lối mòn, thể hiện sự sáng tạo của bạn. Hãy suy nghĩ "out-of-the-box".
+    *   Các lựa chọn này có thể thuộc một trong các dạng sau:
+        *   **Tương tác Môi trường Sáng tạo:** Tận dụng một chi tiết trong môi trường mà người chơi có thể đã bỏ qua.
+        *   **Hành động Xã hội/Lừa lọc Bất ngờ:** Một cách tiếp cận xã hội không ngờ tới (hăm dọa, nịnh bợ, nói đùa, kể một câu chuyện...).
+        *   **"Quân Bài Tẩy" (Wildcard):** Một hành động có vẻ kỳ quặc, hài hước hoặc hoàn toàn ngẫu nhiên nhưng có thể dẫn đến kết quả thú vị.
+        *   **Chiến lược Dài hạn:** Một hành động không giải quyết vấn đề ngay lập tức nhưng có thể mang lại lợi ích về sau.
+    *   Các lựa chọn này vẫn phải tuân thủ định dạng \`[CHOICE: "Nội dung"]\` và phong cách gợi ý tinh tế.
+    *   **Ví dụ (Sáng Tạo):**
+        *   **Tình huống:** Đối mặt với một tên lính gác to béo trước cổng thành.
+        *   **SAI (Nhàm chán):** \`[CHOICE: "Tấn công tên lính gác."]\`
+        *   **ĐÚNG (Tương tác Môi trường):** \`[CHOICE: "Ném một đồng tiền về phía xa để đánh lạc hướng tên lính gác."]\`
+        *   **ĐÚNG (Hành động Xã hội):** \`[CHOICE: "Hỏi tên lính gác về món ăn ngon nhất trong thành để bắt chuyện."]\`
+        *   **ĐÚNG ("Quân Bài Tẩy"):** \`[CHOICE: "Bắt đầu cất tiếng hát một bài ca bi tráng về những người hùng đã ngã xuống."]\`
+
+*   **QUAN TRỌNG:** Bạn phải trả về **TẤT CẢ** các lựa chọn (cả Cốt Lõi và Sáng Tạo) dưới cùng một định dạng \\\`[CHOICE: "Nội dung lựa chọn"]\\\` và trộn lẫn chúng với nhau một cách ngẫu nhiên.`);
     }
     
     if (config.sendTurnRules) {
