@@ -1,4 +1,3 @@
-
 import { KnowledgeBase, PlayerStats, GameMessage, RealmBaseStatDefinition, PlayerSpecialStatus, Master, PersonBase, VectorMetadata } from '../../types';
 import { DEFAULT_PLAYER_STATS, VIETNAMESE, SUB_REALM_NAMES } from '../../constants';
 import { calculateRealmBaseStats, calculateEffectiveStats } from '../statsCalculationUtils';
@@ -225,7 +224,34 @@ export const processStatsUpdate = (
         const change = statsAfterThisTag.sinhLuc - statsBeforeThisTag.sinhLuc;
         systemMessages.push({ id: 'stat-change-sinhLuc-' + Date.now(), type: 'system', content: `Sinh lực thay đổi: ${statsBeforeThisTag.sinhLuc} -> ${statsAfterThisTag.sinhLuc} (${change > 0 ? '+' : ''}${Math.round(change)}).`, timestamp: Date.now(), turnNumber: turnForSystemMessages });
     }
-    // ... (similar checks and messages for linhLuc, kinhNghiem, currency, realm, hieuUngBinhCanh)
+    
+    if (tagParams.kinhNghiem && statsAfterThisTag.kinhNghiem !== statsBeforeThisTag.kinhNghiem) {
+        const change = statsAfterThisTag.kinhNghiem - statsBeforeThisTag.kinhNghiem;
+        if (change !== 0) {
+            const expLabel = newKb.worldConfig?.isCultivationEnabled ? VIETNAMESE.kinhNghiemLabel : "Kinh Nghiệm";
+            systemMessages.push({
+                id: 'stat-change-kinhNghiem-' + Date.now(),
+                type: 'system',
+                content: `${expLabel} thay đổi: ${statsBeforeThisTag.kinhNghiem} -> ${statsAfterThisTag.kinhNghiem} (${change > 0 ? '+' : ''}${Math.round(change)}).`,
+                timestamp: Date.now(),
+                turnNumber: turnForSystemMessages
+            });
+        }
+    }
+
+    if (tagParams.currency && statsAfterThisTag.currency !== statsBeforeThisTag.currency) {
+        const change = statsAfterThisTag.currency - statsBeforeThisTag.currency;
+        if (change !== 0) {
+            const currencyName = newKb.worldConfig?.currencyName || "Tiền Tệ";
+            systemMessages.push({
+                id: 'stat-change-currency-' + Date.now(),
+                type: 'system',
+                content: `${currencyName} thay đổi: ${statsBeforeThisTag.currency} -> ${statsAfterThisTag.currency} (${change > 0 ? '+' : ''}${Math.round(change)}).`,
+                timestamp: Date.now(),
+                turnNumber: turnForSystemMessages
+            });
+        }
+    }
 
     if (newKb.playerStats.kinhNghiem < 0) newKb.playerStats.kinhNghiem = 0;
     newKb.playerStats.sinhLuc = Math.min(newKb.playerStats.sinhLuc, newKb.playerStats.maxSinhLuc);

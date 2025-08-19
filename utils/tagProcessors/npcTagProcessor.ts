@@ -178,6 +178,12 @@ export const processNpc = async (
             vendorSlogan: vendorSlogan || undefined,
             vendorBuysCategories: vendorBuysCategories,
         };
+        
+        // If it's a new vendor, set their restock year to prevent immediate re-stocking.
+        if (npcToProcess.vendorType) {
+            npcToProcess.lastRestockYear = newKb.worldDate.year;
+        }
+
         newKb.discoveredNPCs.push(npcToProcess);
         newVectorMetadata = { entityId: npcToProcess.id, entityType: 'npc', text: formatPersonForEmbedding(npcToProcess) };
 

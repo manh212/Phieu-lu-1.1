@@ -1,11 +1,9 @@
-
-
 import { useState, useCallback } from 'react';
 import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, FindLocationParams } from '../../types';
 import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS } from '../../constants';
 import { generateNextTurn, summarizeTurnHistory, generateCityEconomy, generateGeneralSubLocations, findLocationWithAI, getApiSettings } from '../../services/geminiService';
 import { generateEmbeddings } from '../../services/embeddingService';
-import { performTagProcessing, addTurnHistoryEntryRaw, getMessagesForPage, calculateRealmBaseStats, calculateEffectiveStats, progressNpcCultivation, handleLevelUps, searchVectors, extractEntityContextsFromString, updateGameEventsStatus } from '../../utils/gameLogicUtils';
+import { performTagProcessing, addTurnHistoryEntryRaw, getMessagesForPage, calculateRealmBaseStats, calculateEffectiveStats, progressNpcCultivation, handleLevelUps, searchVectors, extractEntityContextsFromString, updateGameEventsStatus, handleLocationEntryEvents } from '../../utils/gameLogicUtils';
 import * as GameTemplates from '../../templates';
 
 interface UseMainGameLoopProps {
@@ -189,28 +187,32 @@ export const useMainGameLoop = ({
 
                     if (isFirstVisit) {
                         finalKbForThisTurn.discoveredLocations[targetLocationIndex].visited = true;
-                        systemMessagesForThisTurn.push({ id: `gen-details-notice-${Date.now()}`, type: 'system', content: `Đang tạo chi tiết cho ${targetLocation.name}...`, timestamp: Date.now(), turnNumber: turnOfPlayerAction });
-
-                        const generationPromises = [];
-
-                        // Always generate general sub-locations on first visit to a main location
-                        generationPromises.push(
-                            generateGeneralSubLocations(
-                                targetLocation,
-                                finalKbForThisTurn,
-                                (prompt) => setSentGeneralSubLocationPromptsLog(prev => [prompt, ...prev].slice(0, 10)),
-                                (rawText) => setReceivedGeneralSubLocationResponsesLog(prev => [rawText, ...prev].slice(0, 10))
-                            )
-                        );
                         
-                        // Generate economy only for specific location types
-                         const eligibleForEconomy = [
+                        // Define urban locations where sub-locations can be generated
+                        const urbanLocationTypes: GameTemplates.LocationTypeValues[] = [
+                            GameTemplates.LocationType.VILLAGE,
                             GameTemplates.LocationType.TOWN,
                             GameTemplates.LocationType.CITY,
-                            GameTemplates.LocationType.CAPITAL
-                         ].includes(targetLocation.locationType as any);
+                            GameTemplates.LocationType.CAPITAL,
+                            GameTemplates.LocationType.SECT_CLAN,
+                        ];
 
-                        if (eligibleForEconomy) {
+                        // Only generate sub-locations if the location is urban
+                        if (urbanLocationTypes.includes(targetLocation.locationType as any)) {
+                            systemMessagesForThisTurn.push({ id: `gen-details-notice-${Date.now()}`, type: 'system', content: `Đang tạo chi tiết cho ${targetLocation.name}...`, timestamp: Date.now(), turnNumber: turnOfPlayerAction });
+
+                            const generationPromises = [];
+
+                            // Generate both general and economy locations for urban areas
+                            generationPromises.push(
+                                generateGeneralSubLocations(
+                                    targetLocation,
+                                    finalKbForThisTurn,
+                                    (prompt) => setSentGeneralSubLocationPromptsLog(prev => [prompt, ...prev].slice(0, 10)),
+                                    (rawText) => setReceivedGeneralSubLocationResponsesLog(prev => [rawText, ...prev].slice(0, 10))
+                                )
+                            );
+                            
                             generationPromises.push(
                                 generateCityEconomy(
                                     targetLocation,
@@ -219,29 +221,34 @@ export const useMainGameLoop = ({
                                     (rawText) => setReceivedEconomyResponsesLog(prev => [rawText, ...prev].slice(0, 10))
                                 )
                             );
+                            
+                            // Await all generations and process their tags
+                            const allResponses = await Promise.all(generationPromises);
+                            for (const parsedResponse of allResponses) {
+                                const { newKb: kbAfterSubGenTags, systemMessagesFromTags: subGenSystemMessages } = await performTagProcessing(
+                                    finalKbForThisTurn, 
+                                    parsedResponse.tags, 
+                                    finalKbForThisTurn.playerStats.turn, 
+                                    setKnowledgeBase, 
+                                    logNpcAvatarPromptCallback
+                                );
+                                finalKbForThisTurn = kbAfterSubGenTags;
+                                systemMessagesForThisTurn.push(...subGenSystemMessages);
+                            }
+                             systemMessagesForThisTurn.push({
+                                id: `gen-details-success-${Date.now()}`,
+                                type: 'system',
+                                content: `Các cửa hàng và khu vực mới tại ${targetLocation.name} đã được làm mới/khám phá.`,
+                                timestamp: Date.now(),
+                                turnNumber: turnOfPlayerAction
+                            });
                         }
-                        
-                        // Await all generations and process their tags
-                        const allResponses = await Promise.all(generationPromises);
-                        for (const parsedResponse of allResponses) {
-                             const { newKb: kbAfterSubGenTags, systemMessagesFromTags: subGenSystemMessages } = await performTagProcessing(
-                                finalKbForThisTurn, 
-                                parsedResponse.tags, 
-                                finalKbForThisTurn.playerStats.turn, 
-                                setKnowledgeBase, 
-                                logNpcAvatarPromptCallback
-                            );
-                            finalKbForThisTurn = kbAfterSubGenTags;
-                            systemMessagesForThisTurn.push(...subGenSystemMessages);
-                        }
-                         systemMessagesForThisTurn.push({
-                            id: `gen-details-success-${Date.now()}`,
-                            type: 'system',
-                            content: `Các cửa hàng và khu vực mới tại ${targetLocation.name} đã được làm mới/khám phá.`,
-                            timestamp: Date.now(),
-                            turnNumber: turnOfPlayerAction
-                        });
                     }
+
+                    // Run location entry events like restocking, which will now correctly skip newly created vendors.
+                    const { updatedKb: kbAfterEvents, systemMessages: eventMessages } = await handleLocationEntryEvents(finalKbForThisTurn, targetLocation, turnOfPlayerAction);
+                    finalKbForThisTurn = kbAfterEvents;
+                    systemMessagesForThisTurn.push(...eventMessages);
                 }
             }
             
