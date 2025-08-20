@@ -11,6 +11,7 @@ export const VIETNAMESE_TRANSLATIONS = {
   gameUpdates: "Cập Nhật Game (Chưa hỗ trợ)",
   apiSettings: "Thiết Lập API Gemini",
   storageSettings: "Cài Đặt Lưu Trữ",
+  mainMenu: "Menu chính", // NEW
   characterName: "Tên Nhân Vật",
   gender: "Giới Tính",
   personality: "Tính Cách",

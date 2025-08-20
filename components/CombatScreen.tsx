@@ -245,6 +245,7 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
     const [combatEnded, setCombatEnded] = useState<'victory' | 'defeat' | 'escaped' | 'surrendered' | null>(null);
     const initialActionFired = useRef(false);
     const [statNotifications, setStatNotifications] = useState<StatUpdateNotification[]>([]);
+    const [liveRegionMessage, setLiveRegionMessage] = useState('');
     const [isReaderMode, setIsReaderMode] = useState(false);
     const [selectedStatusEffect, setSelectedStatusEffect] = useState<StatusEffect | null>(null);
     const [selectedSkillForDetail, setSelectedSkillForDetail] = useState<Skill | null>(null);
@@ -265,6 +266,13 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
         return () => timers.forEach(clearTimeout);
     }, [statNotifications]);
 
+    useEffect(() => {
+        if (liveRegionMessage) {
+            const timer = setTimeout(() => setLiveRegionMessage(''), 500); // Clear after a short delay so it can be re-triggered
+            return () => clearTimeout(timer);
+        }
+    }, [liveRegionMessage]);
+
     const handleCombatAction = useCallback(async (action: string) => {
         setIsLoading(true);
         const kbForPrompt = { ...knowledgeBase, combatants: combatants };
@@ -277,6 +285,7 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
             setCombatMessages(prev => [...prev, parsedResponse.narration]);
             
             const newNotifications: StatUpdateNotification[] = [];
+            const srMessages: string[] = [];
             parsedResponse.statUpdates.forEach(update => {
                 const target = combatants.find(c => c.id === update.targetId);
                 if (target) {
@@ -286,10 +295,14 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
                     const colorClass = change > 0 ? 'text-green-300' : 'text-red-400';
                     const message = (<span><span className={colorClass}>{`${symbol}${change} ${statLabel}`}</span><span className="text-yellow-100"> cho </span><span className="font-bold text-white">{target.name}</span></span>);
                     newNotifications.push({ id: `${update.targetId}-${update.stat}-${Date.now()}-${Math.random()}`, message });
+                    srMessages.push(`${symbol}${change} ${statLabel} cho ${target.name}.`);
                 }
             });
             if(newNotifications.length > 0) {
                 setStatNotifications(prev => [...prev, ...newNotifications]);
+            }
+            if(srMessages.length > 0) {
+                setLiveRegionMessage(srMessages.join(' '));
             }
 
             setCombatants(prevCombatants => {
@@ -399,6 +412,7 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
 
     return (
         <>
+            <div className="sr-only" aria-live="polite" role="log">{liveRegionMessage}</div>
             <div className="h-screen w-screen bg-gray-900/95 flex flex-col p-2 sm:p-4 text-gray-100 font-sans">
                 <header className="mb-2 flex justify-between items-center flex-shrink-0">
                     <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500">
@@ -428,7 +442,7 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
                 </div>
                  <div aria-live="polite" aria-atomic="true" className="absolute top-1/2 -translate-y-1/2 left-4 z-50 pointer-events-none space-y-2">
                     {statNotifications.map(notif => (
-                        <div key={notif.id} className="animate-fade-in-out bg-black/70 px-3 py-1.5 rounded-lg text-sm shadow-lg border border-gray-700">{notif.message}</div>
+                        <div key={notif.id} className="animate-fade-in-out bg-black/70 px-3 py-1.5 rounded-lg text-sm shadow-lg border border-gray-700" aria-hidden="true">{notif.message}</div>
                     ))}
                 </div>
             </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Quest } from '../../types';
 import { VIETNAMESE } from '../../constants';
@@ -43,10 +42,14 @@ const QuestsDisplayPanel: React.FC<QuestsDisplayPanelProps> = React.memo(({ ques
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex border-b border-gray-700 mb-2">
+      <div className="flex border-b border-gray-700 mb-2" role="tablist" aria-label="Quest Status">
         {(['active', 'completed', 'failed'] as const).map(tab => (
           <button
             key={tab}
+            id={`quest-tab-${tab}`}
+            role="tab"
+            aria-controls="quest-panel"
+            aria-selected={activeTab === tab}
             className={`py-2 px-3 sm:px-4 text-xs sm:text-sm font-medium flex-1 ${
               activeTab === tab
                 ? 'border-b-2 border-indigo-500 text-indigo-400'
@@ -58,7 +61,7 @@ const QuestsDisplayPanel: React.FC<QuestsDisplayPanelProps> = React.memo(({ ques
           </button>
         ))}
       </div>
-      <div className="flex-grow overflow-y-auto custom-scrollbar">
+      <div id="quest-panel" role="tabpanel" tabIndex={0} aria-labelledby={`quest-tab-${activeTab}`} className="flex-grow overflow-y-auto custom-scrollbar">
         {renderQuestList(filteredQuests)}
       </div>
     </div>

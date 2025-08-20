@@ -1,5 +1,4 @@
-
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useMemo, useLayoutEffect } from 'react';
 import { GameMessage, KnowledgeBase, StyleSettings } from '../../../types';
 import Button from '../../ui/Button';
 import Spinner from '../../ui/Spinner';
@@ -52,6 +51,8 @@ const StoryLog: React.FC<StoryLogProps> = ({
   const lastNarrationRef = useRef<HTMLDivElement>(null);
   const prevMessagesLength = useRef(displayedMessages.length);
   const isInitialMount = useRef(true);
+  const [liveRegionText, setLiveRegionText] = useState('');
+  const prevMessagesLengthForAnnouncement = useRef(displayedMessages.length);
 
   useEffect(() => {
     if (messageIdBeingEdited) {
@@ -91,6 +92,32 @@ const StoryLog: React.FC<StoryLogProps> = ({
 
     prevMessagesLength.current = newLength;
   }, [displayedMessages, isCurrentlyActivePage, isLoadingUi, isSummarizingUi]);
+
+  // Effect for screen reader announcement of new content
+  useEffect(() => {
+    const lastMessage = displayedMessages[displayedMessages.length - 1];
+    // Check if a new message was added and it's an AI narration on the active page
+    if (
+        displayedMessages.length > prevMessagesLengthForAnnouncement.current &&
+        lastMessage &&
+        lastMessage.type === 'narration' &&
+        !lastMessage.isPlayerInput &&
+        isCurrentlyActivePage
+    ) {
+        setLiveRegionText('Đã có nội dung mới.');
+        const timer = setTimeout(() => {
+            setLiveRegionText('');
+        }, 500); // Clear after a short delay so it can be re-triggered
+        
+        return () => clearTimeout(timer);
+    }
+  }, [displayedMessages, isCurrentlyActivePage]);
+
+  // Effect to update the length ref *after* the render is committed and other effects have run
+  useEffect(() => {
+    prevMessagesLengthForAnnouncement.current = displayedMessages.length;
+  });
+
 
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (messageIdBeingEdited) return;
@@ -153,6 +180,9 @@ const StoryLog: React.FC<StoryLogProps> = ({
       aria-atomic="false"
       aria-relevant="additions"
     >
+      <div role="status" aria-live="polite" className="sr-only">
+        {liveRegionText}
+      </div>
       {groupedMessages.map((item, index) => {
         const isGroup = Array.isArray(item);
         

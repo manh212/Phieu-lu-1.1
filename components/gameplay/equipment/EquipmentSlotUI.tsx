@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Item, EquipmentSlotId, EquipmentSlotConfig } from '../../../types';
 import { VIETNAMESE } from '../../../constants';
@@ -51,7 +50,7 @@ const EquipmentSlotUI: React.FC<EquipmentSlotUIProps> = ({
 
   const slotLabel = (VIETNAMESE[slotConfig.labelKey] as string) || slotConfig.id;
 
-  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleClick = (event: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
     onClick(slotConfig.id, event.currentTarget);
   };
   
@@ -73,6 +72,9 @@ const EquipmentSlotUI: React.FC<EquipmentSlotUIProps> = ({
       draggable={!!equippedItem}
       onDragStart={handleDragStart}
       onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleClick(e)}
       title={equippedItem ? `${equippedItem.name} (${slotLabel})` : slotLabel}
       aria-label={slotLabel}
     >

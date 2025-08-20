@@ -806,73 +806,81 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         )}
 
         <div className="border-b border-gray-700 sticky top-0 bg-gray-900 z-10 -mx-6 px-6 mb-2">
-          <nav className="-mb-px flex space-x-2 sm:space-x-4 overflow-x-auto pb-px hide-scrollbar" aria-label="Tabs">
-            <button onClick={() => setActiveTab('aiAssist')} className={activeTab === 'aiAssist' ? activeTabStyle : inactiveTabStyle}>AI Hỗ Trợ</button>
-            <button onClick={() => setActiveTab('characterStory')} className={activeTab === 'characterStory' ? activeTabStyle : inactiveTabStyle}>Nhân Vật & Cốt Truyện</button>
-            <button onClick={() => setActiveTab('worldSettings')} className={activeTab === 'worldSettings' ? activeTabStyle : inactiveTabStyle}>Thiết Lập Thế Giới</button>
-            <button onClick={() => setActiveTab('startingElements')} className={activeTab === 'startingElements' ? activeTabStyle : inactiveTabStyle}>Yếu Tố Khởi Đầu</button>
+          <nav className="-mb-px flex space-x-2 sm:space-x-4 overflow-x-auto pb-px hide-scrollbar" aria-label="Tabs" role="tablist">
+            <button id="tab-aiAssist" role="tab" aria-controls="panel-aiAssist" aria-selected={activeTab === 'aiAssist'} onClick={() => setActiveTab('aiAssist')} className={activeTab === 'aiAssist' ? activeTabStyle : inactiveTabStyle}>AI Hỗ Trợ</button>
+            <button id="tab-characterStory" role="tab" aria-controls="panel-characterStory" aria-selected={activeTab === 'characterStory'} onClick={() => setActiveTab('characterStory')} className={activeTab === 'characterStory' ? activeTabStyle : inactiveTabStyle}>Nhân Vật & Cốt Truyện</button>
+            <button id="tab-worldSettings" role="tab" aria-controls="panel-worldSettings" aria-selected={activeTab === 'worldSettings'} onClick={() => setActiveTab('worldSettings')} className={activeTab === 'worldSettings' ? activeTabStyle : inactiveTabStyle}>Thiết Lập Thế Giới</button>
+            <button id="tab-startingElements" role="tab" aria-controls="panel-startingElements" aria-selected={activeTab === 'startingElements'} onClick={() => setActiveTab('startingElements')} className={activeTab === 'startingElements' ? activeTabStyle : inactiveTabStyle}>Yếu Tố Khởi Đầu</button>
           </nav>
         </div>
 
         <div className="max-h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar pr-2 pb-4 -mr-2">
           {activeTab === 'aiAssist' && (
-            <AIAssistTab
-              settings={settings}
-              handleChange={handleChange}
-              storyIdea={storyIdea} setStoryIdea={setStoryIdea}
-              handleGenerateFromStoryIdea={handleGenerateFromStoryIdea} isGeneratingDetails={isGeneratingDetails}
-              handleGenerateCompletion={handleGenerateCompletion} isGeneratingCompletion={isGeneratingCompletion}
-              fanficSourceType={fanficSourceType} setFanficSourceType={setFanficSourceType}
-              fanficStoryName={fanficStoryName} setFanficStoryName={setFanficStoryName}
-              fanficFile={fanficFile} handleFanficFileChange={handleFanficFileChange}
-              fanficTokenCount={fanficTokenCount} isLoadingTokens={isLoadingTokens}
-              fanficPlayerDescription={fanficPlayerDescription} setFanficPlayerDescription={setFanficPlayerDescription}
-              handleGenerateFromFanfic={handleGenerateFromFanfic} isGeneratingFanficDetails={isGeneratingFanficDetails}
-              originalStorySummary={originalStorySummary} handleOriginalStorySummaryChange={handleOriginalStorySummaryChange}
-              showOriginalStorySummaryInput={showOriginalStorySummaryInput} setShowOriginalStorySummaryInput={setShowOriginalStorySummaryInput}
-              fanficFileInputRef={fanficFileInputRef}
-              handleAnalyzeWritingStyle={handleAnalyzeWritingStyle}
-              isAnalyzingStyle={isAnalyzingStyle}
-              analysisResult={analysisResult}
-              analysisError={analysisError}
-            />
+            <div id="panel-aiAssist" role="tabpanel" tabIndex={0} aria-labelledby="tab-aiAssist">
+              <AIAssistTab
+                settings={settings}
+                handleChange={handleChange}
+                storyIdea={storyIdea} setStoryIdea={setStoryIdea}
+                handleGenerateFromStoryIdea={handleGenerateFromStoryIdea} isGeneratingDetails={isGeneratingDetails}
+                handleGenerateCompletion={handleGenerateCompletion} isGeneratingCompletion={isGeneratingCompletion}
+                fanficSourceType={fanficSourceType} setFanficSourceType={setFanficSourceType}
+                fanficStoryName={fanficStoryName} setFanficStoryName={setFanficStoryName}
+                fanficFile={fanficFile} handleFanficFileChange={handleFanficFileChange}
+                fanficTokenCount={fanficTokenCount} isLoadingTokens={isLoadingTokens}
+                fanficPlayerDescription={fanficPlayerDescription} setFanficPlayerDescription={setFanficPlayerDescription}
+                handleGenerateFromFanfic={handleGenerateFromFanfic} isGeneratingFanficDetails={isGeneratingFanficDetails}
+                originalStorySummary={originalStorySummary} handleOriginalStorySummaryChange={handleOriginalStorySummaryChange}
+                showOriginalStorySummaryInput={showOriginalStorySummaryInput} setShowOriginalStorySummaryInput={setShowOriginalStorySummaryInput}
+                fanficFileInputRef={fanficFileInputRef}
+                handleAnalyzeWritingStyle={handleAnalyzeWritingStyle}
+                isAnalyzingStyle={isAnalyzingStyle}
+                analysisResult={analysisResult}
+                analysisError={analysisError}
+              />
+            </div>
           )}
           {activeTab === 'characterStory' && (
-            <CharacterStoryTab
-              settings={settings}
-              handleChange={handleChange}
-              playerAvatarPreviewUrl={playerAvatarPreviewUrl} // Pass down for preview
-              setPlayerAvatarPreviewUrl={setPlayerAvatarPreviewUrl} // Allow CharacterStoryTab to update preview
-              onPlayerAvatarDataChange={setPlayerUploadedAvatarData} // Allow CharacterStoryTab to set the raw data
-            />
+            <div id="panel-characterStory" role="tabpanel" tabIndex={0} aria-labelledby="tab-characterStory">
+              <CharacterStoryTab
+                settings={settings}
+                handleChange={handleChange}
+                playerAvatarPreviewUrl={playerAvatarPreviewUrl} // Pass down for preview
+                setPlayerAvatarPreviewUrl={setPlayerAvatarPreviewUrl} // Allow CharacterStoryTab to update preview
+                onPlayerAvatarDataChange={setPlayerUploadedAvatarData} // Allow CharacterStoryTab to set the raw data
+              />
+            </div>
           )}
           {activeTab === 'worldSettings' && (
-            <WorldSettingsTab 
-              settings={settings} 
-              handleChange={handleChange} 
-              handleRaceSystemChange={handleRaceSystemChange}
-              addRaceSystem={addRaceSystem}
-              removeRaceSystem={removeRaceSystem}
-            />
+            <div id="panel-worldSettings" role="tabpanel" tabIndex={0} aria-labelledby="tab-worldSettings">
+              <WorldSettingsTab 
+                settings={settings} 
+                handleChange={handleChange} 
+                handleRaceSystemChange={handleRaceSystemChange}
+                addRaceSystem={addRaceSystem}
+                removeRaceSystem={removeRaceSystem}
+              />
+            </div>
           )}
           {activeTab === 'startingElements' && (
-            <StartingElementsTab
-              settings={settings}
-              isSkillsSectionOpen={isSkillsSectionOpen} setIsSkillsSectionOpen={setIsSkillsSectionOpen}
-              handleStartingSkillChange={handleStartingSkillChange} addStartingSkill={addStartingSkill} removeStartingSkill={removeStartingSkill}
-              isItemsSectionOpen={isItemsSectionOpen} setIsItemsSectionOpen={setIsItemsSectionOpen}
-              handleStartingItemChange={handleStartingItemChange} addStartingItem={addStartingItem} removeStartingItem={removeStartingItem}
-              isNpcsSectionOpen={isNpcsSectionOpen} setIsNpcsSectionOpen={setIsNpcsSectionOpen}
-              handleStartingNPCChange={handleStartingNPCChange} addStartingNPC={addStartingNPC} removeStartingNPC={removeStartingNPC}
-              isYeuThuSectionOpen={isYeuThuSectionOpen} setIsYeuThuSectionOpen={setIsYeuThuSectionOpen}
-              handleStartingYeuThuChange={handleStartingYeuThuChange} addStartingYeuThu={addStartingYeuThu} removeStartingYeuThu={removeStartingYeuThu}
-              isLoreSectionOpen={isLoreSectionOpen} setIsLoreSectionOpen={setIsLoreSectionOpen}
-              handleStartingLoreChange={handleStartingLoreChange} addStartingLore={addStartingLore} removeStartingLore={removeStartingLore}
-              isLocationsSectionOpen={isLocationsSectionOpen} setIsLocationsSectionOpen={setIsLocationsSectionOpen}
-              handleStartingLocationChange={handleStartingLocationChange} addStartingLocation={addStartingLocation} removeStartingLocation={removeStartingLocation}
-              isFactionsSectionOpen={isFactionsSectionOpen} setIsFactionsSectionOpen={setIsFactionsSectionOpen}
-              handleStartingFactionChange={handleStartingFactionChange} addStartingFaction={addStartingFaction} removeStartingFaction={removeStartingFaction}
-            />
+            <div id="panel-startingElements" role="tabpanel" tabIndex={0} aria-labelledby="tab-startingElements">
+              <StartingElementsTab
+                settings={settings}
+                isSkillsSectionOpen={isSkillsSectionOpen} setIsSkillsSectionOpen={setIsSkillsSectionOpen}
+                handleStartingSkillChange={handleStartingSkillChange} addStartingSkill={addStartingSkill} removeStartingSkill={removeStartingSkill}
+                isItemsSectionOpen={isItemsSectionOpen} setIsItemsSectionOpen={setIsItemsSectionOpen}
+                handleStartingItemChange={handleStartingItemChange} addStartingItem={addStartingItem} removeStartingItem={removeStartingItem}
+                isNpcsSectionOpen={isNpcsSectionOpen} setIsNpcsSectionOpen={setIsNpcsSectionOpen}
+                handleStartingNPCChange={handleStartingNPCChange} addStartingNPC={addStartingNPC} removeStartingNPC={removeStartingNPC}
+                isYeuThuSectionOpen={isYeuThuSectionOpen} setIsYeuThuSectionOpen={setIsYeuThuSectionOpen}
+                handleStartingYeuThuChange={handleStartingYeuThuChange} addStartingYeuThu={addStartingYeuThu} removeStartingYeuThu={removeStartingYeuThu}
+                isLoreSectionOpen={isLoreSectionOpen} setIsLoreSectionOpen={setIsLoreSectionOpen}
+                handleStartingLoreChange={handleStartingLoreChange} addStartingLore={addStartingLore} removeStartingLore={removeStartingLore}
+                isLocationsSectionOpen={isLocationsSectionOpen} setIsLocationsSectionOpen={setIsLocationsSectionOpen}
+                handleStartingLocationChange={handleStartingLocationChange} addStartingLocation={addStartingLocation} removeStartingLocation={removeStartingLocation}
+                isFactionsSectionOpen={isFactionsSectionOpen} setIsFactionsSectionOpen={setIsFactionsSectionOpen}
+                handleStartingFactionChange={handleStartingFactionChange} addStartingFaction={addStartingFaction} removeStartingFaction={removeStartingFaction}
+              />
+            </div>
           )}
         </div>
 

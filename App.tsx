@@ -1,6 +1,7 @@
 
 
 
+
 import React from 'react';
 
 import { GameProvider } from './contexts/GameContext';
@@ -58,13 +59,19 @@ const AppContent: React.FC = () => {
           {game.notification.message}
         </div>
       )}
+      <div role="alert" aria-live="assertive" className="sr-only">
+        {game.apiError && game.currentScreen === GameScreen.Gameplay && `Lỗi API: ${game.apiError}`}
+      </div>
       {game.apiError && game.currentScreen === GameScreen.Gameplay && ( 
-         <div className="fixed top-5 left-1/2 -translate-x-1/2 p-3 bg-red-700 text-white rounded-md shadow-lg z-[100] text-xs max-w-md">
+         <div className="fixed top-5 left-1/2 -translate-x-1/2 p-3 bg-red-700 text-white rounded-md shadow-lg z-[100] text-xs max-w-md" aria-hidden="true">
             Lỗi API: {game.apiError}
          </div>
       )}
+      <div role="status" aria-live="polite" className="sr-only">
+        {game.isCraftingItem && VIETNAMESE.craftingInProgress}
+      </div>
       {(game.isCraftingItem) && ( 
-         <div className="fixed top-5 left-1/2 -translate-x-1/2 p-3 bg-blue-600 text-white rounded-md shadow-lg z-[100] text-sm flex items-center gap-2">
+         <div className="fixed top-5 left-1/2 -translate-x-1/2 p-3 bg-blue-600 text-white rounded-md shadow-lg z-[100] text-sm flex items-center gap-2" aria-hidden="true">
             <Spinner size="sm" />
             <span>{VIETNAMESE.craftingInProgress}</span>
          </div>

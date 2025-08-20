@@ -182,18 +182,23 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
                     className="w-full sm:w-auto h-full justify-between"
                     onClick={() => setIsResponseLengthDropdownOpen(!isResponseLengthDropdownOpen)}
                     disabled={isLoadingUi || isSummarizingUi || !isCurrentlyActivePage || !!messageIdBeingEdited}
+                    id="response-length-button"
+                    aria-haspopup="menu"
+                    aria-expanded={isResponseLengthDropdownOpen}
+                    aria-controls="response-length-menu"
                 >
                     <span>{VIETNAMESE.responseLengthLabel}: {responseLengthOptions.find(o => o.value === selectedResponseLength)?.label}</span>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </Button>
                 {isResponseLengthDropdownOpen && (
-                    <div className="absolute bottom-full right-0 mb-1 w-max bg-gray-600 rounded-md shadow-lg z-20">
+                    <div id="response-length-menu" role="menu" aria-labelledby="response-length-button" className="absolute bottom-full right-0 mb-1 w-max bg-gray-600 rounded-md shadow-lg z-20">
                         {responseLengthOptions.map(opt => (
                             <a
                                 key={opt.value}
                                 href="#"
                                 onClick={(e) => { e.preventDefault(); setSelectedResponseLength(opt.value); setIsResponseLengthDropdownOpen(false); }}
                                 className="block px-4 py-2 text-sm text-gray-200 hover:bg-indigo-500 first:rounded-t-md last:rounded-b-md"
+                                role="menuitem"
                             >
                                 {opt.label}
                             </a>
@@ -206,6 +211,7 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
             value={playerInput}
             onChange={(e) => setPlayerInput(e.target.value)}
             placeholder={!isCurrentlyActivePage ? "Chỉ có thể hành động ở trang hiện tại nhất." : VIETNAMESE.enterAction}
+            aria-label={VIETNAMESE.enterAction}
             className="flex-grow w-full p-2 sm:p-2.5 text-sm sm:text-base bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-100 placeholder-gray-400"
             disabled={isLoadingUi || isSummarizingUi || !isCurrentlyActivePage || !!messageIdBeingEdited}
             />
@@ -219,10 +225,11 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
                 disabled={isLoadingUi || isSummarizingUi || !isCurrentlyActivePage || !!messageIdBeingEdited}
                 title={isStrictMode ? "Tắt Chế độ Nghiêm ngặt (AI sẽ diễn giải và hành động tự do hơn)" : "Bật Chế độ Nghiêm ngặt (AI chỉ thực hiện hành động vật lý bạn yêu cầu)"}
                 className={`h-full px-3 transition-colors ${isStrictMode ? 'bg-blue-600 text-white border-blue-500' : 'text-gray-400'}`}
+                aria-pressed={isStrictMode}
             >
                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     {isStrictMode ? (
-                        <path fillRule="evenodd" d="M10 1a3 3 0 00-3 3v1H6a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-1V4a3 3 0 00-3-3zM9 4a1 1 0 012 0v1H9V4z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M10 1a3 3 0 00-3 3v1H6a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002 2V7a2 2 0 00-2-2h-1V4a3 3 0 00-3-3zM9 4a1 1 0 012 0v1H9V4z" clipRule="evenodd" />
                     ) : (
                         <>
                             <path fillRule="evenodd" d="M10 4a3 3 0 00-3 3v1h6V7a3 3 0 00-3-3zM7 7v1h6V7a3 3 0 00-6 0z" clipRule="evenodd" />
@@ -304,25 +311,27 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
                         onClick={() => setIsPaginationMenuOpen(!isPaginationMenuOpen)}
                         disabled={isLoadingUi || isSummarizingUi || !!messageIdBeingEdited}
                         title="Mở Menu Trang"
+                        id="pagination-button"
                         aria-haspopup="true"
                         aria-expanded={isPaginationMenuOpen}
+                        aria-controls="pagination-menu"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
                     </Button>
                     {isPaginationMenuOpen && (
-                        <div className="absolute bottom-full right-0 mb-2 w-72 bg-gray-600 rounded-lg shadow-lg z-20 p-3 border border-gray-500 space-y-3">
+                        <div id="pagination-menu" aria-labelledby="pagination-button" className="absolute bottom-full right-0 mb-2 w-72 bg-gray-600 rounded-lg shadow-lg z-20 p-3 border border-gray-500 space-y-3">
                             <div className="flex items-center justify-between">
                                 <Button onClick={handlePrevClick} disabled={currentPage <= 1 || isSummarizingUi} size="sm" variant="ghost" className="text-xs px-2 py-1">
                                     {VIETNAMESE.previousPage}
                                 </Button>
-                                <span className="text-sm text-gray-200 mx-2 font-semibold">
+                                <span className="text-sm text-gray-200 mx-2 font-semibold" aria-live="polite">
                                     {VIETNAMESE.pageIndicator(currentPage, totalPages)}
                                 </span>
                                 <Button onClick={handleNextClick} disabled={currentPage >= totalPages || isSummarizingUi} size="sm" variant="ghost" className="text-xs px-2 py-1">
                                     {VIETNAMESE.nextPage}
                                 </Button>
                             </div>
-                            <form onSubmit={handleJumpSubmit} className="flex items-center gap-2 border-t border-gray-500 pt-3">
+                            <form onSubmit={handleJumpSubmit} className="flex items-center gap-2 border-t border-gray-500 pt-3" aria-label="Chuyển trang nhanh">
                                 <input
                                     type="number"
                                     value={jumpToPageInput}
@@ -330,7 +339,7 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
                                     min="1"
                                     max={totalPages}
                                     className="w-full p-2 text-sm text-center bg-gray-800 border border-gray-700 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-100"
-                                    aria-label="Nhập số trang"
+                                    aria-label="Nhập số trang để chuyển tới"
                                     disabled={isSummarizingUi}
                                 />
                                 <Button type="submit" size="sm" variant="primary" className="h-full px-3" disabled={isSummarizingUi}>
