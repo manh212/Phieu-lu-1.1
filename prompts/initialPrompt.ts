@@ -1,7 +1,8 @@
+
 import { WorldSettings, StartingItem, GenreType, ViolenceLevel, StoryTone, DIALOGUE_MARKER, TuChatTier, StartingSkill, AIContextConfig } from '../types';
 import { SUB_REALM_NAMES, VIETNAMESE, AVAILABLE_GENRES, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, NSFW_DESCRIPTION_STYLES, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, TU_CHAT_TIERS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
 import * as GameTemplates from '../templates';
-import { continuePromptSystemRules } from '../constants/systemRulesNormal';
+import { continuePromptSystemRules, storytellingRulesSection } from '../constants/systemRulesNormal';
 
 const buildSkillTag = (skill: StartingSkill): string => {
     let tag = `[SKILL_LEARNED: name="${skill.name.replace(/"/g, '\\"')}" description="${skill.description.replace(/"/g, '\\"')}" skillType="${skill.skillType || GameTemplates.SkillType.KHAC}"`;
@@ -139,24 +140,11 @@ ${writingStyleGuide}
 """
 ` : '';
 
-const narrationAndVividnessRules = aiContextConfig.sendShowDontTellRule ? `
-**MỆNH LỆNH TỐI THƯỢNG: PHONG CÁCH KỂ CHUYỆN ("Tả, đừng kể" - CỰC KỲ QUAN TRỌNG)**
-Nhiệm vụ của bạn là vẽ nên những bức tranh sống động trong tâm trí người chơi. Hãy tuân thủ nghiêm ngặt các quy tắc sau trong MỌI lời kể:
-*   **Sử dụng Ngũ quan:** Mô tả những gì nhân vật chính **nhìn thấy** (ánh sáng, màu sắc, bóng tối), **nghe thấy** (tiếng gió, tiếng xì xào, sự im lặng), **ngửi thấy** (mùi ẩm mốc, mùi hoa cỏ), **cảm nhận** (cái lạnh của sương, hơi nóng của lửa), và **nếm** (vị gỉ sét của máu).
-*   **"Tả", không "Kể":** Thay vì dùng những từ ngữ chung chung, hãy mô tả chi tiết để người chơi tự cảm nhận.
-    *   **SAI (Kể):** "Cô gái đó rất xinh đẹp."
-    *   **ĐÚNG (Tả):** "Nàng có làn da trắng như tuyết, đôi mắt phượng cong cong ẩn chứa một làn sương mờ ảo, và đôi môi đỏ mọng như quả anh đào chín. Mỗi khi nàng khẽ cười, hai lúm đồng tiền nhỏ xinh lại hiện lên bên má, khiến người đối diện bất giác ngẩn ngơ."
-    *   **SAI (Kể):** "Hắn ta rất tức giận."
-    *   **ĐÚNG (Tả):** "Hai tay hắn siết chặt thành nắm đấm, những đường gân xanh nổi rõ trên mu bàn tay. Hắn nghiến chặt răng, quai hàm bạnh ra, và đôi mắt đỏ ngầu nhìn chằm chằm vào kẻ thù như muốn ăn tươi nuốt sống."
-*   **Nội tâm nhân vật:** Mô tả những suy nghĩ, cảm xúc, ký ức thoáng qua của nhân vật chính để làm cho họ trở nên sống động và có chiều sâu.
-*   **BẮT ĐẦU CÂU CHUYỆN:** Hãy bắt đầu câu chuyện bằng một đoạn văn miêu tả chi tiết, sâu sắc từ góc nhìn của nhân vật chính, áp dụng ngay lập tức các quy tắc trên.
-` : '';
-
   return `**YÊU CẦU CỐT LÕI:** Bắt đầu một câu chuyện game nhập vai thể loại "${effectiveGenre}" bằng tiếng Việt. Tạo ra một thế giới sống động và một cốt truyện mở đầu hấp dẫn dựa trên thông tin do người chơi cung cấp. Bắt đầu lời kể ngay lập tức, không có lời dẫn hay tự xưng là người kể chuyện.
 
 ${writingStyleGuideSection}
 
-${narrationAndVividnessRules}
+${storytellingRulesSection(aiContextConfig)}
 
 ${isCultivationEnabled ? subRealmNamesInstruction : ''}
 
@@ -279,7 +267,7 @@ ${continuePromptSystemRules(worldConfig, mainRealms, aiContextConfig)}
 
 **BỐI CẢNH KHỞI ĐẦU:**
 Người chơi sẽ bắt đầu cuộc phiêu lưu tại địa điểm: "${worldConfig.startingLocations?.[0]?.name || 'một nơi vô định'}".
-Hãy bắt đầu lời kể của bạn bằng cách mô tả cảnh vật và tình huống của nhân vật tại địa điểm khởi đầu này, tuân thủ **MỆNH LỆNH TỐI THƯỢNG: PHONG CÁCH KỂ CHUYỆN**.
+Hãy bắt đầu lời kể của bạn bằng cách mô tả cảnh vật và tình huống của nhân vật tại địa điểm khởi đầu này, tuân thủ **MỆNH LỆNH TỐI THƯỢỢNG: PHONG CÁCH KỂ CHUYỆN**.
 
 **TIẾP TỤC CÂU CHUYỆN:** Dựa trên **HƯỚNG DẪN TỪ NGƯỜI CHƠI**, **ĐỘ DÀI PHẢN HỒI MONG MUỐN** và **TOÀN BỘ BỐI CẢNH GAME**, hãy tiếp tục câu chuyện cho thể loại "${effectiveGenre}". Mô tả kết quả, cập nhật trạng thái game bằng tags, và cung cấp các lựa chọn hành động mới (theo định dạng đã hướng dẫn ở mục 17). Và đưa ra ít nhất một nhiệm vụ khởi đầu dựa trên mục tiêu của nhân vật.
 `;

@@ -2,7 +2,7 @@
 import { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, DIALOGUE_MARKER, TuChatTier, AIContextConfig } from '../types';
 import { SUB_REALM_NAMES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, NSFW_DESCRIPTION_STYLES, TU_CHAT_TIERS, SPECIAL_EVENT_INTERVAL_TURNS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
 import * as GameTemplates from '../templates';
-import { continuePromptSystemRules } from '../constants/systemRulesNormal';
+import { continuePromptSystemRules, storytellingRulesSection } from '../constants/systemRulesNormal';
 import { getWorldDateDifferenceString, getTimeOfDayContext, getSeason } from '../utils/dateUtils';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
 
@@ -235,34 +235,7 @@ ${previousPageSummaries.length > 0 ? previousPageSummaries.map((summary, index) 
 ${lastNarrationFromPreviousPage || "Chưa có."}
 - **Diễn biến chi tiết trang hiện tại (từ lượt đầu trang đến lượt ${playerStats.turn}):**
 ${currentPageMessagesLog || "Chưa có diễn biến nào trong trang này."}` : '';
-
-  const narrationAndVividnessRules = aiContextConfig.sendShowDontTellRule ? `
-*   **A.1. MỆNH LỆNH TỐI THƯỢỢNG: PHONG CÁCH KỂ CHUYỆN ("Tả, đừng kể")**
-    *   **Sử dụng Ngũ quan:** Mô tả những gì nhân vật chính **nhìn thấy**, **nghe thấy**, **ngửi thấy**, **cảm nhận**, và **nếm**.
-    *   **"Tả", không "Kể":** Thay vì dùng những từ ngữ chung chung, hãy mô tả chi tiết để người chơi tự cảm nhận.
-    *   **Nội tâm nhân vật:** Mô tả những suy nghĩ, cảm xúc, ký ức thoáng qua của nhân vật chính.` : '';
-
-  const livingWorldRules = aiContextConfig.sendLivingWorldRule ? `
-*   **A.2. MỆNH LỆNH "THẾ GIỚI SỐNG ĐỘNG"**
-    *   Làm cho thế giới cảm thấy đang "sống" và tự vận hành.
-    *   **QUY TRÌNH:** Trong mỗi phản hồi, hãy **luôn mô tả ngắn gọn một sự kiện nền** đang diễn ra xung quanh không liên quan trực tiếp đến người chơi.` : '';
   
-  const proactiveNpcRule = aiContextConfig.sendProactiveNpcRule ? `
-*   **A.3. GIAO THỨC "NPC CHỦ ĐỘNG"**
-    *   Trong mỗi cảnh, **BẮT BUỘC có ít nhất MỘT NPC thực hiện một hành động chủ động**.` : '';
-
-  const rumorMillRule = aiContextConfig.sendRumorMillRule ? `
-*   **A.4. CHỈ THỊ "CỐI XAY TIN ĐỒN"**
-    *   Nội dung hội thoại của NPC phải đa dạng.
-    *   **ĐỘ TIN CẬY:** Tin đồn có thể là **chính xác**, **bị phóng đại**, hoặc **hoàn toàn sai lệch**.` : '';
-
-  const storytellingRulesSection = (narrationAndVividnessRules || livingWorldRules || proactiveNpcRule || rumorMillRule) ? `
-**A. QUY TẮC VỀ LỜI KỂ & SỰ SỐNG ĐỘNG (ƯU TIÊN CAO NHẤT)**
-${narrationAndVividnessRules}
-${livingWorldRules}
-${proactiveNpcRule}
-${rumorMillRule}` : '';
-
   const timeOfDayContext = getTimeOfDayContext(worldDate);
   const seasonContext = getSeason(worldDate);
   const timeContextBlock = `
@@ -312,7 +285,7 @@ ${inputType === 'action'
 **PHẦN 3: QUY TẮC VÀ HƯỚNG DẪN CHI TIẾT**
 Đây là các quy tắc bạn phải tuân theo để tạo ra phản hồi hợp lệ.
 
-${storytellingRulesSection}
+${storytellingRulesSection(aiContextConfig)}
 
 **B. HƯỚNG DẪN VỀ ĐỘ KHÓ:**
 ${aiContextConfig.sendDifficultyGuidance ? `- **Dễ:** ${VIETNAMESE.difficultyGuidanceEasy}
