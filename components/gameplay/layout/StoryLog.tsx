@@ -104,12 +104,10 @@ const StoryLog: React.FC<StoryLogProps> = ({
         !lastMessage.isPlayerInput &&
         isCurrentlyActivePage
     ) {
-        setLiveRegionText('Đã có nội dung mới.');
-        const timer = setTimeout(() => {
-            setLiveRegionText('');
-        }, 500); // Clear after a short delay so it can be re-triggered
-        
-        return () => clearTimeout(timer);
+        // Announce the new content directly for screen readers
+        // We also add a prefix to provide context that this is an AI narration
+        const announcement = `AI kể: ${lastMessage.content}`;
+        setLiveRegionText(announcement);
     }
   }, [displayedMessages, isCurrentlyActivePage]);
 
