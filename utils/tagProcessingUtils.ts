@@ -1,4 +1,3 @@
-
 import { KnowledgeBase, GameMessage, VectorMetadata } from './../types';
 import { parseTagValue } from './parseTagValue'; 
 import { processPlayerStatsInit, processStatsUpdate, processRemoveBinhCanhEffect, processBecomeSpecialStatus, processPlayerSpecialStatusUpdate, processBecomeFree } from './tagProcessors/statsTagProcessor';
@@ -50,6 +49,7 @@ import { processPrisonerAdd, processWifeAdd, processSlaveAdd, processWifeUpdate,
 import { processMasterUpdate } from './tagProcessors/masterTagProcessor';
 import { processSlaveForSale, processAuctionSlave } from './tagProcessors/slaveTagProcessor';
 import { processEventTriggered, processEventUpdate, processEventDetailRevealed } from './tagProcessors/eventTagProcessor';
+import { processWorldConfigUpdate } from './tagProcessors/worldConfigTagProcessor';
 import { generateEmbeddings } from './../services/embeddingService';
 
 
@@ -197,6 +197,12 @@ export const performTagProcessing = async (
                     workingKb = updatedKb;
                     allSystemMessages.push(...systemMessages);
                     if (updatedVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, updatedVectorMetadata);
+                    break;
+                }
+                 case 'WORLD_CONFIG_UPDATE': {
+                    const { updatedKb, systemMessages } = processWorldConfigUpdate(workingKb, tagParams, turnForSystemMessages);
+                    workingKb = updatedKb;
+                    allSystemMessages.push(...systemMessages);
                     break;
                 }
                 case 'SLAVE_FOR_SALE': {

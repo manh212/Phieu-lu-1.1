@@ -3,7 +3,7 @@ import { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, Genr
 import { SUB_REALM_NAMES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, NSFW_DESCRIPTION_STYLES, TU_CHAT_TIERS, SPECIAL_EVENT_INTERVAL_TURNS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
 import * as GameTemplates from '../templates';
 import { continuePromptSystemRules } from '../constants/systemRulesNormal';
-import { getWorldDateDifferenceString } from '../utils/dateUtils';
+import { getWorldDateDifferenceString, getTimeOfDayContext, getSeason } from '../utils/dateUtils';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
 
 export const generateContinuePrompt = (
@@ -263,9 +263,21 @@ ${livingWorldRules}
 ${proactiveNpcRule}
 ${rumorMillRule}` : '';
 
+  const timeOfDayContext = getTimeOfDayContext(worldDate);
+  const seasonContext = getSeason(worldDate);
+  const timeContextBlock = `
+**BỐI CẢNH THỜI GIAN & MÔI TRƯỜI (CỰC KỲ QUAN TRỌNG):**
+- **Mùa:** ${seasonContext}.
+- **Buổi trong ngày:**
+${timeOfDayContext}
+`;
+
+
   return `
 **YÊU CẦU CỐT LÕI:** Nhiệm vụ của bạn là tiếp tục câu chuyện game nhập vai thể loại "${effectiveGenre}" bằng tiếng Việt.
 **QUY TẮC QUAN TRỌNG NHẤT:** Bắt đầu phản hồi của bạn bằng cách đi thẳng vào lời kể về những gì xảy ra do hành động của người chơi. **TUYỆT ĐỐI KHÔNG** bình luận về lựa chọn của người chơi. Hãy kể trực tiếp kết quả.
+
+${timeContextBlock}
 
 ---
 **PHẦN 1: BỐI CẢNH (CONTEXT)**

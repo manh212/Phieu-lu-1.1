@@ -54,6 +54,7 @@ export * from './tagProcessors/locationTagProcessor';
 export * from './tagProcessors/factionTagProcessor';
 export * from './tagProcessors/worldLoreTagProcessor';
 export * from './tagProcessors/eventTagProcessor'; // NEW
+export * from './tagProcessors/worldConfigTagProcessor'; // NEW
 
 // Other Tag Processors
 export * from './tagProcessors/statusEffectTagProcessor'; 
