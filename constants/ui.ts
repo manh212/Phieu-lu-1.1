@@ -1,4 +1,3 @@
-
 import { StyleSettings } from '../types';
 
 export const STYLE_SETTINGS_STORAGE_KEY = 'daoDoAiStyleSettings_v1';
@@ -36,4 +35,5 @@ export const DEFAULT_STYLE_SETTINGS: StyleSettings = {
     textColor: '#C084FC', // purple-400
     backgroundColor: undefined,
   },
+  enableKeywordHighlighting: false,
 };

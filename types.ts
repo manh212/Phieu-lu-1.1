@@ -479,7 +479,14 @@ export interface SaveGameMeta { id: string; name: string; timestamp: Date; size?
 export type PlayerActionInputType = 'action' | 'story';
 export type ResponseLength = 'default' | 'short' | 'medium' | 'long';
 export interface StyleSettingProperty { fontFamily?: string; fontSize?: string; textColor: string; backgroundColor?: string; }
-export interface StyleSettings { narration: StyleSettingProperty; playerAction: StyleSettingProperty; choiceButton: StyleSettingProperty; keywordHighlight: StyleSettingProperty; dialogueHighlight: StyleSettingProperty; }
+export interface StyleSettings { 
+  narration: StyleSettingProperty; 
+  playerAction: StyleSettingProperty; 
+  choiceButton: StyleSettingProperty; 
+  keywordHighlight: StyleSettingProperty; 
+  dialogueHighlight: StyleSettingProperty; 
+  enableKeywordHighlighting: boolean; 
+}
 
 export interface GeneratedWorldElements {
   startingSkills: StartingSkill[]; startingItems: StartingItem[]; startingNPCs: StartingNPC[]; startingLore: StartingLore[];

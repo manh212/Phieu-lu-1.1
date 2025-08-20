@@ -1,10 +1,9 @@
-
-
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { StyleSettings, StyleSettingProperty } from '../types';
 import Button from './ui/Button';
 import Modal from './ui/Modal'; // Corrected import path
 import { VIETNAMESE, AVAILABLE_FONTS, AVAILABLE_FONT_SIZES, DEFAULT_STYLE_SETTINGS } from '../constants';
+import InputField from './ui/InputField';
 
 interface StyleSettingsModalProps {
   initialSettings: StyleSettings;
@@ -20,18 +19,27 @@ const StyleSettingsModal: React.FC<StyleSettingsModalProps> = ({ initialSettings
   }, [initialSettings]);
 
   const handleStyleChange = (
-    section: keyof StyleSettings,
+    section: Exclude<keyof StyleSettings, 'enableKeywordHighlighting'>,
     property: keyof StyleSettingProperty,
     value: string
   ) => {
     setCurrentStyles(prev => ({
       ...prev,
       [section]: {
-        ...prev[section],
-        [property]: value === 'inherit' || value === '' ? undefined : value, // Store undefined for inheritance
+        ...(prev[section] as StyleSettingProperty),
+        [property]: value === 'inherit' || value === '' ? undefined : value,
       },
     }));
   };
+
+  const handleToggleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setCurrentStyles(prev => ({
+        ...prev,
+        [name]: checked,
+    }));
+  };
+
 
   const handleResetSection = (section: keyof StyleSettings) => {
     setCurrentStyles(prev => ({
@@ -48,13 +56,13 @@ const StyleSettingsModal: React.FC<StyleSettingsModalProps> = ({ initialSettings
     onSave(currentStyles);
   };
 
-  const renderStyleSection = (sectionKey: keyof StyleSettings, sectionLabel: string) => {
-    const sectionStyles = currentStyles[sectionKey];
+  const renderStyleSection = (sectionKey: Exclude<keyof StyleSettings, 'enableKeywordHighlighting'>, sectionLabel: string) => {
+    const sectionStyles = currentStyles[sectionKey] as StyleSettingProperty;
     const isKeywordSection = sectionKey === 'keywordHighlight';
     const isDialogueSection = sectionKey === 'dialogueHighlight';
 
     return (
-      <fieldset className="border border-gray-700 p-4 rounded-md mb-6 bg-gray-800/30">
+      <fieldset className="border border-gray-700 p-4 rounded-md bg-gray-800/30">
         <legend className="text-lg font-semibold text-indigo-300 px-2 flex justify-between items-center w-full">
           <span>{sectionLabel}</span>
           <Button 
@@ -126,6 +134,21 @@ const StyleSettingsModal: React.FC<StyleSettingsModalProps> = ({ initialSettings
   return (
     <Modal isOpen={true} onClose={onClose} title={VIETNAMESE.displaySettingsTitle}>
       <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+        <fieldset className="border border-gray-700 p-4 rounded-md mb-4 bg-gray-800/30">
+            <legend className="text-lg font-semibold text-indigo-300 px-2">Cài Đặt Chung</legend>
+            <div className="mt-3">
+                <InputField
+                    label="Bật tô sáng & click từ khóa"
+                    id="enableKeywordHighlighting"
+                    name="enableKeywordHighlighting"
+                    type="checkbox"
+                    checked={currentStyles.enableKeywordHighlighting}
+                    onChange={handleToggleChange}
+                />
+                 <p className="text-xs text-gray-400 ml-7 -mt-3">Tắt tính năng này sẽ hiển thị lời kể dưới dạng văn bản thuần túy, không có từ khóa nào được tô màu hoặc có thể nhấp vào.</p>
+            </div>
+        </fieldset>
+
         {renderStyleSection('narration', VIETNAMESE.narrationStylesLabel)}
         {renderStyleSection('playerAction', VIETNAMESE.playerActionStylesLabel)}
         {renderStyleSection('choiceButton', VIETNAMESE.choiceButtonStylesLabel)}

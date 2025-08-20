@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { KnowledgeBase, StyleSettings, DIALOGUE_MARKER } from '../types';
 import KeywordSpan from '../components/ui/KeywordSpan';
@@ -46,6 +45,11 @@ export const parseAndHighlightText = (
             }
         } else {
             if (segment.length > 0) {
+                if (!styleSettings.enableKeywordHighlighting) {
+                    finalNodes.push(segment);
+                    return;
+                }
+                
                 const allKeywords: Array<{ name: string; type: GameEntityType; entity: GameEntity;}> = [];
                 kb.inventory.forEach(e => { if (typeof e.name === 'string' && e.name.trim().length > 2) allKeywords.push({ name: e.name.trim(), type: 'item', entity: e }); });
                 kb.playerSkills.forEach(e => { if (typeof e.name === 'string' && e.name.trim().length > 2) allKeywords.push({ name: e.name.trim(), type: 'skill', entity: e }); });
