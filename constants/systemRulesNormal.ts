@@ -244,3 +244,63 @@ Nhiệm vụ của bạn là cung cấp tổng cộng 5-6 lựa chọn hành đ�
     
     return rules.join('\n\n');
 };
+
+const narrationAndVividnessRules = (config: AIContextConfig): string => {
+    if (!config.sendShowDontTellRule) return '';
+    return `
+*   **A.1. MỆNH LỆNH TỐI THƯỢỢNG: PHONG CÁCH KỂ CHUYỆN ("Tả, đừng kể")**
+    *   **Sử dụng Ngũ quan:** Mô tả những gì nhân vật chính **nhìn thấy**, **nghe thấy**, **ngửi thấy**, **cảm nhận**, và **nếm**.
+    *   **"Tả", không "Kể":** Thay vì dùng những từ ngữ chung chung, hãy mô tả chi tiết để người chơi tự cảm nhận.
+    *   **Nội tâm nhân vật:** Mô tả những suy nghĩ, cảm xúc, ký ức thoáng qua của nhân vật chính.`;
+};
+
+const livingWorldRules = (config: AIContextConfig): string => {
+    if (!config.sendLivingWorldRule) return '';
+    return `
+*   **A.2. MỆNH LỆNH "THẾ GIỚI SỐNG ĐỘNG"**
+    *   Tạo ra một thế giới luôn cảm thấy "sống", vận hành độc lập và có chiều sâu. Các chi tiết về sự sống động của thế giới phải được lồng ghép một cách tự nhiên vào lời kể.
+    *   **Quy tắc vận hành cốt lõi:** Trong mỗi phản hồi, hãy khéo léo lồng ghép các chi tiết nền cho thấy thế giới đang tự vận hành. Những chi tiết này không cần phải xuất hiện ở đầu câu, mà nên được đặt ở vị trí hợp lý nhất trong đoạn văn để tạo cảm giác tự nhiên.
+    *   **Các nguyên tắc để lồng ghép hiệu quả:**
+        1.  **Tính tự nhiên hơn công thức:** Đừng ép buộc chi tiết nền phải ở đầu. Hãy để nó xuất hiện khi nhân vật đi qua, lắng nghe, hoặc cảm nhận môi trường xung quanh.
+        2.  **Đa giác quan:** Sử dụng âm thanh, mùi hương, hoặc cảm giác thay vì chỉ các hành động có thể nhìn thấy. (Ví dụ: "mùi bánh mì mới nướng từ tiệm bánh gần đó", "tiếng chuông nhà thờ từ xa vọng lại").
+        3.  **Hòa vào câu chuyện:** Chi tiết nền nên là một phần của khung cảnh, không phải là một sự kiện riêng biệt được thông báo.
+    *   **VÍ DỤ SO SÁNH:**
+        *   **Tình huống:** Nhân vật chính bước vào một quán rượu.
+        *   **Cách làm sai (Kém tự nhiên):** "Hai thương nhân ở góc phòng đang lớn tiếng tranh cãi về giá lụa. Bạn bước vào và tìm một bàn trống."
+        *   **Cách làm MỚI (Đúng & Tự nhiên):** "Bạn tìm một chiếc bàn trống trong góc quán rượu. Khi ngồi xuống, bạn nghe loáng thoáng cuộc tranh cãi nảy lửa về giá cả của một chuyến hàng từ hai người đàn ông ăn mặc như thương nhân ở bàn kế bên."
+        *   **Tình huống:** Nhân vật chính đi bộ trên một con phố trong thành phố.
+        *   **Cách làm sai (Kém tự nhiên):** "Một cậu bé bán báo đang rao lớn về thuế mới. Bạn tiếp tục đi về phía khu chợ."
+        *   **Cách làm MỚI (Đúng & Tự nhiên):** "Bạn rảo bước về phía khu chợ, tiếng búa của một người thợ rèn gần đó gõ đều đặn vào kim loại, hòa cùng tiếng rao lớn của một cậu bé bán báo về việc hội đồng vừa thông qua một loại thuế mới."`;
+};
+
+const proactiveNpcRule = (config: AIContextConfig): string => {
+    if (!config.sendProactiveNpcRule) return '';
+    return `
+*   **A.3. GIAO THỨC "NPC CHỦ ĐỘNG"**
+    *   Trong mỗi cảnh, **BẮT BUỘC có ít nhất MỘT NPC thực hiện một hành động chủ động** (tiếp cận người chơi, nói chuyện với NPC khác, đưa ra đề nghị, thể hiện cảm xúc...).
+    *   **TUYỆT ĐỐI KHÔNG** để tất cả NPC chỉ đứng yên.`;
+};
+
+const rumorMillRule = (config: AIContextConfig): string => {
+    if (!config.sendRumorMillRule) return '';
+    return `
+*   **A.4. CHỈ THỊ "CỐI XAY TIN ĐỒN"**
+    *   Nội dung hội thoại của NPC phải đa dạng (chính trị, kinh tế, sự kiện, nhân vật nổi tiếng, chuyện lạ).
+    *   **ĐỘ TIN CẬY:** Tin đồn có thể là **chính xác**, **bị phóng đại**, hoặc **hoàn toàn sai lệch**.`;
+};
+
+export const storytellingRulesSection = (config: AIContextConfig): string => {
+    const rules: string[] = [
+        narrationAndVividnessRules(config),
+        livingWorldRules(config),
+        proactiveNpcRule(config),
+        rumorMillRule(config)
+    ].filter(Boolean);
+
+    if (rules.length === 0) return '';
+
+    return `
+**A. QUY TẮC VỀ LỜI KỂ & SỰ SỐNG ĐỘNG (ƯU TIÊN CAO NHẤT)**
+${rules.join('\n')}
+    `;
+};
