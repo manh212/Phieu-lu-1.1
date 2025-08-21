@@ -1,4 +1,3 @@
-
 import { WorldSettings, StartingItem, GenreType, ViolenceLevel, StoryTone, DIALOGUE_MARKER, TuChatTier, StartingSkill, AIContextConfig } from '../types';
 import { SUB_REALM_NAMES, VIETNAMESE, AVAILABLE_GENRES, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, NSFW_DESCRIPTION_STYLES, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, TU_CHAT_TIERS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
 import * as GameTemplates from '../templates';
@@ -263,7 +262,7 @@ ${isCultivationEnabled ? `2.  **Xác nhận Hệ thống Cảnh giới:** Hệ t
     **QUAN TRỌNG:** Bất cứ khi nào nhân vật học được một kỹ năng mới, BẮT BUỘC phải sử dụng tag \\\`[SKILL_LEARNED]\`\\\` với đầy đủ thông tin nhất có thể.
 
 **QUY TẮC SỬ DỤNG TAGS (CHUNG CHO MỌI LƯỢT KỂ TIẾP THEO, BAO GỒM CẢ LƯỢT ĐẦU TIÊN NÀY SAU KHI KHỞI TẠO):**
-${continuePromptSystemRules(worldConfig, mainRealms, aiContextConfig)}
+${continuePromptSystemRules(worldConfig, mainRealms, aiContextConfig, worldConfig.startingDate)}
 
 **BỐI CẢNH KHỞI ĐẦU:**
 Người chơi sẽ bắt đầu cuộc phiêu lưu tại địa điểm: "${worldConfig.startingLocations?.[0]?.name || 'một nơi vô định'}".

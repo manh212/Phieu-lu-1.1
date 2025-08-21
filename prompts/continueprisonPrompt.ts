@@ -337,11 +337,9 @@ ${inputType === 'action'
 **A. QUY TẮC VỀ LỜI KỂ & SỰ SỐNG ĐỘNG (ƯU TIÊN CAO NHẤT)**
 Nhiệm vụ của bạn là vẽ nên những bức tranh sống động và tạo ra một thế giới tự vận hành.
 
-*   **A.1. MỆNH LỆNH TỐI THƯỢNG: PHONG CÁCH KỂ CHUYỆN ("Tả, đừng kể")**
+*   **A.1. MỆNH LỆNH TỐI THƯỢỢNG: PHONG CÁCH KỂ CHUYỆN ("Tả, đừng kể")**
     *   **Sử dụng Ngũ quan:** Mô tả những gì nhân vật chính **nhìn thấy**, **nghe thấy**, **ngửi thấy**, **cảm nhận**, và **nếm**.
     *   **"Tả", không "Kể":** Thay vì dùng những từ ngữ chung chung, hãy mô tả chi tiết để người chơi tự cảm nhận.
-        *   **SAI (Kể):** "Cô gái đó rất xinh đẹp."
-        *   **ĐÚNG (Tả):** "Nàng có làn da trắng như tuyết, đôi mắt phượng cong cong ẩn chứa một làn sương mờ ảo, và đôi môi đỏ mọng như quả anh đào chín."
     *   **Nội tâm nhân vật:** Mô tả những suy nghĩ, cảm xúc, ký ức thoáng qua của nhân vật chính.
 
 *   **A.2. MỆNH LỆNH "THẾ GIỚI SỐNG ĐỘNG"**
@@ -378,6 +376,6 @@ ${nsfwGuidanceCombined}
 Hãy cố gắng điều chỉnh độ dài của lời kể và mô tả cho phù hợp với yêu cầu này của người chơi, nhưng vẫn đảm bảo tính tự nhiên và logic của câu chuyện.
 
 **E. CÁC QUY TẮC SỬ DỤNG TAG (CỰC KỲ QUAN TRỌNG):**
-${prisonContinuePromptSystemRules(worldConfig, statusType, mainRealms, aiContextConfig)}
+${prisonContinuePromptSystemRules(worldConfig, statusType, mainRealms, aiContextConfig, worldDate)}
 `;
 };

@@ -109,12 +109,10 @@ const StoryLog: React.FC<StoryLogProps> = ({
         const announcement = `AI kể: ${lastMessage.content}`;
         setLiveRegionText(announcement);
     }
-  }, [displayedMessages, isCurrentlyActivePage]);
-
-  // Effect to update the length ref *after* the render is committed and other effects have run
-  useEffect(() => {
+    
+    // After the check, update the ref to the current length for the next render.
     prevMessagesLengthForAnnouncement.current = displayedMessages.length;
-  });
+  }, [displayedMessages, isCurrentlyActivePage]);
 
 
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {

@@ -1,10 +1,11 @@
-import { WorldSettings, DIALOGUE_MARKER, TU_CHAT_TIERS, AIContextConfig } from '../types';
+import { WorldSettings, DIALOGUE_MARKER, TU_CHAT_TIERS, AIContextConfig, WorldDate } from '../types';
 import * as GameTemplates from '../templates';
 import { WEAPON_TYPES_FOR_VO_Y } from './character';
 import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../templates';
+import { getTimeOfDayContext, getSeason } from '../utils/dateUtils';
 
 
-export const continuePromptSystemRules = (worldConfig: WorldSettings | null, mainRealms: string[], config: AIContextConfig): string => {
+export const continuePromptSystemRules = (worldConfig: WorldSettings | null, mainRealms: string[], config: AIContextConfig, worldDate: WorldDate): string => {
     const rules: string[] = [];
 
     if (config.sendFormattingRules) {
@@ -15,10 +16,16 @@ export const continuePromptSystemRules = (worldConfig: WorldSettings | null, mai
     *   Ví dụ tiếng hét chiến đấu: AI kể: Tiếng hét ${DIALOGUE_MARKER}Xung phong!${DIALOGUE_MARKER} vang vọng chiến trường.
     *   Phần văn bản bên ngoài các cặp marker này vẫn là lời kể bình thường của bạn. Chỉ nội dung *bên trong* cặp marker mới được coi là lời nói/âm thanh trực tiếp.`);
     }
-
+    
     if (config.sendTimeRules) {
-        rules.push(`**2.  Tag Thay Đổi Thời Gian (CỰC KỲ QUAN TRỌNG):**
-    *   **Bối cảnh:** Thời gian trong game được tính theo lịch (30 ngày/tháng, 12 tháng/năm) và theo giờ:phút (HH:MM).
+        const timeOfDayContext = getTimeOfDayContext(worldDate);
+        const seasonContext = getSeason(worldDate);
+        
+        const timeChangeRule = `**2.  Tag Thay Đổi Thời Gian & Bối Cảnh Môi Trường (CỰC KỲ QUAN TRỌNG):**
+    *   **Bối cảnh thời gian & Môi trường:**
+        - **Mùa:** ${seasonContext}.
+        - **Buổi trong ngày:**
+${timeOfDayContext}
     *   **Ý nghĩa gameplay:** Thời gian ảnh hưởng lớn đến thế giới. Ví dụ: cửa hàng đóng cửa vào ban đêm, NPC đi ngủ, yêu thú nguy hiểm hơn xuất hiện.
     *   **Khi nào dùng:** Dùng tag này để cho thời gian trôi qua sau các hành động của người chơi.
         *   **Hành động ngắn:** Dùng \`phut\` (phút) hoặc \`gio\` (giờ). Ví dụ, một cuộc trò chuyện có thể tốn \`phut=15\`, đi từ nơi này sang nơi khác trong thành có thể tốn \`gio=1\`.
@@ -27,8 +34,11 @@ export const continuePromptSystemRules = (worldConfig: WorldSettings | null, mai
     *   **Ví dụ:**
         *   Để cho 2 tiếng 30 phút trôi qua: \`[CHANGE_TIME: gio=2, phut=30]\`
         *   Để cho 5 ngày trôi qua: \`[CHANGE_TIME: ngay=5]\`
-    *   **Cách kể chuyện:** Hãy lồng ghép yếu tố thời gian vào lời kể. Ví dụ: "Sau gần một canh giờ, bạn đã đến nơi...", "Khi màn đêm buông xuống...", "Ba năm thấm thoắt trôi qua...".`);
+    *   **Cách kể chuyện:** Hãy lồng ghép yếu tố thời gian vào lời kể. Ví dụ: "Sau gần một canh giờ, bạn đã đến nơi...", "Khi màn đêm buông xuống...", "Ba năm thấm thoắt trôi qua...".`;
+        
+        rules.push(timeChangeRule);
     }
+
 
     if (config.sendStatRules) {
         rules.push(`**3.  Tag \\\`[STATS_UPDATE: TênChỉSố=GiáTrịHoặcThayĐổi, ...]\`\\\`:** Dùng để cập nhật chỉ số của người chơi.

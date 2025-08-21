@@ -1,10 +1,10 @@
-import { WorldSettings, DIALOGUE_MARKER, AIContextConfig } from '../types';
+import { WorldSettings, DIALOGUE_MARKER, AIContextConfig, WorldDate } from '../types';
 import * as GameTemplates from '../templates';
 import { WEAPON_TYPES_FOR_VO_Y, TU_CHAT_TIERS, ALL_FACTION_ALIGNMENTS, SUB_REALM_NAMES } from '../constants';
 import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../templates';
 import { continuePromptSystemRules as baseContinuePromptSystemRules } from './systemRulesNormal'; // Renamed to avoid conflict
 
-export const prisonContinuePromptSystemRules = (worldConfig: WorldSettings | null, statusType: 'Tù Nhân' | 'Nô Lệ', mainRealms: string[], config: AIContextConfig ): string => {
+export const prisonContinuePromptSystemRules = (worldConfig: WorldSettings | null, statusType: 'Tù Nhân' | 'Nô Lệ', mainRealms: string[], config: AIContextConfig, worldDate: WorldDate ): string => {
     const rules: string[] = [];
 
     rules.push(`**QUY TẮC BỐI CẢNH (CỰC KỲ QUAN TRỌNG):**`);
@@ -24,7 +24,7 @@ export const prisonContinuePromptSystemRules = (worldConfig: WorldSettings | nul
     rules.push('**QUY TẮC CHUNG (BẮT BUỘC ÁP DỤNG CHO MỌI PHẢN HỒI):**');
     
     // Re-use the normal rules function but filter out prison-specific ones if they are duplicated.
-    const baseRules = baseContinuePromptSystemRules(worldConfig, mainRealms, config); // Assuming this is now refactored.
+    const baseRules = baseContinuePromptSystemRules(worldConfig, mainRealms, config, worldDate); // Assuming this is now refactored.
     rules.push(baseRules);
     
     return rules.join('\n\n');

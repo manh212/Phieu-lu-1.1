@@ -1,9 +1,8 @@
-
 import { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, DIALOGUE_MARKER, TuChatTier, AIContextConfig } from '../types';
 import { SUB_REALM_NAMES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, NSFW_DESCRIPTION_STYLES, TU_CHAT_TIERS, SPECIAL_EVENT_INTERVAL_TURNS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
 import * as GameTemplates from '../templates';
 import { continuePromptSystemRules, storytellingRulesSection } from '../constants/systemRulesNormal';
-import { getWorldDateDifferenceString, getTimeOfDayContext, getSeason } from '../utils/dateUtils';
+import { getWorldDateDifferenceString } from '../utils/dateUtils';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
 
 export const generateContinuePrompt = (
@@ -235,22 +234,10 @@ ${previousPageSummaries.length > 0 ? previousPageSummaries.map((summary, index) 
 ${lastNarrationFromPreviousPage || "Chưa có."}
 - **Diễn biến chi tiết trang hiện tại (từ lượt đầu trang đến lượt ${playerStats.turn}):**
 ${currentPageMessagesLog || "Chưa có diễn biến nào trong trang này."}` : '';
-  
-  const timeOfDayContext = getTimeOfDayContext(worldDate);
-  const seasonContext = getSeason(worldDate);
-  const timeContextBlock = `
-**BỐI CẢNH THỜI GIAN & MÔI TRƯỜI (CỰC KỲ QUAN TRỌNG):**
-- **Mùa:** ${seasonContext}.
-- **Buổi trong ngày:**
-${timeOfDayContext}
-`;
-
 
   return `
 **YÊU CẦU CỐT LÕI:** Nhiệm vụ của bạn là tiếp tục câu chuyện game nhập vai thể loại "${effectiveGenre}" bằng tiếng Việt.
 **QUY TẮC QUAN TRỌNG NHẤT:** Bắt đầu phản hồi của bạn bằng cách đi thẳng vào lời kể về những gì xảy ra do hành động của người chơi. **TUYỆT ĐỐI KHÔNG** bình luận về lựa chọn của người chơi. Hãy kể trực tiếp kết quả.
-
-${timeContextBlock}
 
 ---
 **PHẦN 1: BỐI CẢNH (CONTEXT)**
@@ -282,7 +269,7 @@ ${inputType === 'action'
 *   **SỬ DỤNG TAGS HỆ THỐNG:** Tạo ra các tag để cập nhật trạng thái game. Mỗi tag trên một dòng riêng.
 
 ---
-**PHẦN 3: QUY TẮC VÀ HƯỚNG DẪN CHI TIẾT**
+**PHẦN 3: QUY TẮC VÀ HƯỚSNG DẪN CHI TIẾT**
 Đây là các quy tắc bạn phải tuân theo để tạo ra phản hồi hợp lệ.
 
 ${storytellingRulesSection(aiContextConfig)}
@@ -306,6 +293,7 @@ ${nsfwGuidanceCombined}
 Hãy cố gắng điều chỉnh độ dài của lời kể và mô tả cho phù hợp với yêu cầu này của người chơi, nhưng vẫn đảm bảo tính tự nhiên và logic của câu chuyện.
 
 **E. CÁC QUY TẮC SỬ DỤNG TAG (CỰC KỲ QUAN TRỌNG):**
-${continuePromptSystemRules(worldConfig, mainRealms, aiContextConfig)}
+
+${continuePromptSystemRules(worldConfig, mainRealms, aiContextConfig, worldDate)}
 `;
 };
