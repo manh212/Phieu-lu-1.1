@@ -181,8 +181,8 @@ const parseTagParams = (paramString: string): Record<string, string> => {
 };
 
 
-export const parseAiResponseText = (responseText: string): ParsedAiResponse => {
-  let narration = responseText;
+export const parseAiResponseText = (responseText: string | undefined): ParsedAiResponse => {
+  let narration = responseText || '';
   const choices: AiChoice[] = [];
   const gameStateTags: string[] = [];
   let systemMessage: string | undefined;
@@ -278,7 +278,7 @@ export const parseAiResponseText = (responseText: string): ParsedAiResponse => {
   return { narration, choices, tags: gameStateTags, systemMessage };
 };
 
-export const parseGeneratedWorldDetails = (responseText: string): GeneratedWorldElements => {
+export const parseGeneratedWorldDetails = (responseText: string | undefined): GeneratedWorldElements => {
   const GWD_SKILL = 'GENERATED_SKILL:';
   const GWD_ITEM = 'GENERATED_ITEM:';
   const GWD_NPC = 'GENERATED_NPC:';
@@ -334,8 +334,10 @@ export const parseGeneratedWorldDetails = (responseText: string): GeneratedWorld
     storyTone: DEFAULT_STORY_TONE, 
   };
 
+  let responseTextSafe = responseText || '';
+
   const originalStorySummaryRegex = /\[GENERATED_ORIGINAL_STORY_SUMMARY:\s*text\s*=\s*(?:"((?:\\.|[^"\\])*?)"|'((?:\\.|[^'\\])*?)')\s*\]/is;
-  const originalStorySummaryMatch = responseText.match(originalStorySummaryRegex);
+  const originalStorySummaryMatch = responseTextSafe.match(originalStorySummaryRegex);
 
   if (originalStorySummaryMatch) {
     let summaryText = originalStorySummaryMatch[1] !== undefined ? originalStorySummaryMatch[1] : originalStorySummaryMatch[2];
@@ -347,11 +349,11 @@ export const parseGeneratedWorldDetails = (responseText: string): GeneratedWorld
         .replace(/\\t/g, '\t')
         .replace(/\\\\/g, '\\');
     }
-    responseText = responseText.replace(originalStorySummaryMatch[0], '');
+    responseTextSafe = responseTextSafe.replace(originalStorySummaryMatch[0], '');
   }
 
 
-  const lines = responseText.split('\n');
+  const lines = responseTextSafe.split('\n');
   lines.forEach(line => {
     line = line.trim();
     if (line.startsWith(`[${GWD_SKILL}`)) {
@@ -629,7 +631,7 @@ async function generateContentWithRateLimit(
             safetySettings: safetySettings,
         },
     });
-    const rawText = response.text;
+    const rawText = response.text || '';
     const parsedResponse = parseAiResponseText(rawText);
     return { response: parsedResponse, rawText, constructedPrompt: prompt };
 }
@@ -702,7 +704,7 @@ export async function generateWorldDetailsFromStory(
     incrementApiCallCount('WORLD_GENERATION');
     const ai = getAiClient();
     const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text;
+    const rawText = response.text || '';
     const parsed = parseGeneratedWorldDetails(rawText);
     return { response: parsed, rawText, constructedPrompt: prompt };
 }
@@ -726,7 +728,7 @@ export async function generateFanfictionWorldDetails(
     incrementApiCallCount('FANFIC_GENERATION');
     const ai = getAiClient();
     const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text;
+    const rawText = response.text || '';
     const parsed = parseGeneratedWorldDetails(rawText);
     return { response: parsed, rawText, constructedPrompt: prompt };
 }
@@ -741,7 +743,7 @@ export async function generateCompletionForWorldDetails(
     incrementApiCallCount('WORLD_COMPLETION');
     const ai = getAiClient();
     const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text;
+    const rawText = response.text || '';
     const parsed = parseGeneratedWorldDetails(rawText);
     return { response: parsed, rawText, constructedPrompt: prompt };
 }
@@ -752,7 +754,7 @@ export async function analyzeWritingStyle(textToAnalyze: string): Promise<string
     incrementApiCallCount('STYLE_ANALYSIS');
     const ai = getAiClient();
     const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    return response.text;
+    return response.text || '';
 }
 
 export async function generateImageWithImagen3(prompt: string): Promise<string> {
@@ -812,7 +814,7 @@ export async function summarizeTurnHistory(messagesToSummarize: GameMessage[], w
     incrementApiCallCount('PAGE_SUMMARY');
     const ai = getAiClient();
     const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text;
+    const rawText = response.text || '';
     if(onResponseReceived) onResponseReceived(rawText);
     return { rawSummary: rawText, processedSummary: rawText.trim() };
 }
@@ -832,7 +834,7 @@ export const generateCombatTurn = async (
     if (onPromptConstructed) onPromptConstructed(prompt);
     incrementApiCallCount('COMBAT_TURN');
     const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text;
+    const rawText = response.text || '';
     
     // Parse combat-specific response
     const { narration, choices, tags } = parseAiResponseText(rawText);
@@ -888,7 +890,7 @@ export async function summarizeCombat(combatLog: string[], outcome: 'victory' | 
     incrementApiCallCount('COMBAT_SUMMARY');
     const ai = getAiClient();
     const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    return response.text.trim();
+    return (response.text || '').trim();
 }
 
 export async function generateCraftedItemViaAI(desiredCategory: GameTemplates.ItemCategoryValues, requirements: string, materials: ItemType[], playerStats: PlayerStats, worldConfig: WorldSettings | null, currentPageMessagesLog: string, previousPageSummaries: string[], lastNarrationFromPreviousPage: string | undefined, onPromptConstructed?: (prompt: string) => void): Promise<{response: ParsedAiResponse, rawText: string}> {
@@ -923,7 +925,7 @@ export async function summarizeCompanionInteraction(log: string[]): Promise<stri
     incrementApiCallCount('CHARACTER_INTERACTION');
     const ai = getAiClient();
     const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    return response.text.trim();
+    return (response.text || '').trim();
 }
 export async function summarizePrisonerInteraction(log: string[]): Promise<string> {
     const { model } = getApiSettings();
@@ -931,7 +933,7 @@ export async function summarizePrisonerInteraction(log: string[]): Promise<strin
     incrementApiCallCount('CHARACTER_INTERACTION');
     const ai = getAiClient();
     const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    return response.text.trim();
+    return (response.text || '').trim();
 }
 
 export async function generateSlaveAuctionData(kb: KnowledgeBase, onPromptConstructed?: (prompt: string) => void): Promise<{response: ParsedAiResponse, rawText: string}> {
@@ -983,7 +985,7 @@ export async function generateCityEconomy(city: GameLocation, kb: KnowledgeBase,
     incrementApiCallCount('ECONOMY_LOCATION');
     const ai = getAiClient();
     const response = await ai.models.generateContent({ model: economyModel || DEFAULT_MODEL_ID, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text;
+    const rawText = response.text || '';
     if(onResponseReceived) onResponseReceived(rawText);
     return parseAiResponseText(rawText);
 }
@@ -995,7 +997,7 @@ export async function generateGeneralSubLocations(mainLocation: GameLocation, kb
     incrementApiCallCount('ECONOMY_LOCATION');
     const ai = getAiClient();
     const response = await ai.models.generateContent({ model: economyModel || DEFAULT_MODEL_ID, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text;
+    const rawText = response.text || '';
     if(onResponseReceived) onResponseReceived(rawText);
     return parseAiResponseText(rawText);
 }
@@ -1012,7 +1014,7 @@ export async function summarizeCultivationSession(log: string[]): Promise<string
     incrementApiCallCount('CULTIVATION');
     const ai = getAiClient();
     const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    return response.text.trim();
+    return (response.text || '').trim();
 }
 
 export async function generateVendorRestock(vendor: NPC, kb: KnowledgeBase): Promise<{response: ParsedAiResponse, rawText: string}> {
