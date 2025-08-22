@@ -612,26 +612,41 @@ export const parseGeneratedWorldDetails = (responseText: string | undefined): Ge
 
 // --- Re-implemented Functions ---
 
+// New helper function to wrap content generation and add a check for empty responses.
+async function generateContentAndCheck(
+    params: { model: string, contents: any, config?: any }
+): Promise<GenerateContentResponse> {
+    const ai = getAiClient(); // getAiClient is already defined in the file
+    const response = await ai.models.generateContent(params);
+    
+    // The core check for empty/undefined/whitespace-only responses.
+    // This is often due to safety filters blocking the response without throwing an error.
+    if (!response.text || response.text.trim() === '') {
+        throw new Error("Phản hồi từ AI trống. Điều này có thể do bộ lọc nội dung. Vui lòng thử một hành động khác hoặc lùi lượt.");
+    }
+    
+    return response;
+}
+
 async function generateContentWithRateLimit(
     prompt: string, 
     modelId: string, 
     onPromptConstructed?: (prompt: string) => void
 ): Promise<{response: ParsedAiResponse, rawText: string, constructedPrompt: string}> {
-    const ai = getAiClient();
     const { safetySettings } = getApiSettings();
 
     if (onPromptConstructed) {
         onPromptConstructed(prompt);
     }
     
-    const response = await ai.models.generateContent({
+    const response = await generateContentAndCheck({
         model: modelId,
         contents: [{ parts: [{ text: prompt }] }],
         config: {
             safetySettings: safetySettings,
         },
     });
-    const rawText = response.text || '';
+    const rawText = response.text;
     const parsedResponse = parseAiResponseText(rawText);
     return { response: parsedResponse, rawText, constructedPrompt: prompt };
 }
@@ -702,9 +717,8 @@ export async function generateWorldDetailsFromStory(
     const prompt = PROMPT_FUNCTIONS.generateWorldDetails(storyIdea, nsfwMode, genre, isCultivationEnabled, violenceLevel, storyTone, customGenreName, nsfwDescriptionStyle);
     if (onPromptConstructed) onPromptConstructed(prompt);
     incrementApiCallCount('WORLD_GENERATION');
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text || '';
+    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
+    const rawText = response.text;
     const parsed = parseGeneratedWorldDetails(rawText);
     return { response: parsed, rawText, constructedPrompt: prompt };
 }
@@ -726,9 +740,8 @@ export async function generateFanfictionWorldDetails(
     const prompt = PROMPT_FUNCTIONS.generateFanfictionWorldDetails(sourceMaterial, isContentProvided, playerInputDescription, nsfwMode, genre, isCultivationEnabled, violenceLevel, storyTone, customGenreName, nsfwDescriptionStyle);
     if (onPromptConstructed) onPromptConstructed(prompt);
     incrementApiCallCount('FANFIC_GENERATION');
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text || '';
+    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
+    const rawText = response.text;
     const parsed = parseGeneratedWorldDetails(rawText);
     return { response: parsed, rawText, constructedPrompt: prompt };
 }
@@ -741,9 +754,8 @@ export async function generateCompletionForWorldDetails(
     const prompt = PROMPT_FUNCTIONS.completeWorldDetails(settings, settings.nsfwMode || false, settings.genre, settings.isCultivationEnabled, settings.violenceLevel || DEFAULT_VIOLENCE_LEVEL, settings.storyTone || DEFAULT_STORY_TONE, settings.customGenreName, settings.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE);
     if (onPromptConstructed) onPromptConstructed(prompt);
     incrementApiCallCount('WORLD_COMPLETION');
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text || '';
+    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
+    const rawText = response.text;
     const parsed = parseGeneratedWorldDetails(rawText);
     return { response: parsed, rawText, constructedPrompt: prompt };
 }
@@ -752,9 +764,8 @@ export async function analyzeWritingStyle(textToAnalyze: string): Promise<string
     const { model } = getApiSettings();
     const prompt = PROMPT_FUNCTIONS.analyzeStyle(textToAnalyze);
     incrementApiCallCount('STYLE_ANALYSIS');
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    return response.text || '';
+    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
+    return response.text;
 }
 
 export async function generateImageWithImagen3(prompt: string): Promise<string> {
@@ -812,9 +823,8 @@ export async function summarizeTurnHistory(messagesToSummarize: GameMessage[], w
     const prompt = PROMPT_FUNCTIONS.summarizePage(messagesToSummarize, worldTheme, playerName, genre, customGenreName);
     if (onPromptConstructed) onPromptConstructed(prompt);
     incrementApiCallCount('PAGE_SUMMARY');
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text || '';
+    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
+    const rawText = response.text;
     if(onResponseReceived) onResponseReceived(rawText);
     return { rawSummary: rawText, processedSummary: rawText.trim() };
 }
@@ -828,13 +838,12 @@ export const generateCombatTurn = async (
     lastNarrationFromPreviousPage: string | undefined,
     onPromptConstructed?: (prompt: string) => void
 ): Promise<{response: ParsedCombatResponse, rawText: string}> => {
-    const ai = getAiClient();
     const { model } = getApiSettings();
     const prompt = PROMPT_FUNCTIONS.combatTurn(knowledgeBase, playerAction, combatLog, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage);
     if (onPromptConstructed) onPromptConstructed(prompt);
     incrementApiCallCount('COMBAT_TURN');
-    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text || '';
+    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
+    const rawText = response.text;
     
     // Parse combat-specific response
     const { narration, choices, tags } = parseAiResponseText(rawText);
@@ -888,9 +897,8 @@ export async function summarizeCombat(combatLog: string[], outcome: 'victory' | 
     const { model } = getApiSettings();
     const prompt = PROMPT_FUNCTIONS.summarizeCombat(combatLog, outcome);
     incrementApiCallCount('COMBAT_SUMMARY');
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    return (response.text || '').trim();
+    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
+    return response.text.trim();
 }
 
 export async function generateCraftedItemViaAI(desiredCategory: GameTemplates.ItemCategoryValues, requirements: string, materials: ItemType[], playerStats: PlayerStats, worldConfig: WorldSettings | null, currentPageMessagesLog: string, previousPageSummaries: string[], lastNarrationFromPreviousPage: string | undefined, onPromptConstructed?: (prompt: string) => void): Promise<{response: ParsedAiResponse, rawText: string}> {
@@ -923,17 +931,15 @@ export async function summarizeCompanionInteraction(log: string[]): Promise<stri
     const { model } = getApiSettings();
     const prompt = PROMPT_FUNCTIONS.summarizeCompanionInteraction(log);
     incrementApiCallCount('CHARACTER_INTERACTION');
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    return (response.text || '').trim();
+    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
+    return response.text.trim();
 }
 export async function summarizePrisonerInteraction(log: string[]): Promise<string> {
     const { model } = getApiSettings();
     const prompt = PROMPT_FUNCTIONS.summarizePrisonerInteraction(log);
     incrementApiCallCount('CHARACTER_INTERACTION');
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    return (response.text || '').trim();
+    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
+    return response.text.trim();
 }
 
 export async function generateSlaveAuctionData(kb: KnowledgeBase, onPromptConstructed?: (prompt: string) => void): Promise<{response: ParsedAiResponse, rawText: string}> {
@@ -983,9 +989,8 @@ export async function generateCityEconomy(city: GameLocation, kb: KnowledgeBase,
     const prompt = PROMPT_FUNCTIONS.generateEconomyLocations(city, kb);
     if(onPromptConstructed) onPromptConstructed(prompt);
     incrementApiCallCount('ECONOMY_LOCATION');
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({ model: economyModel || DEFAULT_MODEL_ID, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text || '';
+    const response = await generateContentAndCheck({ model: economyModel || DEFAULT_MODEL_ID, contents: [{ parts: [{ text: prompt }] }] });
+    const rawText = response.text;
     if(onResponseReceived) onResponseReceived(rawText);
     return parseAiResponseText(rawText);
 }
@@ -995,9 +1000,8 @@ export async function generateGeneralSubLocations(mainLocation: GameLocation, kb
     const prompt = PROMPT_FUNCTIONS.generateGeneralSubLocations(mainLocation, kb);
     if(onPromptConstructed) onPromptConstructed(prompt);
     incrementApiCallCount('ECONOMY_LOCATION');
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({ model: economyModel || DEFAULT_MODEL_ID, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text || '';
+    const response = await generateContentAndCheck({ model: economyModel || DEFAULT_MODEL_ID, contents: [{ parts: [{ text: prompt }] }] });
+    const rawText = response.text;
     if(onResponseReceived) onResponseReceived(rawText);
     return parseAiResponseText(rawText);
 }
@@ -1012,9 +1016,8 @@ export async function summarizeCultivationSession(log: string[]): Promise<string
     const { model } = getApiSettings();
     const prompt = PROMPT_FUNCTIONS.summarizeCultivation(log);
     incrementApiCallCount('CULTIVATION');
-    const ai = getAiClient();
-    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
-    return (response.text || '').trim();
+    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
+    return response.text.trim();
 }
 
 export async function generateVendorRestock(vendor: NPC, kb: KnowledgeBase): Promise<{response: ParsedAiResponse, rawText: string}> {
