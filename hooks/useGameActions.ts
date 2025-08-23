@@ -82,96 +82,65 @@ export const useGameActions = (props: UseGameActionsProps) => {
       setSentLivingWorldPromptsLog, setRawLivingWorldResponsesLog, setLastScoredNpcsForTick // Destructure new setters
     } = props;
 
-    const executeWorldTick = useCallback(async () => {
-      // 1. Start: Lock the state
-      setKnowledgeBase(prev => ({ ...prev, isWorldTicking: true }));
+    const executeWorldTick = useCallback(async (kbForTick: KnowledgeBase): Promise<{ updatedKb: KnowledgeBase; worldEventMessages: GameMessage[] }> => {
+      setKnowledgeBase(prev => ({...prev, isWorldTicking: true}));
       try {
-          // 2. Schedule: Get a prioritized list of NPCs
-          const npcsToTick = scheduleWorldTick(knowledgeBase);
+          const npcsToTick = scheduleWorldTick(kbForTick);
           setLastScoredNpcsForTick(npcsToTick.map(npc => ({ npc, score: npc.tickPriorityScore })));
 
-          if (npcsToTick.length === 0) return;
+          if (npcsToTick.length === 0) {
+              return { updatedKb: kbForTick, worldEventMessages: [] };
+          }
 
-          // 3. Build Prompt
-          const prompt = PROMPT_FUNCTIONS.livingWorldTick(knowledgeBase, npcsToTick);
+          const prompt = PROMPT_FUNCTIONS.livingWorldTick(kbForTick, npcsToTick);
           setSentLivingWorldPromptsLog(prev => [prompt, ...prev].slice(0, 10));
 
-          // 4. Generate Update from Gemini
           const jsonResponse = await generateWorldTickUpdate(prompt);
           setRawLivingWorldResponsesLog(prev => [jsonResponse, ...prev].slice(0, 10));
 
-          // 5. Parse & Validate Response
-          const worldUpdate = parseAndValidateResponse(jsonResponse, knowledgeBase);
+          const worldUpdate = parseAndValidateResponse(jsonResponse, kbForTick);
           if (!worldUpdate) {
               console.warn("World tick update was null after parsing/validation. Skipping this tick.");
               showNotification("AI phản hồi không hợp lệ cho thế giới sống.", "warning");
-              return;
+              return { updatedKb: kbForTick, worldEventMessages: [] };
           }
 
-          // 6. Process Results
-          let workingKb = JSON.parse(JSON.stringify(knowledgeBase)) as KnowledgeBase;
+          let workingKb = JSON.parse(JSON.stringify(kbForTick));
           const turnForMessages = workingKb.playerStats.turn;
           const worldEventMessages: GameMessage[] = [];
           
           for (const plan of worldUpdate.npcUpdates) {
-              const npc = workingKb.discoveredNPCs.find(n => n.id === plan.npcId);
-              if (!npc) continue;
+              const npcIndex = workingKb.discoveredNPCs.findIndex((n: NPC) => n.id === plan.npcId);
+              if (npcIndex === -1) continue;
 
-              // Ensure activityLog exists
-              if (!npc.activityLog) {
-                  npc.activityLog = [];
-              }
+              const npc = workingKb.discoveredNPCs[npcIndex];
+
+              if (!npc.activityLog) npc.activityLog = [];
               
               npc.lastTickTurn = turnForMessages;
               
               let tagsToProcess: string[] = [];
 
               for (const action of plan.actions) {
-                  // Generate a system tag if the action requires a direct state change
                   const tag = convertNpcActionToTag(action, npc);
-                  if (tag) {
-                      tagsToProcess.push(tag);
-                  }
+                  if (tag) tagsToProcess.push(tag);
                   
-                  // --- START PHASE 3: CREATE LOG ENTRY ---
                   const logEntry: ActivityLogEntry = {
                       turnNumber: turnForMessages,
-                      locationId: npc.locationId || 'unknown', // Use current location before potential move
+                      locationId: npc.locationId || 'unknown',
                       description: action.reason,
                   };
                   npc.activityLog.push(logEntry);
 
-                  // Limit the log size to 30 entries
-                  const MAX_LOG_ENTRIES = 30;
-                  if (npc.activityLog.length > MAX_LOG_ENTRIES) {
-                      npc.activityLog = npc.activityLog.slice(-MAX_LOG_ENTRIES);
-                  }
-                  // --- END PHASE 3 ---
+                  if (npc.activityLog.length > 30) npc.activityLog = npc.activityLog.slice(-30);
 
-                  // Handle direct interaction with the player
-                  if (action.type === 'INTERACT_NPC' && action.parameters.targetNpcId === 'player') {
-                      const interactionMessage: GameMessage = {
-                          id: `world-event-interaction-${npc.id}-${Date.now()}`,
-                          type: 'narration',
-                          content: `${npc.name} tiếp cận bạn. ${action.reason}`,
-                          timestamp: Date.now(),
-                          turnNumber: turnForMessages,
-                          choices: [
-                              { text: "Lắng nghe xem họ muốn nói gì." },
-                              { text: "Tỏ ra không quan tâm." }
-                          ]
-                      };
-                      worldEventMessages.push(interactionMessage);
-                  } else {
-                      // Generate a "system" message for other significant actions
-                      worldEventMessages.push({
-                          id: `world-event-${npc.id}-${Date.now()}`,
-                          type: 'system',
-                          content: action.reason,
-                          timestamp: Date.now(),
-                          turnNumber: turnForMessages
-                      });
-                  }
+                  worldEventMessages.push({
+                      id: `world-event-${npc.id}-${Date.now()}-${Math.random()}`,
+                      type: 'system',
+                      content: `[Thế giới sống] ${action.reason}`,
+                      timestamp: Date.now(),
+                      turnNumber: turnForMessages
+                  });
               }
               
               if (tagsToProcess.length > 0) {
@@ -181,27 +150,27 @@ export const useGameActions = (props: UseGameActionsProps) => {
           }
           
           workingKb.lastWorldTickTurn = turnForMessages;
-          addMessageAndUpdateState(worldEventMessages, workingKb);
+          
+          return { updatedKb: workingKb, worldEventMessages };
 
       } catch (error) {
-          // Comprehensive error handling (Phase 4)
           console.error("An error occurred during executeWorldTick:", error);
           const errorMsg = error instanceof Error ? error.message : "Lỗi không xác định trong quá trình thế giới vận động.";
           showNotification(`Lỗi World Tick: ${errorMsg}`, "error");
-          // The game continues, just this tick is skipped.
+          return { updatedKb: kbForTick, worldEventMessages: [] };
       } finally {
-          // 7. End: Unlock the state
-          setKnowledgeBase(prev => ({ ...prev, isWorldTicking: false }));
+        setKnowledgeBase(prev => ({...prev, isWorldTicking: false}));
       }
-  }, [knowledgeBase, setKnowledgeBase, addMessageAndUpdateState, logNpcAvatarPromptCallback, showNotification, setLastScoredNpcsForTick, setRawLivingWorldResponsesLog, setSentLivingWorldPromptsLog]);
+  }, [setKnowledgeBase, logNpcAvatarPromptCallback, showNotification, setLastScoredNpcsForTick, setRawLivingWorldResponsesLog, setSentLivingWorldPromptsLog]);
 
-  const handleManualTick = useCallback(() => {
+  const handleManualTick = useCallback(async () => {
     if (knowledgeBase.isWorldTicking) {
         showNotification("Thế giới đang vận động, vui lòng chờ.", "info");
         return;
     }
-    executeWorldTick();
-  }, [knowledgeBase.isWorldTicking, executeWorldTick, showNotification]);
+    const { updatedKb, worldEventMessages } = await executeWorldTick(knowledgeBase);
+    addMessageAndUpdateState(worldEventMessages, updatedKb);
+  }, [knowledgeBase, executeWorldTick, showNotification, addMessageAndUpdateState]);
 
   const logSentPromptCallback = useCallback((prompt: string) => {
     setSentPromptsLog(prev => [prompt, ...prev].slice(0, 10));
@@ -238,23 +207,18 @@ export const useGameActions = (props: UseGameActionsProps) => {
   });
 
   const handleNonCombatDefeat = useCallback(async (kbStateAtDefeat: KnowledgeBase, fatalNarration?: string) => {
-    // NEW CHECK: If player is already a prisoner or slave, prevent standard defeat.
     if (kbStateAtDefeat.playerStats.playerSpecialStatus) {
         showNotification("Bạn đã gục ngã nhưng số phận của bạn nằm trong tay chủ nhân.", "warning");
         const newKb = JSON.parse(JSON.stringify(kbStateAtDefeat));
-        if (newKb.playerStats.sinhLuc <= 0) {
-            newKb.playerStats.sinhLuc = 1; // Heal to 1 HP to prevent repeated triggers
-        }
+        if (newKb.playerStats.sinhLuc <= 0) newKb.playerStats.sinhLuc = 1;
         const systemMessage: GameMessage = {
-            id: `non-combat-defeat-prevented-${Date.now()}`,
-            type: 'system',
+            id: `non-combat-defeat-prevented-${Date.now()}`, type: 'system',
             content: `Bạn đã gục ngã, nhưng vì đang là ${newKb.playerStats.playerSpecialStatus.type === 'prisoner' ? 'tù nhân' : 'nô lệ'}, bạn không thể chết. Số phận của bạn sẽ do ${newKb.playerStats.playerSpecialStatus.ownerName} quyết định.`,
-            timestamp: Date.now(),
-            turnNumber: newKb.playerStats.turn
+            timestamp: Date.now(), turnNumber: newKb.playerStats.turn
         };
         addMessageAndUpdateState([systemMessage], newKb);
-        setIsLoadingApi(false); // Reset loading state set by the caller
-        return; // Exit early to avoid the defeat consequence prompt
+        setIsLoadingApi(false);
+        return;
     }
 
     setIsLoadingApi(true);
@@ -263,45 +227,29 @@ export const useGameActions = (props: UseGameActionsProps) => {
 
     try {
         const { response, rawText } = await generateNonCombatDefeatConsequence(
-            kbStateAtDefeat,
-            currentPageMessagesLog,
-            previousPageSummaries,
+            kbStateAtDefeat, currentPageMessagesLog, previousPageSummaries,
             fatalNarration || 'Bạn đã gục ngã do một sự kiện không rõ.',
             lastNarrationFromPreviousPage,
             (prompt) => setSentPromptsLog(prev => [prompt, ...prev].slice(0, 10))
         );
         setRawAiResponsesLog(prev => [rawText, ...prev].slice(0, 50));
 
-        const {
-            newKb: kbAfterTags,
-            systemMessagesFromTags
-        } = await performTagProcessing(
-            kbStateAtDefeat, // We process tags based on the state *before* the consequence
-            response.tags,
-            kbStateAtDefeat.playerStats.turn + 1, // Consequence is the next turn
-            setKnowledgeBase,
-            logNpcAvatarPromptCallback
+        const { newKb: kbAfterTags, systemMessagesFromTags } = await performTagProcessing(
+            kbStateAtDefeat, response.tags, kbStateAtDefeat.playerStats.turn + 1,
+            setKnowledgeBase, logNpcAvatarPromptCallback
         );
-
-        // FIX: Ensure any pending combat from a contradictory tag is cleared when defeat occurs.
         kbAfterTags.pendingCombat = null;
 
         const narrationMessage: GameMessage = {
-            id: 'non-combat-defeat-narration-' + Date.now(),
-            type: 'narration',
-            content: response.narration,
-            timestamp: Date.now(),
-            choices: response.choices,
-            turnNumber: kbAfterTags.playerStats.turn, // Use the turn from after tag processing
+            id: 'non-combat-defeat-narration-' + Date.now(), type: 'narration',
+            content: response.narration, timestamp: Date.now(),
+            choices: response.choices, turnNumber: kbAfterTags.playerStats.turn,
         };
-        
-        const finalMessages = [narrationMessage, ...systemMessagesFromTags];
-        addMessageAndUpdateState(finalMessages, kbAfterTags);
-
+        addMessageAndUpdateState([narrationMessage, ...systemMessagesFromTags], kbAfterTags);
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Lỗi khi xử lý hậu quả.";
         setApiErrorWithTimeout(errorMsg);
-        onQuit(); // A drastic measure if consequence generation fails.
+        onQuit();
     } finally {
         setIsLoadingApi(false);
     }
@@ -331,16 +279,11 @@ export const useGameActions = (props: UseGameActionsProps) => {
     props.resetApiError();
     try {
         const { response, rawText } = await handlePrisonerInteraction(
-            knowledgeBase, 
-            prisoner, 
-            action,
-            currentPageMessagesLog,
-            previousPageSummaries,
-            lastNarrationFromPreviousPage,
+            knowledgeBase, prisoner, action, currentPageMessagesLog,
+            previousPageSummaries, lastNarrationFromPreviousPage,
             (prompt) => props.setSentPrisonerPromptsLog(prev => [prompt, ...prev].slice(0, 20))
         );
         props.setReceivedPrisonerResponsesLog(prev => [rawText, ...prev].slice(0, 20));
-
         const { newKb } = await performTagProcessing(knowledgeBase, response.tags, knowledgeBase.playerStats.turn, setKnowledgeBase, props.logNpcAvatarPromptCallback);
         setKnowledgeBase(newKb);
         props.setPrisonerInteractionLog(prev => [...prev, response.narration]);
@@ -358,16 +301,11 @@ export const useGameActions = (props: UseGameActionsProps) => {
     props.resetApiError();
     try {
         const { response, rawText } = await handleCompanionInteraction(
-            knowledgeBase, 
-            companion, 
-            action,
-            currentPageMessagesLog,
-            previousPageSummaries,
-            lastNarrationFromPreviousPage,
+            knowledgeBase, companion, action, currentPageMessagesLog,
+            previousPageSummaries, lastNarrationFromPreviousPage,
             (prompt) => props.setSentCompanionPromptsLog(prev => [prompt, ...prev].slice(0, 20))
         );
         props.setReceivedCompanionResponsesLog(prev => [rawText, ...prev].slice(0, 20));
-
         const { newKb } = await performTagProcessing(knowledgeBase, response.tags, knowledgeBase.playerStats.turn, setKnowledgeBase, props.logNpcAvatarPromptCallback);
         setKnowledgeBase(newKb);
         props.setCompanionInteractionLog(prev => [...prev, response.narration]);
@@ -384,10 +322,8 @@ export const useGameActions = (props: UseGameActionsProps) => {
           try {
             const summary = await summarizePrisonerInteraction(log);
             const summaryMessage: GameMessage = {
-                id: 'prisoner-summary-' + Date.now(),
-                type: 'event_summary',
-                content: summary,
-                timestamp: Date.now(),
+                id: 'prisoner-summary-' + Date.now(), type: 'event_summary',
+                content: summary, timestamp: Date.now(),
                 turnNumber: knowledgeBase.playerStats.turn,
             };
             addMessageAndUpdateState([summaryMessage], knowledgeBase);
@@ -407,10 +343,8 @@ export const useGameActions = (props: UseGameActionsProps) => {
         try {
           const summary = await summarizeCompanionInteraction(log);
           const summaryMessage: GameMessage = {
-              id: 'companion-summary-' + Date.now(),
-              type: 'event_summary',
-              content: summary,
-              timestamp: Date.now(),
+              id: 'companion-summary-' + Date.now(), type: 'event_summary',
+              content: summary, timestamp: Date.now(),
               turnNumber: knowledgeBase.playerStats.turn,
           };
           addMessageAndUpdateState([summaryMessage], knowledgeBase);
@@ -428,30 +362,24 @@ export const useGameActions = (props: UseGameActionsProps) => {
 const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
     setIsLoadingApi(true);
     resetApiError();
-    // Clear pendingCombat from KB now that combat is fully resolved.
     const kbAfterCombat = { ...knowledgeBase, playerStats: result.finalPlayerState, pendingCombat: null, postCombatState: null };
-    setKnowledgeBase(kbAfterCombat); // Update state immediately
+    setKnowledgeBase(kbAfterCombat);
 
     try {
         const summary = await summarizeCombat(
-            result.summary.split('\n'),
-            result.outcome,
+            result.summary.split('\n'), result.outcome,
             (prompt) => setSentCombatSummaryPromptsLog(prev => [prompt, ...prev].slice(0, 10))
         );
         setReceivedCombatSummaryResponsesLog(prev => [summary, ...prev].slice(0, 10));
-
         const updatedResultWithSummary = { ...result, summary };
         
         const summaryMessage: GameMessage = {
-            id: 'combat-summary-' + Date.now(),
-            type: 'event_summary',
+            id: 'combat-summary-' + Date.now(), type: 'event_summary',
             content: `Tóm tắt trận chiến: ${summary}`,
-            timestamp: Date.now(),
-            turnNumber: kbAfterCombat.playerStats.turn
+            timestamp: Date.now(), turnNumber: kbAfterCombat.playerStats.turn
         };
         addMessageAndUpdateState([summaryMessage], kbAfterCombat);
 
-        // Now, generate consequences based on the final outcome
         if (result.outcome === 'victory' || result.outcome === 'surrendered') {
             const { response: consequenceResponse, rawText } = await generateVictoryConsequence(
                 kbAfterCombat, updatedResultWithSummary, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage,
@@ -481,14 +409,11 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
             }];
             addMessageAndUpdateState(finalMessages, kbAfterTags);
         }
-        
         setCurrentScreen(GameScreen.Gameplay);
-
     } catch (error) {
-        console.error("Error generating post-combat consequence:", error);
         const errorMsg = `Lỗi tạo hậu quả sau trận chiến: ${error instanceof Error ? error.message : String(error)}`;
         setApiErrorWithTimeout(errorMsg);
-        setCurrentScreen(GameScreen.Gameplay); // Still return to gameplay on error
+        setCurrentScreen(GameScreen.Gameplay);
     } finally {
         setIsLoadingApi(false);
     }
@@ -500,31 +425,22 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
     setKnowledgeBase, logNpcAvatarPromptCallback, setCurrentScreen, setApiErrorWithTimeout
 ]);
 
-
     const handleBuySlave = useCallback((slave: Slave, vendorId: string) => {
         setKnowledgeBase(prevKb => {
             const newKb = JSON.parse(JSON.stringify(prevKb)) as KnowledgeBase;
             const vendor = newKb.discoveredNPCs.find((n: NPC) => n.id === vendorId);
             if (!vendor) return prevKb;
-
             const price = slave.value || 0;
             if (newKb.playerStats.currency < price) {
                 showNotification(VIETNAMESE.notEnoughMoney, 'error');
                 return prevKb;
             }
-
-            // Deduct currency
             newKb.playerStats.currency -= price;
-
-            // Add slave to player's collection
             const { value, ...newSlaveForCollection } = slave;
             newKb.slaves.push(newSlaveForCollection as Slave);
-
-            // Remove slave from vendor's for-sale list
             if (vendor.slavesForSale) {
                 vendor.slavesForSale = vendor.slavesForSale.filter((s: Slave) => s.id !== slave.id);
             }
-            
             showNotification(`Bạn đã mua nô lệ ${slave.name} với giá ${price.toLocaleString()}.`, 'success');
             return newKb;
         });
@@ -533,37 +449,26 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
     const handleSellSlave = useCallback((slaveId: string, vendorId: string) => {
         setKnowledgeBase(prevKb => {
             const newKb = JSON.parse(JSON.stringify(prevKb)) as KnowledgeBase;
-            
             const slaveIndex = newKb.slaves.findIndex(s => s.id === slaveId);
             if (slaveIndex === -1) {
                 showNotification("Không tìm thấy nô lệ để bán.", "error");
                 return prevKb;
             }
-
             const slaveToSell = newKb.slaves[slaveIndex];
             const slaveRaceSystem = newKb.worldConfig?.raceCultivationSystems.find(rs => rs.raceName === slaveToSell.race)?.realmSystem || newKb.realmProgressionList.join(' - ');
             const slaveRealmProgression = slaveRaceSystem.split(' - ').map(s => s.trim());
             const calculatedValue = calculateSlaveValue(slaveToSell, slaveRealmProgression);
             const sellPrice = Math.floor(calculatedValue * 0.8);
-
             const vendor = newKb.discoveredNPCs.find(n => n.id === vendorId);
             if (!vendor) {
                 showNotification(`Không tìm thấy thương nhân với ID ${vendorId}.`, "error");
                 return prevKb;
             }
-
-            // Remove from player's slaves
             newKb.slaves.splice(slaveIndex, 1);
-            // Add currency to player
             newKb.playerStats.currency += sellPrice;
-
-            // Optional: Add to vendor's for-sale list.
-            if (!vendor.slavesForSale) {
-                vendor.slavesForSale = [];
-            }
+            if (!vendor.slavesForSale) vendor.slavesForSale = [];
             const slaveForResale = {...slaveToSell, value: calculatedValue};
             vendor.slavesForSale.push(slaveForResale);
-
             showNotification(`Bạn đã bán nô lệ ${slaveToSell.name} với giá ${sellPrice.toLocaleString()}.`, 'success');
             return newKb;
         });
@@ -573,9 +478,7 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
         setIsLoadingApi(true);
         resetApiError();
         showNotification("Đang chuẩn bị phiên đấu giá nô lệ...", 'info');
-        
         let workingKb = JSON.parse(JSON.stringify(knowledgeBase));
-
         const playerAuctionSlaves: AuctionSlave[] = [];
         if (playerSlaveIds.length > 0) {
             playerSlaveIds.forEach(slaveId => {
@@ -587,61 +490,39 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
                     const slaveValue = calculateSlaveValue(slave, slaveRealmProgression);
                     
                     const playerAuctionSlave: AuctionSlave = {
-                        ...slave,
-                        ownerId: 'player', 
-                        value: slaveValue,
+                        ...slave, ownerId: 'player', value: slaveValue,
                         startingPrice: Math.floor(slaveValue * 0.5),
                         currentBid: Math.floor(slaveValue * 0.5),
-                        buyoutPrice: Math.floor(slaveValue * 2.5),
-                        highestBidderId: undefined,
+                        buyoutPrice: Math.floor(slaveValue * 2.5), highestBidderId: undefined,
                     };
                     playerAuctionSlaves.push(playerAuctionSlave);
-                    // Remove slave from player's list to prevent them being sold twice
                     workingKb.slaves.splice(slaveIndex, 1);
                 }
             });
         }
-        
         workingKb.slaveAuctionState = {
-            isOpen: true,
-            items: [],
-            auctionNPCs: [],
-            currentItemIndex: 0,
-            auctioneerCommentary: [],
-            lastBidTime: Date.now(),
-            auctioneerCallCount: 0,
+            isOpen: true, items: [], auctionNPCs: [], currentItemIndex: 0,
+            auctioneerCommentary: [], lastBidTime: Date.now(), auctioneerCallCount: 0,
             locationId: locationId,
         };
-    
         try {
             const { response, rawText } = await generateSlaveAuctionData(
-                workingKb,
-                (prompt) => setSentEconomyPromptsLog(prev => [prompt, ...prev].slice(0, 10))
+                workingKb, (prompt) => setSentEconomyPromptsLog(prev => [prompt, ...prev].slice(0, 10))
             );
             setReceivedEconomyResponsesLog(prev => [rawText, ...prev].slice(0, 10));
-    
             const { newKb, systemMessagesFromTags } = await performTagProcessing(
-                workingKb, 
-                response.tags, 
-                workingKb.playerStats.turn, 
-                setKnowledgeBase, 
-                logNpcAvatarPromptCallback
+                workingKb, response.tags, workingKb.playerStats.turn, setKnowledgeBase, logNpcAvatarPromptCallback
             );
-            
             workingKb = newKb;
-    
             if (workingKb.slaveAuctionState) {
                 workingKb.slaveAuctionState.items.push(...playerAuctionSlaves);
-                workingKb.slaveAuctionState.items.sort(() => Math.random() - 0.5); // Shuffle all items
+                workingKb.slaveAuctionState.items.sort(() => Math.random() - 0.5);
             }
-
             if (response.systemMessage) {
                  workingKb.slaveAuctionState!.auctioneerCommentary.push({ id: Date.now().toString(), text: response.systemMessage, timestamp: Date.now() });
             }
-            
             setKnowledgeBase(workingKb);
             setCurrentScreen(GameScreen.SlaveAuction);
-    
         } catch (error) {
             const errorMsg = `Lỗi chuẩn bị đấu giá nô lệ: ${error instanceof Error ? error.message : String(error)}`;
             setApiErrorWithTimeout(errorMsg);
@@ -654,16 +535,13 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
     const handlePlayerSlaveAuctionAction = useCallback(async (slaveId: string, bidAmount: number) => {
         setIsLoadingApi(true);
         resetApiError();
-    
         const item = knowledgeBase.slaveAuctionState?.items.find(i => i.id === slaveId);
         if (!item) {
             showNotification("Lỗi: Nô lệ đấu giá không tồn tại.", 'error');
             setIsLoadingApi(false);
             return;
         }
-        
         let workingKb = JSON.parse(JSON.stringify(knowledgeBase));
-        
         if (workingKb.slaveAuctionState) {
             const itemIndex = workingKb.slaveAuctionState.items.findIndex((i: any) => i.id === slaveId);
             if (itemIndex > -1) {
@@ -676,55 +554,44 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
             workingKb.slaveAuctionState.auctioneerCommentary.push(newCommentary);
         }
         setKnowledgeBase(workingKb);
-    
         try {
             const { response, rawText } = await runSlaveAuctionTurn(workingKb, item, bidAmount,
                 (prompt) => setSentEconomyPromptsLog(prev => [prompt, ...prev].slice(0, 10))
             );
             setReceivedEconomyResponsesLog(prev => [rawText, ...prev].slice(0, 10));
-    
             const { newKb } = await performTagProcessing(
                 workingKb, response.tags, workingKb.playerStats.turn, setKnowledgeBase, logNpcAvatarPromptCallback
             );
             workingKb = newKb;
-    
             if (response.systemMessage) {
                 workingKb.slaveAuctionState!.auctioneerCommentary.push({id: Date.now().toString(), text: response.systemMessage, timestamp: Date.now()});
             }
-            
             if (response.tags.some(t => t.toUpperCase().startsWith('[NPC_BID'))) {
                 workingKb.slaveAuctionState.lastBidTime = Date.now();
                 workingKb.slaveAuctionState.auctioneerCallCount = 0;
             }
-            
             setKnowledgeBase(workingKb);
-    
         } catch (error) {
              const errorMsg = `Lỗi trong lượt đấu giá nô lệ: ${error instanceof Error ? error.message : String(error)}`;
              setApiErrorWithTimeout(errorMsg);
         } finally {
             setIsLoadingApi(false);
         }
-    
     }, [knowledgeBase, setKnowledgeBase, showNotification, setApiErrorWithTimeout, setIsLoadingApi, setSentEconomyPromptsLog, setReceivedEconomyResponsesLog, logNpcAvatarPromptCallback, resetApiError]);
     
     const handleSlaveAuctioneerCall = useCallback(async () => {
         if (isLoadingApi || !knowledgeBase.slaveAuctionState || !knowledgeBase.slaveAuctionState.isOpen) return;
-    
         setIsLoadingApi(true);
         const { items, currentItemIndex, auctioneerCallCount } = knowledgeBase.slaveAuctionState;
         const currentItem = items[currentItemIndex];
         let workingKb = JSON.parse(JSON.stringify(knowledgeBase));
-    
         const newCallCount = auctioneerCallCount + 1;
-    
         if (newCallCount > 3) {
             const winnerId = currentItem.highestBidderId;
             const finalPrice = currentItem.currentBid;
             let systemMessageContent = "";
             const isPlayerOwner = currentItem.ownerId === 'player';
             const currencyName = workingKb.worldConfig?.currencyName || "Tiền";
-    
             if (winnerId === 'player') {
                 if (isPlayerOwner) {
                     const fee = Math.floor(finalPrice * 0.15);
@@ -772,7 +639,6 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
                 }
                 showNotification(systemMessageContent, 'info');
             }
-            
             const nextItemIndex = currentItemIndex + 1;
             if (nextItemIndex >= items.length) {
                 workingKb.slaveAuctionState.isOpen = false;
@@ -783,37 +649,27 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
                 workingKb.slaveAuctionState.lastBidTime = Date.now();
                 workingKb.slaveAuctionState.auctioneerCommentary.push({id: Date.now().toString(), text: `Tiếp theo là: ${items[nextItemIndex].name}!`, timestamp: Date.now()});
             }
-            
             setKnowledgeBase(workingKb); 
             addMessageAndUpdateState([{
-                id: `auction-sold-${currentItem.id}`,
-                type: 'event_summary',
-                content: systemMessageContent,
-                timestamp: Date.now(),
-                turnNumber: workingKb.playerStats.turn
+                id: `auction-sold-${currentItem.id}`, type: 'event_summary', content: systemMessageContent,
+                timestamp: Date.now(), turnNumber: workingKb.playerStats.turn
             }], workingKb);
-    
             setIsLoadingApi(false);
             return;
         }
-    
         workingKb.slaveAuctionState.auctioneerCallCount = newCallCount;
         setKnowledgeBase(workingKb);
-    
         try {
             const { response } = await runSlaveAuctioneerCall(workingKb, currentItem, newCallCount, (prompt) => setSentEconomyPromptsLog(prev => [prompt, ...prev].slice(0, 10)));
             const { newKb: kbAfterTags, systemMessagesFromTags } = await performTagProcessing(workingKb, response.tags, workingKb.playerStats.turn, setKnowledgeBase, logNpcAvatarPromptCallback);
             workingKb = kbAfterTags;
-            
             if (response.tags.some(t => t.toUpperCase().startsWith('[NPC_BID'))) {
                 workingKb.slaveAuctionState.lastBidTime = Date.now();
                 workingKb.slaveAuctionState.auctioneerCallCount = 0;
             }
-    
             if (response.systemMessage) {
                 workingKb.slaveAuctionState.auctioneerCommentary.push({id: Date.now().toString(), text: response.systemMessage, timestamp: Date.now()});
             }
-            
             addMessageAndUpdateState(systemMessagesFromTags, workingKb);
         } catch (error) {
              const errorMsg = `Lỗi trong lượt gọi giá nô lệ: ${error instanceof Error ? error.message : String(error)}`;
@@ -830,7 +686,6 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
         const { items, currentItemIndex } = workingKb.slaveAuctionState!;
         const nextItemIndex = currentItemIndex + 1;
         let systemMessageContent = `Bạn đã bỏ qua nô lệ "${items[currentItemIndex].name}".`;
-    
         if (nextItemIndex >= items.length) {
             workingKb.slaveAuctionState!.isOpen = false;
             workingKb.slaveAuctionState!.auctioneerCommentary.push({ id: Date.now().toString(), text: "Phiên đấu giá đã kết thúc! Cảm ơn quý vị.", timestamp: Date.now() });
@@ -848,7 +703,6 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
 
     const handleRefreshChoices = useCallback(async (playerHint: string) => {
       if (isLoadingApi) return;
-  
       let lastMessageIndex = -1;
       for (let i = gameMessages.length - 1; i >= 0; i--) {
           const msg = gameMessages[i];
@@ -857,7 +711,6 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
               break;
           }
       }
-
       if (lastMessageIndex === -1) {
           showNotification("Không có lựa chọn nào để làm mới.", 'warning');
           return;
@@ -865,136 +718,84 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
       const lastMessage = gameMessages[lastMessageIndex];
       const lastNarration = lastMessage.content;
       const currentChoices = lastMessage.choices || [];
-  
       setIsLoadingApi(true);
       resetApiError();
       try {
           const { response, rawText } = await generateRefreshedChoices(
-              lastNarration,
-              currentChoices,
-              playerHint,
-              knowledgeBase,
-              logSentPromptCallback
+              lastNarration, currentChoices, playerHint, knowledgeBase, logSentPromptCallback
           );
           setRawAiResponsesLog(prev => [rawText, ...prev].slice(0, 50));
-  
           if (response.choices && response.choices.length > 0) {
               setGameMessages(prevMessages => {
                   const newMessages = [...prevMessages];
                   const targetMessage = newMessages[lastMessageIndex];
-                  if (targetMessage) {
-                      newMessages[lastMessageIndex] = { ...targetMessage, choices: response.choices };
-                  }
+                  if (targetMessage) newMessages[lastMessageIndex] = { ...targetMessage, choices: response.choices };
                   return newMessages;
               });
           } else {
               showNotification("AI không thể tạo ra lựa chọn mới. Vui lòng thử lại.", 'warning');
           }
-  
       } catch (err) {
           const errorMsg = err instanceof Error ? err.message : "Lỗi khi làm mới lựa chọn.";
           setApiErrorWithTimeout(errorMsg);
       } finally {
           setIsLoadingApi(false);
       }
-    }, [
-        isLoadingApi, 
-        gameMessages, 
-        knowledgeBase, 
-        showNotification, 
-        setIsLoadingApi, 
-        resetApiError, 
-        logSentPromptCallback, 
-        setRawAiResponsesLog, 
-        setApiErrorWithTimeout,
-        setGameMessages
-    ]);
+    }, [isLoadingApi, gameMessages, knowledgeBase, showNotification, setIsLoadingApi, resetApiError, logSentPromptCallback, setRawAiResponsesLog, setApiErrorWithTimeout, setGameMessages]);
 
     const handleCopilotQuery = useCallback(async (userQuestion: string, context?: string) => {
         setIsLoadingApi(true);
         resetApiError();
-    
         const userMessageContent = context ? `${userQuestion}\n\n**Bối cảnh:**\n${context}` : userQuestion;
         const userMessage: GameMessage = {
-            id: `copilot-user-${Date.now()}`,
-            type: 'player_action',
-            content: userMessageContent,
-            timestamp: Date.now(),
-            turnNumber: knowledgeBase.playerStats.turn,
-            isPlayerInput: true,
+            id: `copilot-user-${Date.now()}`, type: 'player_action', content: userMessageContent,
+            timestamp: Date.now(), turnNumber: knowledgeBase.playerStats.turn, isPlayerInput: true,
         };
-    
         const newCopilotMessages = [...(props.aiCopilotMessages || []), userMessage];
         props.setAiCopilotMessages(newCopilotMessages);
-    
         try {
             const { turnHistory, ragVectorStore, aiCopilotMessages, userPrompts, ...kbSnapshot } = knowledgeBase;
-            
             const last20Messages = gameMessages.slice(-20).map(msg => {
                 if (msg.type === 'player_action') return `${knowledgeBase.worldConfig?.playerName || 'Người chơi'}: ${msg.content}`;
                 if (msg.type === 'narration') return `AI: ${msg.content}`;
                 return `[${msg.type.toUpperCase()}]: ${msg.content}`;
             }).join('\n');
-            
             const copilotChatHistory = newCopilotMessages.slice(0, -1).map(msg => {
                 return msg.isPlayerInput ? `Người chơi: ${msg.content}` : `Trợ lý: ${msg.content}`;
             }).join('\n');
-
             const latestGameplayPrompt = props.sentPromptsLog[0] || "";
-
             const activeCopilotConfig = knowledgeBase.aiCopilotConfigs.find(c => c.id === knowledgeBase.activeAICopilotConfigId);
             const copilotModel = activeCopilotConfig?.model || getGeminiApiSettings().model;
-    
             const { response: copilotResponse, constructedPrompt } = await generateCopilotResponse(
-                kbSnapshot,
-                last20Messages,
-                copilotChatHistory,
-                userMessageContent,
-                latestGameplayPrompt,
-                userPrompts || [],
+                kbSnapshot, last20Messages, copilotChatHistory, userMessageContent,
+                latestGameplayPrompt, userPrompts || [],
                 (prompt) => props.setSentCopilotPromptsLog(prev => [prompt, ...prev].slice(0, 10)),
                 copilotModel
             );
-            
             props.setSentCopilotPromptsLog(prev => [constructedPrompt, ...prev].slice(0, 10));
-
             let narration = copilotResponse.narration;
             let actionTags: string[] = [];
-
             const changesMatch = narration.match(/<GAME_CHANGES>([\s\S]*?)<\/GAME_CHANGES>/);
             if (changesMatch && changesMatch[1]) {
                 const tagsBlock = changesMatch[1].trim();
                 const tagRegex = /\[[^\]]+\]/g;
                 let match;
-                while ((match = tagRegex.exec(tagsBlock)) !== null) {
-                    actionTags.push(match[0]);
-                }
+                while ((match = tagRegex.exec(tagsBlock)) !== null) actionTags.push(match[0]);
                 narration = narration.replace(/<GAME_CHANGES>[\s\S]*?<\/GAME_CHANGES>/, '').trim();
-                if (!narration) {
-                    narration = "Tôi đã chuẩn bị các thay đổi bạn yêu cầu. Nhấn 'Áp Dụng Thay Đổi' để xác nhận.";
-                }
+                if (!narration) narration = "Tôi đã chuẩn bị các thay đổi bạn yêu cầu. Nhấn 'Áp Dụng Thay Đổi' để xác nhận.";
             }
-    
             const aiMessage: GameMessage = {
-                id: `copilot-ai-${Date.now()}`,
-                type: 'narration',
-                content: narration,
-                timestamp: Date.now(),
-                turnNumber: knowledgeBase.playerStats.turn,
+                id: `copilot-ai-${Date.now()}`, type: 'narration', content: narration,
+                timestamp: Date.now(), turnNumber: knowledgeBase.playerStats.turn,
                 actionTags: actionTags.length > 0 ? actionTags : undefined,
             };
-    
             props.setAiCopilotMessages(prev => [...prev, aiMessage]);
-    
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : "Lỗi khi liên hệ Siêu Trợ Lý AI.";
             setApiErrorWithTimeout(errorMsg);
             const errorMessage: GameMessage = {
-                id: `copilot-error-${Date.now()}`,
-                type: 'error',
-                content: `Lỗi: ${errorMsg}`,
-                timestamp: Date.now(),
-                turnNumber: knowledgeBase.playerStats.turn,
+                id: `copilot-error-${Date.now()}`, type: 'error', content: `Lỗi: ${errorMsg}`,
+                timestamp: Date.now(), turnNumber: knowledgeBase.playerStats.turn,
             };
             props.setAiCopilotMessages(prev => [...prev, errorMessage]);
         } finally {
@@ -1025,7 +826,7 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
     resetApiError: props.resetApiError,
     handleCheckTokenCount,
     handleCopilotQuery,
-    executeWorldTick, // Expose the main tick function
-    handleManualTick,   // Expose the manual trigger
+    executeWorldTick,
+    handleManualTick,
   };
 };
