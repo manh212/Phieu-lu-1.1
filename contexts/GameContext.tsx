@@ -1,6 +1,6 @@
 import React, { createContext, ReactNode, useRef, useState, useCallback, useEffect } from 'react';
 import * as jsonpatch from 'fast-json-patch';
-import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, AvatarUploadHandlers, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap } from '../types';
+import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, AvatarUploadHandlers, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction } from '../types';
 import { INITIAL_KNOWLEDGE_BASE, VIETNAMESE, APP_VERSION, MAX_AUTO_SAVE_SLOTS, TURNS_PER_PAGE, DEFAULT_TIERED_STATS, KEYFRAME_INTERVAL, EQUIPMENT_SLOTS_CONFIG } from '../constants';
 import { saveGameToIndexedDB, loadGamesFromIndexedDB, loadSpecificGameFromIndexedDB, deleteGameFromIndexedDB, importGameToIndexedDB, resetDBConnection as resetIndexedDBConnection } from '../services/indexedDBService';
 import * as GameTemplates from '../templates';
@@ -10,8 +10,8 @@ import { useGameData } from '../hooks/useGameData';
 import { useGameActions } from '../hooks/useGameActions';
 import { useGameplayModals } from '../hooks/useGameplayModals';
 import type { GameEntity, GameEntityType } from '../hooks/types'; // Import modal hook and types
-import { calculateRealmBaseStats, calculateEffectiveStats, getMessagesForPage, performTagProcessing, handleLevelUps, progressNpcCultivation, updateGameEventsStatus } from '../utils/gameLogicUtils'; 
-import { getApiSettings as getGeminiApiSettings, countTokens, generateCraftedItemViaAI, generateDefeatConsequence, summarizeTurnHistory } from '../services/geminiService'; 
+import { calculateRealmBaseStats, calculateEffectiveStats, getMessagesForPage, performTagProcessing, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, convertNpcActionToTag } from '../utils/gameLogicUtils'; 
+import { getApiSettings as getGeminiApiSettings, countTokens, generateCraftedItemViaAI, generateDefeatConsequence, summarizeTurnHistory, generateWorldTickUpdate } from '../services/geminiService'; 
 import { uploadImageToCloudinary } from '../services/cloudinaryService';
 import { isValidImageUrl } from '../utils/imageValidationUtils';
 
@@ -63,6 +63,10 @@ export interface GameContextType {
     receivedCombatSummaryResponsesLog: string[];
     sentVictoryConsequencePromptsLog: string[];
     receivedVictoryConsequenceResponsesLog: string[];
+    // Living World Debug States (Phase 4)
+    sentLivingWorldPromptsLog: string[];
+    rawLivingWorldResponsesLog: string[];
+    lastScoredNpcsForTick: { npc: NPC, score: number }[];
     currentPageDisplay: number;
     totalPages: number;
     messageIdBeingEdited: string | null;
@@ -132,6 +136,7 @@ export interface GameContextType {
     updateLocationCoordinates: (locationId: string, x: number, y: number) => void;
     handleCheckTokenCount: () => Promise<void>; // NEW
     handleCopilotQuery: (userQuestion: string, context?: string) => Promise<void>; // NEW
+    handleManualTick: () => void; // NEW (Phase 4)
 
     // Modal Actions
     openEntityModal: (type: GameEntityType, entity: GameEntity) => void;
@@ -178,7 +183,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         sentCombatSummaryPromptsLog, setSentCombatSummaryPromptsLog,
         receivedCombatSummaryResponsesLog, setReceivedCombatSummaryResponsesLog,
         sentVictoryConsequencePromptsLog, setSentVictoryConsequencePromptsLog,
-        receivedVictoryConsequenceResponsesLog, setReceivedVictoryConsequenceResponsesLog
+        receivedVictoryConsequenceResponsesLog, setReceivedVictoryConsequenceResponsesLog,
+        // Destructure Living World debug state and setters
+        sentLivingWorldPromptsLog, setSentLivingWorldPromptsLog,
+        rawLivingWorldResponsesLog, setRawLivingWorldResponsesLog,
+        lastScoredNpcsForTick, setLastScoredNpcsForTick
     } = gameData;
     const { 
         selectedEntity, isStyleSettingsModalOpen, isAiContextModalOpen, activeEconomyModal, activeSlaveMarketModal,
@@ -384,6 +393,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSentVictoryConsequencePromptsLog,
         setReceivedVictoryConsequenceResponsesLog,
         sentPromptsLog: gameData.sentPromptsLog,
+        // Pass Living World debug setters
+        setSentLivingWorldPromptsLog,
+        setRawLivingWorldResponsesLog,
+        setLastScoredNpcsForTick,
     });
     
     const { isSummarizingNextPageTransition } = gameActions;
@@ -1051,6 +1064,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         receivedCombatSummaryResponsesLog: gameData.receivedCombatSummaryResponsesLog,
         sentVictoryConsequencePromptsLog: gameData.sentVictoryConsequencePromptsLog,
         receivedVictoryConsequenceResponsesLog: gameData.receivedVictoryConsequenceResponsesLog,
+        sentLivingWorldPromptsLog: gameData.sentLivingWorldPromptsLog,
+        rawLivingWorldResponsesLog: gameData.rawLivingWorldResponsesLog,
+        lastScoredNpcsForTick: gameData.lastScoredNpcsForTick,
         currentPageDisplay,
         totalPages,
         messageIdBeingEdited,
@@ -1129,6 +1145,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateLocationCoordinates,
         handleCheckTokenCount: gameActions.handleCheckTokenCount,
         handleCopilotQuery: gameActions.handleCopilotQuery,
+        handleManualTick: gameActions.handleManualTick,
     };
 
     return (

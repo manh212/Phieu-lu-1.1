@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { KnowledgeBase, GameMessage, CombatEndPayload } from '../types';
+import { KnowledgeBase, GameMessage, CombatEndPayload, NPC } from '../types';
 import { INITIAL_KNOWLEDGE_BASE } from '../constants';
 import { calculateTotalPages, getMessagesForPage } from '../utils/gameLogicUtils';
 
@@ -36,6 +36,11 @@ export const useGameData = () => {
   const [receivedCombatSummaryResponsesLog, setReceivedCombatSummaryResponsesLog] = useState<string[]>([]);
   const [sentVictoryConsequencePromptsLog, setSentVictoryConsequencePromptsLog] = useState<string[]>([]);
   const [receivedVictoryConsequenceResponsesLog, setReceivedVictoryConsequenceResponsesLog] = useState<string[]>([]);
+
+  // NEW: State for Living World Debugging (Phase 4)
+  const [sentLivingWorldPromptsLog, setSentLivingWorldPromptsLog] = useState<string[]>([]);
+  const [rawLivingWorldResponsesLog, setRawLivingWorldResponsesLog] = useState<string[]>([]);
+  const [lastScoredNpcsForTick, setLastScoredNpcsForTick] = useState<{ npc: NPC, score: number }[]>([]);
   
   const [currentPageDisplay, setCurrentPageDisplay] = useState<number>(1);
   const [messageIdBeingEdited, setMessageIdBeingEdited] = useState<string | null>(null);
@@ -85,6 +90,10 @@ export const useGameData = () => {
     setReceivedCombatSummaryResponsesLog([]);
     setSentVictoryConsequencePromptsLog([]);
     setReceivedVictoryConsequenceResponsesLog([]);
+    // Reset Living World Debug Logs
+    setSentLivingWorldPromptsLog([]);
+    setRawLivingWorldResponsesLog([]);
+    setLastScoredNpcsForTick([]);
     setCurrentPageDisplay(1);
     setMessageIdBeingEdited(null);
   }, [setKnowledgeBase, setGameMessages, setRawAiResponsesLog, setSentPromptsLog, setSentEconomyPromptsLog, setReceivedEconomyResponsesLog, setSentGeneralSubLocationPromptsLog, setReceivedGeneralSubLocationResponsesLog, setLatestPromptTokenCount, setSummarizationResponsesLog, setSentCraftingPromptsLog, setReceivedCraftingResponsesLog, setCurrentPageDisplay, setMessageIdBeingEdited, setRetrievedRagContextLog, setAiCopilotMessages]);
@@ -146,6 +155,13 @@ export const useGameData = () => {
     setSentVictoryConsequencePromptsLog,
     receivedVictoryConsequenceResponsesLog,
     setReceivedVictoryConsequenceResponsesLog,
+    // Living World Debug States
+    sentLivingWorldPromptsLog,
+    setSentLivingWorldPromptsLog,
+    rawLivingWorldResponsesLog,
+    setRawLivingWorldResponsesLog,
+    lastScoredNpcsForTick,
+    setLastScoredNpcsForTick,
     currentPageDisplay,
     setCurrentPageDisplay,
     totalPages,

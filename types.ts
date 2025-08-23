@@ -1,3 +1,5 @@
+
+
 import { HarmCategory, HarmBlockThreshold } from "@google/genai";
 import * as GameTemplates from './templates'; // Import all templates
 import { Operation as JsonPatchOperation } from 'fast-json-patch'; // Import Operation from fast-json-patch
@@ -152,6 +154,13 @@ export interface Companion {
   id: string; name: string; description: string; hp: number; maxHp: number; mana: number; maxMana: number; atk: number;
 }
 
+// NEW: Interface for NPC Activity Log entries
+export interface ActivityLogEntry {
+  turnNumber: number;
+  description: string;
+  locationId: string;
+}
+
 // Base interface for all complex characters (NPCs, Prisoners, Wives, Slaves)
 export interface PersonBase {
     id: string;
@@ -175,6 +184,17 @@ export interface Prisoner extends PersonBase {
     willpower: number;      // 0-100: Mental fortitude
     resistance: number;     // 0-100: Hostility towards player
     obedience: number;      // 0-100: Willingness to obey
+    // Optional Living World properties
+    locationId?: string;
+    mood?: 'Vui Vẻ' | 'Hài Lòng' | 'Bình Thường' | 'Bực Bội' | 'Giận Dữ' | 'Nghi Ngờ';
+    needs?: Record<string, number>;
+    longTermGoal?: string;
+    shortTermGoal?: string;
+    currentPlan?: string[];
+    relationships?: Record<string, { type: string; affinity: number; }>;
+    lastTickTurn?: number;
+    tickPriorityScore?: number;
+    activityLog?: ActivityLogEntry[];
 }
 
 // Base for complex companions like Wives and Slaves
@@ -185,6 +205,17 @@ export interface ComplexCompanionBase extends PersonBase {
     equippedItems: Record<EquipmentSlotId, Item['id'] | null>;
     isBinhCanh?: boolean; // NEW
     binhCanhCounter?: number; // NEW
+    // Optional Living World properties
+    locationId?: string;
+    mood?: 'Vui Vẻ' | 'Hài Lòng' | 'Bình Thường' | 'Bực Bội' | 'Giận Dữ' | 'Nghi Ngờ';
+    needs?: Record<string, number>;
+    longTermGoal?: string;
+    shortTermGoal?: string;
+    currentPlan?: string[];
+    relationships?: Record<string, { type: string; affinity: number; }>;
+    lastTickTurn?: number;
+    tickPriorityScore?: number;
+    activityLog?: ActivityLogEntry[];
 }
 
 // Wife/Daolu Entity
@@ -454,7 +485,65 @@ export interface KnowledgeBase {
   aiCopilotMessages?: GameMessage[]; // NEW for AI Copilot
   aiCopilotConfigs: AICopilotConfig[]; // NEW
   activeAICopilotConfigId: string | null; // NEW
+  
+  // NEW: Living World State
+  isWorldTicking: boolean;
+  lastWorldTickTurn: number;
 }
+
+// --- NEW: Living World JSON Schema Definitions ---
+export interface NpcProfile {
+    id: string;
+    name: string;
+    locationId?: string;
+    personalityTraits: string[];
+    needs: Record<string, number>;
+    longTermGoal: string;
+    shortTermGoal: string;
+    currentPlan: string[];
+    mood: 'Vui Vẻ' | 'Hài Lòng' | 'Bình Thường' | 'Bực Bội' | 'Giận Dữ' | 'Nghi Ngờ';
+    relationships: Record<string, { type: string; affinity: number; }>;
+}
+
+export type NpcActionType =
+    | 'MOVE'
+    | 'INTERACT_NPC'
+    | 'UPDATE_GOAL'
+    | 'UPDATE_PLAN'
+    | 'IDLE'
+    | 'ACQUIRE_ITEM'
+    | 'PRACTICE_SKILL'
+    | 'USE_SKILL'
+    | 'INTERACT_OBJECT'
+    | 'CONVERSE';
+
+export type ActionParameters =
+    | { type: 'MOVE'; destinationLocationId: string; }
+    | { type: 'INTERACT_NPC'; targetNpcId: string; intent: 'friendly' | 'hostile' | 'neutral' | 'transaction'; }
+    | { type: 'UPDATE_GOAL'; newShortTermGoal: string; newLongTermGoal?: string; }
+    | { type: 'UPDATE_PLAN'; newPlanSteps: string[]; }
+    | { type: 'IDLE'; }
+    | { type: 'ACQUIRE_ITEM'; itemName: string; quantity: number; }
+    | { type: 'PRACTICE_SKILL'; skillName: string; }
+    | { type: 'USE_SKILL'; skillName: string; targetId?: string; }
+    | { type: 'INTERACT_OBJECT'; objectName: string; locationId: string; }
+    | { type: 'CONVERSE'; targetNpcId: string; topic: string; };
+
+export interface NpcAction {
+    type: NpcActionType;
+    parameters: any; // Using 'any' for simplicity, could be a discriminated union based on `type`
+    reason: string;
+}
+
+export interface NpcActionPlan {
+    npcId: string;
+    actions: NpcAction[];
+}
+
+export interface WorldTickUpdate {
+    npcUpdates: NpcActionPlan[];
+}
+// --- END: Living World JSON Schema Definitions ---
 
 export interface AiChoice { text: string; actionTag?: string; }
 export interface GameMessage { id: string; type: 'narration' | 'choice' | 'system' | 'player_action' | 'error' | 'page_summary' | 'event_summary'; content: string; timestamp: number; choices?: AiChoice[]; isPlayerInput?: boolean; turnNumber: number; actionTags?: string[]; }

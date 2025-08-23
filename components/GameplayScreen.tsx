@@ -29,6 +29,7 @@ import { usePopover } from '../hooks/usePopover';
 import { parseAndHighlightText as parseAndHighlightTextUtil } from '../utils/textHighlighting';
 import { useGame } from '../hooks/useGame'; // Using useGame to get context
 import Button from './ui/Button'; // Import Button
+import Spinner from './ui/Spinner'; // Import Spinner
 
 export const GameplayScreen: React.FC = () => {
     const game = useGame(); // Get all props from context
@@ -47,13 +48,13 @@ export const GameplayScreen: React.FC = () => {
     } = usePlayerInput({
         onPlayerAction: game.handlePlayerAction,
         onRefreshChoices: game.handleRefreshChoices,
-        isLoading: game.isLoadingApi || game.isSummarizingNextPageTransition,
+        isLoading: game.isLoadingApi || game.isSummarizingNextPageTransition || game.knowledgeBase.isWorldTicking,
         isSummarizing: game.isSummarizingOnLoad || game.isSummarizingNextPageTransition,
         isCurrentlyActivePage: game.isCurrentlyActivePage,
         messageIdBeingEdited: game.messageIdBeingEdited,
     });
 
-    const isLoadingUi = game.isLoadingApi || game.isUploadingAvatar;
+    const isLoadingUi = game.isLoadingApi || game.isUploadingAvatar || game.knowledgeBase.isWorldTicking;
     const isSummarizingUi = game.isSummarizingNextPageTransition || game.isSummarizingOnLoad;
 
     // Scroll management
@@ -213,6 +214,14 @@ export const GameplayScreen: React.FC = () => {
             )}
             
             <div className="flex-grow flex flex-col bg-gray-850 shadow-xl rounded-lg overflow-hidden relative min-h-0">
+                {game.knowledgeBase.isWorldTicking && (
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20" aria-live="polite" aria-busy="true">
+                        <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm shadow-lg border border-sky-500/50">
+                            <Spinner size="sm" />
+                            <span>Thế giới đang vận động...</span>
+                        </div>
+                    </div>
+                )}
                 <StoryLog 
                     storyLogRef={storyLogRef}
                     displayedMessages={game.getMessagesForPage(game.currentPageDisplay)}
@@ -344,6 +353,10 @@ export const GameplayScreen: React.FC = () => {
                 receivedCombatSummaryResponsesLog={game.receivedCombatSummaryResponsesLog}
                 sentVictoryConsequencePromptsLog={game.sentVictoryConsequencePromptsLog}
                 receivedVictoryConsequenceResponsesLog={game.receivedVictoryConsequenceResponsesLog}
+                sentLivingWorldPromptsLog={game.sentLivingWorldPromptsLog}
+                rawLivingWorldResponsesLog={game.rawLivingWorldResponsesLog}
+                lastScoredNpcsForTick={game.lastScoredNpcsForTick}
+                onManualTick={game.handleManualTick}
             />}
         </div>
     );

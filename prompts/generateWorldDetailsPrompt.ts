@@ -20,7 +20,6 @@ export const generateWorldDetailsPrompt = (
   const currentStoryTone = storyTone || DEFAULT_STORY_TONE;
   const currentNsfwStyle = nsfwStyle || DEFAULT_NSFW_DESCRIPTION_STYLE;
 
-
   const cultivationSystemInstructions = isCultivationEnabled ? `
     *   **Tạo Hệ Thống Cảnh Giới Theo Chủng Tộc (CỰC KỲ QUAN TRỌNG):**
         *   **Yêu cầu:** Dựa trên **Ý Tưởng Cốt Truyện** ("${storyIdea}"), thể loại ("${effectiveGenreDisplay}"), và các cài đặt 18+ đã chọn, hãy tạo ra các hệ thống cảnh giới/cấp bậc **RIÊNG BIỆT** cho các chủng tộc khác nhau. Tên gọi phải phản ánh văn hóa và bản chất của từng chủng tộc.
@@ -179,13 +178,13 @@ ${lifespanInstruction}
             - **CHI TIẾT THUỘC TÍNH:**
                 - \`category\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.ItemCategory).join(' | ')}\`.
                 - \`rarity\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.ItemRarity).join(' | ')}\`.
-                - **\`itemRealm\`: BẮT BUỘC. Đây là cảnh giới/cấp độ của vật phẩm, quyết định sức mạnh và giá trị cơ bản của nó. **PHẢI** là một trong các cảnh giới lớn trong tag \`[GENERATED_RACE_SYSTEM: race="Nhân Tộc", ...]\` mà bạn đã tạo cho chủng tộc của người chơi. KHÔNG được sử dụng cảnh giới từ hệ thống của các chủng tộc khác hoặc các cảnh giới không có trong danh sách. Ví dụ, nếu bạn tạo \`system="Luyện Khí - Trúc Cơ"\`, thì \`itemRealm\` chỉ có thể là "Luyện Khí" hoặc "Trúc Cơ".**
+                - **\`itemRealm\`: BẮT BUỘC. Đây là cảnh giới/cấp độ của vật phẩm, quyết định sức mạnh và giá trị cơ bản của nó. **PHẢI** là một trong các cảnh giới lớn trong tag \`[GENERATED_RACE_SYSTEM: race="Nhân Tộc", ...]\` mà bạn đã tạo. Ví dụ, nếu bạn tạo hệ thống cho Nhân Tộc là \`system="Luyện Khí - Trúc Cơ"\`, thì \`itemRealm\` chỉ có thể là "Luyện Khí" hoặc "Trúc Cơ".**
             - **THUỘC TÍNH BỔ SUNG TÙY THEO \`category\`:**
                 - Nếu \`category="${GameTemplates.ItemCategory.EQUIPMENT}"\`:
                     - \`equipmentType\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.EquipmentType).join(' | ')}\`.
                     - \`slot\`: TÙY CHỌN. Vị trí trang bị, ví dụ: "Vũ Khí Chính", "Giáp Thân".
-                    - \`statBonusesJSON\`: BẮT BUỘC. Một chuỗi JSON hợp lệ chứa các chỉ số cộng thêm. Các khóa hợp lệ là: \`${Object.keys(STAT_POINT_VALUES).join(', ')}\`. Nếu không có, dùng \`statBonusesJSON='{}'\`. Ví dụ: \`statBonusesJSON='{"sucTanCong": 15, "maxSinhLuc": 100}'\`.
-                    - \`uniqueEffectsList\`: BẮT BUỘC. Danh sách hiệu ứng đặc biệt, cách nhau bởi dấu ';'. Nếu không có, dùng \`uniqueEffectsList="Không có gì đặc biệt"\`. Cố gắng sử dụng các từ khóa sau để hệ thống tính giá trị chính xác hơn: \`${Object.keys(SPECIAL_EFFECT_KEYWORDS).join(', ')}\`. Ví dụ: \`uniqueEffectsList="hút máu 5%;tăng 10% chí mạng"\`.
+                    - **QUAN TRỌNG về \`statBonusesJSON\`:** LÀ BẮT BUỘC. Phải là một chuỗi JSON hợp lệ. Các khóa hợp lệ là: \`${Object.keys(STAT_POINT_VALUES).join(', ')}\`. **Nếu không có, PHẢI ĐỂ LÀ \`statBonusesJSON='{}'\`.** Ví dụ: \`statBonusesJSON='{"sucTanCong": 15, "maxSinhLuc": 100}'\`.
+                    - **QUAN TRỌNG về \`uniqueEffectsList\`:** LÀ BẮT BUỘC. Danh sách hiệu ứng đặc biệt, cách nhau bởi dấu ';'. **Nếu không có, PHẢI ĐỂ LÀ \`uniqueEffectsList="Không có gì đặc biệt"\`.** Cố gắng sử dụng các từ khóa sau để hệ thống tính giá trị chính xác hơn: \`${Object.keys(SPECIAL_EFFECT_KEYWORDS).join(', ')}\`. Ví dụ: \`uniqueEffectsList="hút máu 5%;tăng 10% chí mạng"\`.
                 - Nếu \`category="${GameTemplates.ItemCategory.POTION}"\`:
                     - \`potionType\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.PotionType).join(' | ')}\`.
                     - \`effectsList\`: BẮT BUỘC. Danh sách hiệu ứng, cách nhau bởi ';'. Ví dụ: "Hồi 50 HP;Tăng 10 công trong 3 lượt".

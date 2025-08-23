@@ -1,4 +1,3 @@
-
 import { KnowledgeBase, GameMessage, NPC, PlayerStats, ApiConfig, TuChatTier, ItemCategoryValues, VectorMetadata } from '../../types';
 import { NPCTemplate } from '../../templates';
 import { ALL_FACTION_ALIGNMENTS, VIETNAMESE, DEFAULT_MORTAL_STATS, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL, TU_CHAT_TIERS } from '../../constants';
@@ -177,6 +176,16 @@ export const processNpc = async (
             vendorType: vendorType || undefined,
             vendorSlogan: vendorSlogan || undefined,
             vendorBuysCategories: vendorBuysCategories,
+            // Living World Defaults
+            mood: 'Bình Thường',
+            needs: {},
+            longTermGoal: 'Chưa có',
+            shortTermGoal: 'Sống sót qua ngày',
+            currentPlan: [],
+            relationships: {},
+            lastTickTurn: 0,
+            tickPriorityScore: 0,
+            activityLog: [],
         };
         
         // If it's a new vendor, set their restock year to prevent immediate re-stocking.
@@ -526,6 +535,11 @@ export const processNpcUpdate = async (
             npcToUpdate.vendorBuysCategories = categoriesArray.filter(c => Object.values(GameTemplates.ItemCategory).includes(c as any)) as ItemCategoryValues[];
             updatedFieldsCount++;
         }
+        // NEW: Living World updates
+        if (tagParams.mood) { npcToUpdate.mood = tagParams.mood as NPC['mood']; updatedFieldsCount++; }
+        if (tagParams.shortTermGoal) { npcToUpdate.shortTermGoal = tagParams.shortTermGoal; updatedFieldsCount++; }
+        if (tagParams.longTermGoal) { npcToUpdate.longTermGoal = tagParams.longTermGoal; updatedFieldsCount++; }
+        if (tagParams.currentPlan) { npcToUpdate.currentPlan = tagParams.currentPlan.split(';').map(s => s.trim()).filter(Boolean); updatedFieldsCount++; }
         
         if(realmUpdated && npcToUpdate.realm && newKb.worldConfig?.isCultivationEnabled){
             const npcRace = npcToUpdate.race || 'Nhân Tộc';

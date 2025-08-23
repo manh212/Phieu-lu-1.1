@@ -1,5 +1,4 @@
-
-import type { PlayerStats, TuChatTier, ProficiencyTier, Slave } from './types'; // PlayerStats will be defined in types.ts
+import type { PlayerStats, TuChatTier, ProficiencyTier, Slave, ActivityLogEntry } from './types'; // PlayerStats will be defined in types.ts
 
 export const ItemRarity = {
     PHO_THONG: "Phổ Thông", HIEM: "Hiếm", QUY_BAU: "Quý Báu", CUC_PHAM: "Cực Phẩm", THAN_THOAI: "Thần Thoại", CHI_TON: "Chí Tôn"
@@ -117,6 +116,17 @@ export interface NPCTemplate {
     slavesForSale?: Slave[]; // New
     lastRestockYear?: number;
     isEssential?: boolean; locationId?: string; level?: number;
+    
+    // NEW: Living World properties
+    mood: 'Vui Vẻ' | 'Hài Lòng' | 'Bình Thường' | 'Bực Bội' | 'Giận Dữ' | 'Nghi Ngờ';
+    needs: Record<string, number>; // e.g. {"Quyền Lực": 85, "Sinh Tồn": 30}
+    longTermGoal: string;
+    shortTermGoal: string;
+    currentPlan: string[];
+    relationships: Record<string, { type: string; affinity: number; }>; // Key is other NPC's ID
+    lastTickTurn: number;
+    tickPriorityScore: number;
+    activityLog: ActivityLogEntry[];
 }
 
 // New YeuThuTemplate

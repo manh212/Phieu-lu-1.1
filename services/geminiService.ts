@@ -1,7 +1,9 @@
 
 
-import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, CountTokensResponse } from "@google/genai";
-import { KnowledgeBase, ParsedAiResponse, AiChoice, WorldSettings, ApiConfig, SafetySetting, PlayerActionInputType, ResponseLength, StartingSkill, StartingItem, StartingNPC, StartingLore, GameMessage, GeneratedWorldElements, StartingLocation, StartingFaction, PlayerStats, Item as ItemType, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, TU_CHAT_TIERS, AuctionItem, GameLocation, AuctionState, WorldDate, CongPhapGrade, CongPhapType, LinhKiActivationType, LinhKiCategory, ProfessionGrade, ProfessionType, FindLocationParams, NPC, Skill, Prisoner, Wife, Slave, CombatEndPayload, RaceCultivationSystem, StartingYeuThu, AuctionSlave } from '../types'; 
+
+
+import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, CountTokensResponse, Type } from "@google/genai";
+import { KnowledgeBase, ParsedAiResponse, AiChoice, WorldSettings, ApiConfig, SafetySetting, PlayerActionInputType, ResponseLength, StartingSkill, StartingItem, StartingNPC, StartingLore, GameMessage, GeneratedWorldElements, StartingLocation, StartingFaction, PlayerStats, Item as ItemType, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, TU_CHAT_TIERS, AuctionItem, GameLocation, AuctionState, WorldDate, CongPhapGrade, CongPhapType, LinhKiActivationType, LinhKiCategory, ProfessionGrade, ProfessionType, FindLocationParams, NPC, Skill, Prisoner, Wife, Slave, CombatEndPayload, RaceCultivationSystem, StartingYeuThu, AuctionSlave, WorldTickUpdate } from '../types'; 
 import { PROMPT_FUNCTIONS } from '../prompts';
 import { VIETNAMESE, API_SETTINGS_STORAGE_KEY, DEFAULT_MODEL_ID, HARM_CATEGORIES, DEFAULT_API_CONFIG, MAX_TOKENS_FANFIC, ALL_FACTION_ALIGNMENTS, AVAILABLE_GENRES, CUSTOM_GENRE_VALUE, AVAILABLE_MODELS, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, DEFAULT_NSFW_DESCRIPTION_STYLE, AVAILABLE_AVATAR_ENGINES, DEFAULT_AVATAR_GENERATION_ENGINE } from '../constants';
 import * as GameTemplates from '../templates';
@@ -1060,4 +1062,100 @@ export async function generateCopilotResponse(
     const prompt = PROMPT_FUNCTIONS.copilot(knowledgeBaseSnapshot, last20Messages, copilotChatHistory, userQuestionAndTask, latestGameplayPrompt, userPrompts);
     incrementApiCallCount('AI_COPILOT');
     return generateContentWithRateLimit(prompt, modelToUse, onPromptConstructed);
+}
+
+// --- NEW: Living World Functions ---
+
+// The JSON schema definition for the AI's response
+const worldTickUpdateSchema = {
+  type: Type.OBJECT,
+  properties: {
+    npcUpdates: {
+      type: Type.ARRAY,
+      description: "Một mảng các kế hoạch hành động cho từng NPC.",
+      items: { // NpcActionPlan
+        type: Type.OBJECT,
+        properties: {
+          npcId: { 
+            type: Type.STRING,
+            description: "ID của NPC thực hiện hành động."
+          },
+          actions: {
+            type: Type.ARRAY,
+            description: "Một chuỗi các hành động mà NPC sẽ thực hiện.",
+            items: { // NpcAction
+              type: Type.OBJECT,
+              properties: {
+                type: { 
+                  type: Type.STRING,
+                  description: "Loại hành động (ví dụ: MOVE, INTERACT_NPC)."
+                },
+                parameters: { 
+                  type: Type.OBJECT,
+                  description: "Các tham số cần thiết cho hành động, cấu trúc phụ thuộc vào 'type'.",
+                  properties: {
+                    destinationLocationId: { type: Type.STRING },
+                    targetNpcId: { type: Type.STRING },
+                    intent: { type: Type.STRING },
+                    newShortTermGoal: { type: Type.STRING },
+                    newLongTermGoal: { type: Type.STRING },
+                    newPlanSteps: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING }
+                    },
+                    itemName: { type: Type.STRING },
+                    quantity: { type: Type.NUMBER },
+                    skillName: { type: Type.STRING },
+                    targetId: { type: Type.STRING },
+                    objectName: { type: Type.STRING },
+                    locationId: { type: Type.STRING },
+                    topic: { type: Type.STRING },
+                  }
+                },
+                reason: { 
+                  type: Type.STRING,
+                  description: "Lý do tại sao NPC thực hiện hành động này."
+                }
+              },
+              required: ['type', 'parameters', 'reason']
+            }
+          }
+        },
+        required: ['npcId', 'actions']
+      }
+    }
+  },
+  required: ['npcUpdates']
+};
+
+/**
+ * Calls the Gemini API to get the next set of actions for NPCs in the world.
+ * Uses JSON mode with a strict schema to ensure reliable output.
+ * @param prompt The fully constructed prompt from buildWorldTickPrompt.
+ * @param onPromptConstructed Optional callback to log the constructed prompt.
+ * @returns A Promise that resolves to the raw JSON string from the AI.
+ */
+export async function generateWorldTickUpdate(
+    prompt: string,
+    onPromptConstructed?: (prompt: string) => void
+): Promise<string> {
+    const { safetySettings } = getApiSettings();
+    const modelId = 'gemini-2.5-flash'; // Optimized for speed and cost
+
+    if (onPromptConstructed) {
+        onPromptConstructed(prompt);
+    }
+    
+    const response = await generateContentAndCheck({
+        model: modelId,
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+            safetySettings: safetySettings,
+            responseMimeType: "application/json",
+            responseSchema: worldTickUpdateSchema,
+        },
+    });
+
+    // In JSON mode, response.text is the JSON string
+    return response.text;
 }

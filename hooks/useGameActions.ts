@@ -1,13 +1,14 @@
+
 import { useCallback, useState } from 'react';
-import { KnowledgeBase, GameMessage, WorldSettings, PlayerActionInputType, ResponseLength, GameScreen, RealmBaseStatDefinition, TurnHistoryEntry, AuctionState, Item, AuctionCommentaryEntry, FindLocationParams, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, NPC, CombatDispositionMap, AiChoice } from './../types';
-import { countTokens, getApiSettings as getGeminiApiSettings, handleCompanionInteraction, handlePrisonerInteraction, summarizeCompanionInteraction, summarizePrisonerInteraction, generateNonCombatDefeatConsequence, generateSlaveAuctionData, runSlaveAuctionTurn, runSlaveAuctioneerCall, generateVictoryConsequence, summarizeCombat, generateDefeatConsequence, generateCraftedItemViaAI, findLocationWithAI, generateNextTurn, generateRefreshedChoices, generateCopilotResponse } from './../services/geminiService';
+import { KnowledgeBase, GameMessage, WorldSettings, PlayerActionInputType, ResponseLength, GameScreen, RealmBaseStatDefinition, TurnHistoryEntry, AuctionState, Item, AuctionCommentaryEntry, FindLocationParams, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, NPC, CombatDispositionMap, AiChoice, ActivityLogEntry } from './../types';
+import { countTokens, getApiSettings as getGeminiApiSettings, handleCompanionInteraction, handlePrisonerInteraction, summarizeCompanionInteraction, summarizePrisonerInteraction, generateNonCombatDefeatConsequence, generateSlaveAuctionData, runSlaveAuctionTurn, runSlaveAuctioneerCall, generateVictoryConsequence, summarizeCombat, generateDefeatConsequence, generateCraftedItemViaAI, findLocationWithAI, generateNextTurn, generateRefreshedChoices, generateCopilotResponse, generateWorldTickUpdate } from './../services/geminiService';
 import { useSetupActions } from './actions/useSetupActions';
 import { useAuctionActions } from './actions/useAuctionActions';
 import { useMainGameLoop } from './actions/useMainGameLoop';
 import { useCultivationActions } from './actions/useCultivationActions';
 import { performTagProcessing } from '../utils/tagProcessingUtils';
-import { VIETNAMESE } from '../constants';
-import { calculateSlaveValue } from '../utils/gameLogicUtils';
+import { VIETNAMESE, LIVING_WORLD_TICK_INTERVAL } from '../constants';
+import { calculateSlaveValue, scheduleWorldTick, PROMPT_FUNCTIONS, parseAndValidateResponse, convertNpcActionToTag } from '../utils/gameLogicUtils';
 
 interface UseGameActionsProps {
   knowledgeBase: KnowledgeBase;
@@ -63,6 +64,10 @@ interface UseGameActionsProps {
   setAiCopilotMessages: React.Dispatch<React.SetStateAction<GameMessage[]>>;
   sentCopilotPromptsLog: string[]; // NEW
   setSentCopilotPromptsLog: React.Dispatch<React.SetStateAction<string[]>>; // NEW
+  // NEW Props for Living World Debugging (Phase 4)
+  setSentLivingWorldPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
+  setRawLivingWorldResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
+  setLastScoredNpcsForTick: React.Dispatch<React.SetStateAction<{ npc: NPC, score: number }[]>>;
 }
 
 export const useGameActions = (props: UseGameActionsProps) => {
@@ -73,8 +78,130 @@ export const useGameActions = (props: UseGameActionsProps) => {
       onQuit, logNpcAvatarPromptCallback, setRawAiResponsesLog, setApiErrorWithTimeout, 
       resetApiError, setSentEconomyPromptsLog, setReceivedEconomyResponsesLog, 
       setSentCombatSummaryPromptsLog, setReceivedCombatSummaryResponsesLog, 
-      setSentVictoryConsequencePromptsLog, setReceivedVictoryConsequenceResponsesLog
+      setSentVictoryConsequencePromptsLog, setReceivedVictoryConsequenceResponsesLog,
+      setSentLivingWorldPromptsLog, setRawLivingWorldResponsesLog, setLastScoredNpcsForTick // Destructure new setters
     } = props;
+
+    const executeWorldTick = useCallback(async () => {
+      // 1. Start: Lock the state
+      setKnowledgeBase(prev => ({ ...prev, isWorldTicking: true }));
+      try {
+          // 2. Schedule: Get a prioritized list of NPCs
+          const npcsToTick = scheduleWorldTick(knowledgeBase);
+          setLastScoredNpcsForTick(npcsToTick.map(npc => ({ npc, score: npc.tickPriorityScore })));
+
+          if (npcsToTick.length === 0) return;
+
+          // 3. Build Prompt
+          const prompt = PROMPT_FUNCTIONS.livingWorldTick(knowledgeBase, npcsToTick);
+          setSentLivingWorldPromptsLog(prev => [prompt, ...prev].slice(0, 10));
+
+          // 4. Generate Update from Gemini
+          const jsonResponse = await generateWorldTickUpdate(prompt);
+          setRawLivingWorldResponsesLog(prev => [jsonResponse, ...prev].slice(0, 10));
+
+          // 5. Parse & Validate Response
+          const worldUpdate = parseAndValidateResponse(jsonResponse, knowledgeBase);
+          if (!worldUpdate) {
+              console.warn("World tick update was null after parsing/validation. Skipping this tick.");
+              showNotification("AI phản hồi không hợp lệ cho thế giới sống.", "warning");
+              return;
+          }
+
+          // 6. Process Results
+          let workingKb = JSON.parse(JSON.stringify(knowledgeBase)) as KnowledgeBase;
+          const turnForMessages = workingKb.playerStats.turn;
+          const worldEventMessages: GameMessage[] = [];
+          
+          for (const plan of worldUpdate.npcUpdates) {
+              const npc = workingKb.discoveredNPCs.find(n => n.id === plan.npcId);
+              if (!npc) continue;
+
+              // Ensure activityLog exists
+              if (!npc.activityLog) {
+                  npc.activityLog = [];
+              }
+              
+              npc.lastTickTurn = turnForMessages;
+              
+              let tagsToProcess: string[] = [];
+
+              for (const action of plan.actions) {
+                  // Generate a system tag if the action requires a direct state change
+                  const tag = convertNpcActionToTag(action, npc);
+                  if (tag) {
+                      tagsToProcess.push(tag);
+                  }
+                  
+                  // --- START PHASE 3: CREATE LOG ENTRY ---
+                  const logEntry: ActivityLogEntry = {
+                      turnNumber: turnForMessages,
+                      locationId: npc.locationId || 'unknown', // Use current location before potential move
+                      description: action.reason,
+                  };
+                  npc.activityLog.push(logEntry);
+
+                  // Limit the log size to 30 entries
+                  const MAX_LOG_ENTRIES = 30;
+                  if (npc.activityLog.length > MAX_LOG_ENTRIES) {
+                      npc.activityLog = npc.activityLog.slice(-MAX_LOG_ENTRIES);
+                  }
+                  // --- END PHASE 3 ---
+
+                  // Handle direct interaction with the player
+                  if (action.type === 'INTERACT_NPC' && action.parameters.targetNpcId === 'player') {
+                      const interactionMessage: GameMessage = {
+                          id: `world-event-interaction-${npc.id}-${Date.now()}`,
+                          type: 'narration',
+                          content: `${npc.name} tiếp cận bạn. ${action.reason}`,
+                          timestamp: Date.now(),
+                          turnNumber: turnForMessages,
+                          choices: [
+                              { text: "Lắng nghe xem họ muốn nói gì." },
+                              { text: "Tỏ ra không quan tâm." }
+                          ]
+                      };
+                      worldEventMessages.push(interactionMessage);
+                  } else {
+                      // Generate a "system" message for other significant actions
+                      worldEventMessages.push({
+                          id: `world-event-${npc.id}-${Date.now()}`,
+                          type: 'system',
+                          content: action.reason,
+                          timestamp: Date.now(),
+                          turnNumber: turnForMessages
+                      });
+                  }
+              }
+              
+              if (tagsToProcess.length > 0) {
+                  const { newKb } = await performTagProcessing(workingKb, tagsToProcess, turnForMessages, setKnowledgeBase, logNpcAvatarPromptCallback);
+                  workingKb = newKb;
+              }
+          }
+          
+          workingKb.lastWorldTickTurn = turnForMessages;
+          addMessageAndUpdateState(worldEventMessages, workingKb);
+
+      } catch (error) {
+          // Comprehensive error handling (Phase 4)
+          console.error("An error occurred during executeWorldTick:", error);
+          const errorMsg = error instanceof Error ? error.message : "Lỗi không xác định trong quá trình thế giới vận động.";
+          showNotification(`Lỗi World Tick: ${errorMsg}`, "error");
+          // The game continues, just this tick is skipped.
+      } finally {
+          // 7. End: Unlock the state
+          setKnowledgeBase(prev => ({ ...prev, isWorldTicking: false }));
+      }
+  }, [knowledgeBase, setKnowledgeBase, addMessageAndUpdateState, logNpcAvatarPromptCallback, showNotification, setLastScoredNpcsForTick, setRawLivingWorldResponsesLog, setSentLivingWorldPromptsLog]);
+
+  const handleManualTick = useCallback(() => {
+    if (knowledgeBase.isWorldTicking) {
+        showNotification("Thế giới đang vận động, vui lòng chờ.", "info");
+        return;
+    }
+    executeWorldTick();
+  }, [knowledgeBase.isWorldTicking, executeWorldTick, showNotification]);
 
   const logSentPromptCallback = useCallback((prompt: string) => {
     setSentPromptsLog(prev => [prompt, ...prev].slice(0, 10));
@@ -185,6 +312,7 @@ export const useGameActions = (props: UseGameActionsProps) => {
       setIsLoadingApi,
       logSentPromptCallback,
       handleNonCombatDefeat,
+      executeWorldTick,
   });
 
   const auctionActions = useAuctionActions({
@@ -897,5 +1025,7 @@ const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
     resetApiError: props.resetApiError,
     handleCheckTokenCount,
     handleCopilotQuery,
+    executeWorldTick, // Expose the main tick function
+    handleManualTick,   // Expose the manual trigger
   };
 };

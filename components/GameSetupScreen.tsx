@@ -118,9 +118,12 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
                 }
             }
 
-            // Process uniqueEffectsString into an array
-            if (newItem.equipmentDetails.uniqueEffectsString && !newItem.equipmentDetails.uniqueEffects) {
+            // Process uniqueEffectsString into an array (Defensive Programming)
+            if (typeof newItem.equipmentDetails.uniqueEffectsString === 'string' && !newItem.equipmentDetails.uniqueEffects) {
                 newItem.equipmentDetails.uniqueEffects = newItem.equipmentDetails.uniqueEffectsString.split(';').map(s => s.trim()).filter(Boolean);
+            } else if (!newItem.equipmentDetails.uniqueEffects) {
+                // If the string is missing or not a string, and the array isn't already there, create a safe default.
+                newItem.equipmentDetails.uniqueEffects = [];
             }
             return newItem;
         }

@@ -85,7 +85,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
     >
       <div 
         ref={modalRef}
-        className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col relative text-gray-100"
+        className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col relative text-gray-100"
         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal content
         tabIndex={-1} // Make it focusable
       >

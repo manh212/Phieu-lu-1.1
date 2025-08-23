@@ -2,6 +2,7 @@ import { WorldSettings, StartingItem, GenreType, ViolenceLevel, StoryTone, DIALO
 import { SUB_REALM_NAMES, VIETNAMESE, AVAILABLE_GENRES, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, NSFW_DESCRIPTION_STYLES, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, TU_CHAT_TIERS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
 import * as GameTemplates from '../templates';
 import { continuePromptSystemRules, storytellingRulesSection } from '../constants/systemRulesNormal';
+import { getTimeOfDayContext } from '../utils/dateUtils';
 
 const buildSkillTag = (skill: StartingSkill): string => {
     let tag = `[SKILL_LEARNED: name="${skill.name.replace(/"/g, '\\"')}" description="${skill.description.replace(/"/g, '\\"')}" skillType="${skill.skillType || GameTemplates.SkillType.KHAC}"`;
@@ -41,7 +42,7 @@ const buildSkillTag = (skill: StartingSkill): string => {
 };
 
 export const generateInitialPrompt = (worldConfig: WorldSettings, aiContextConfig: AIContextConfig): string => {
-  const { genre, customGenreName, isCultivationEnabled, raceCultivationSystems, yeuThuRealmSystem, canhGioiKhoiDau, nsfwMode, nsfwDescriptionStyle, violenceLevel, storyTone, writingStyleGuide } = worldConfig;
+  const { genre, customGenreName, isCultivationEnabled, raceCultivationSystems, yeuThuRealmSystem, canhGioiKhoiDau, nsfwMode, nsfwDescriptionStyle, violenceLevel, storyTone, writingStyleGuide, startingDate } = worldConfig;
 
   const getMainRealms = (realmSystem: string): string[] => {
     return realmSystem.split(' - ').map(s => s.trim()).filter(s => s.length > 0);
@@ -138,6 +139,17 @@ Mục tiêu hàng đầu của bạn là tái hiện một cách trung thực nh
 ${writingStyleGuide}
 """
 ` : '';
+
+  const timeOfDayContext = getTimeOfDayContext(startingDate);
+
+  const startTimeCommand = `
+**BỐI CẢNH VÀ MỆNH LỆNH KHỞI ĐẦU (CỰC KỲ QUAN TRỌNG):**
+1.  **THỜI GIAN CHÍNH XÁC:** Câu chuyện phải bắt đầu vào đúng thời điểm sau: **${String(startingDate.hour).padStart(2, '0')}:${String(startingDate.minute).padStart(2, '0')} ngày ${startingDate.day}/${startingDate.month}/${startingDate.year}**.
+2.  **BỐI CẢNH MÔI TRƯỜNG:** Lời kể đầu tiên của bạn phải phản ánh chính xác bối cảnh môi trường của thời điểm đó. Dưới đây là hướng dẫn chi tiết cho bạn:
+${timeOfDayContext}
+3.  **ĐỊA ĐIỂM:** Người chơi sẽ bắt đầu tại: "${worldConfig.startingLocations?.[0]?.name || 'một nơi vô định'}".
+4.  **MỆNH LỆNH:** Hãy bắt đầu lời kể của bạn ngay lập tức bằng cách mô tả cảnh vật và tình huống của nhân vật tại địa điểm và thời gian chính xác đã nêu. TUYỆT ĐỐI tuân thủ các hướng dẫn về môi trường và hoạt động của NPC cho thời điểm này.
+`;
 
   return `**YÊU CẦU CỐT LÕI:** Bắt đầu một câu chuyện game nhập vai thể loại "${effectiveGenre}" bằng tiếng Việt. Tạo ra một thế giới sống động và một cốt truyện mở đầu hấp dẫn dựa trên thông tin do người chơi cung cấp. Bắt đầu lời kể ngay lập tức, không có lời dẫn hay tự xưng là người kể chuyện.
 
@@ -264,9 +276,7 @@ ${isCultivationEnabled ? `2.  **Xác nhận Hệ thống Cảnh giới:** Hệ t
 **QUY TẮC SỬ DỤNG TAGS (CHUNG CHO MỌI LƯỢT KỂ TIẾP THEO, BAO GỒM CẢ LƯỢT ĐẦU TIÊN NÀY SAU KHI KHỞI TẠO):**
 ${continuePromptSystemRules(worldConfig, mainRealms, aiContextConfig, worldConfig.startingDate)}
 
-**BỐI CẢNH KHỞI ĐẦU:**
-Người chơi sẽ bắt đầu cuộc phiêu lưu tại địa điểm: "${worldConfig.startingLocations?.[0]?.name || 'một nơi vô định'}".
-Hãy bắt đầu lời kể của bạn bằng cách mô tả cảnh vật và tình huống của nhân vật tại địa điểm khởi đầu này, tuân thủ **MỆNH LỆNH TỐI THƯỢỢNG: PHONG CÁCH KỂ CHUYỆN**.
+${startTimeCommand}
 
 **TIẾP TỤC CÂU CHUYỆN:** Dựa trên **HƯỚNG DẪN TỪ NGƯỜI CHƠI**, **ĐỘ DÀI PHẢN HỒI MONG MUỐN** và **TOÀN BỘ BỐI CẢNH GAME**, hãy tiếp tục câu chuyện cho thể loại "${effectiveGenre}". Mô tả kết quả, cập nhật trạng thái game bằng tags, và cung cấp các lựa chọn hành động mới (theo định dạng đã hướng dẫn ở mục 17). Và đưa ra ít nhất một nhiệm vụ khởi đầu dựa trên mục tiêu của nhân vật.
 `;

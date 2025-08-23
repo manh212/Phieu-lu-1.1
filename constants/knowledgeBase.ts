@@ -56,4 +56,8 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   aiContextConfig: {} as AIContextConfig, // NEW: Initialize to satisfy type, will be populated on new/load game.
   aiCopilotConfigs: [], // NEW
   activeAICopilotConfigId: null, // NEW
+  
+  // NEW: Living World State
+  isWorldTicking: false,
+  lastWorldTickTurn: 0,
 };

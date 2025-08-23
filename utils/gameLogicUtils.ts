@@ -46,6 +46,7 @@ export * from './ragUtils'; // NEW: Export RAG utilities
 export * from './dateUtils'; // NEW: Export date utilities
 export * from './eventUtils'; // NEW: Export event utilities
 export * from './apiUsageTracker'; // NEW: Export API usage tracker
+export * from './livingWorldUtils'; // NEW: Export Living World utilities
 
 // NPC, YeuThu, and World Info Tag Processors
 export * from './tagProcessors/npcTagProcessor';
@@ -65,3 +66,4 @@ export * from './tagProcessors/timeTagProcessor';
 export * from './locationEvents';
 export * from './tagProcessors/slaveTagProcessor';
 export * from './avatarUtils';
+export { PROMPT_FUNCTIONS } from '../prompts';

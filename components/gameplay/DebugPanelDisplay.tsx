@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { KnowledgeBase } from '../../types';
+import { KnowledgeBase, NPC } from '../../types';
 import { VIETNAMESE } from '../../constants';
 import Button from '../ui/Button';
 
@@ -30,6 +30,11 @@ interface DebugPanelDisplayProps {
   receivedCombatSummaryResponsesLog: string[];
   sentVictoryConsequencePromptsLog: string[];
   receivedVictoryConsequenceResponsesLog: string[];
+  // NEW Props for Living World (Phase 4)
+  sentLivingWorldPromptsLog: string[];
+  rawLivingWorldResponsesLog: string[];
+  lastScoredNpcsForTick: { npc: NPC, score: number }[];
+  onManualTick: () => void;
 }
 
 const MIN_WIDTH = 320; // px
@@ -82,6 +87,10 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
     receivedCombatSummaryResponsesLog,
     sentVictoryConsequencePromptsLog,
     receivedVictoryConsequenceResponsesLog,
+    sentLivingWorldPromptsLog,
+    rawLivingWorldResponsesLog,
+    lastScoredNpcsForTick,
+    onManualTick,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -272,6 +281,22 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
         >
             Bắt đầu Chiến đấu Thử
         </Button>
+        
+        {/* Living World Manual Trigger */}
+        <div className="mb-4 pt-4 border-t border-yellow-700">
+            <h5 className="text-md font-semibold text-teal-300 mb-2">Hệ Thống Thế Giới Sống</h5>
+            <Button
+                variant="secondary"
+                size="sm"
+                onClick={onManualTick}
+                className="w-full border-teal-500 text-teal-200 hover:bg-teal-700 hover:text-white"
+                disabled={isLoading}
+                isLoading={kb.isWorldTicking}
+                loadingText="Thế giới đang vận động..."
+            >
+                Kích Hoạt Tick Thủ Công
+            </Button>
+        </div>
 
         <div className="mb-4 pt-4 border-t border-yellow-700">
           <h5 className="text-md font-semibold text-yellow-300 mb-1">Xử lý Tags Thủ Công</h5>
@@ -301,6 +326,25 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
           >
             Xử lý Tags
           </Button>
+        </div>
+        
+        {/* Living World Debug Logs */}
+        <div className="mb-4 text-teal-300">
+          <h5 className="text-md font-semibold mb-1">Nhật Ký "Thế Giới Sống"</h5>
+          <LogSection title="Prompt Thế Giới Sống" logs={sentLivingWorldPromptsLog} />
+          <LogSection title="Phản Hồi JSON Thô" logs={rawLivingWorldResponsesLog} />
+          {lastScoredNpcsForTick.length > 0 && (
+            <details className="bg-gray-800 rounded group text-xs">
+                <summary className="p-1.5 cursor-pointer text-[11px] group-open:font-semibold">
+                    NPC Được Chọn Lượt Tick Trước (Nhấn để xem)
+                </summary>
+                <div className="p-1.5 bg-gray-850 whitespace-pre-wrap break-all text-[10px] leading-relaxed max-h-80 overflow-y-auto custom-scrollbar">
+                    {lastScoredNpcsForTick.map(({ npc, score }) => (
+                        <div key={npc.id}>{npc.name}: {score.toFixed(2)}</div>
+                    ))}
+                </div>
+            </details>
+          )}
         </div>
         
         <div className="mb-4 text-orange-300">

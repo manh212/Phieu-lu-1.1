@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, FindLocationParams } from '../../types';
-import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS } from '../../constants';
+import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS, LIVING_WORLD_TICK_INTERVAL } from '../../constants';
 import { generateNextTurn, summarizeTurnHistory, generateCityEconomy, generateGeneralSubLocations, findLocationWithAI, getApiSettings } from '../../services/geminiService';
 import { generateEmbeddings } from '../../services/embeddingService';
 import { performTagProcessing, addTurnHistoryEntryRaw, getMessagesForPage, calculateRealmBaseStats, calculateEffectiveStats, progressNpcCultivation, handleLevelUps, searchVectors, extractEntityContextsFromString, updateGameEventsStatus, handleLocationEntryEvents } from '../../utils/gameLogicUtils';
@@ -34,6 +34,7 @@ interface UseMainGameLoopProps {
   currentPageMessagesLog: string;
   previousPageSummaries: string[];
   lastNarrationFromPreviousPage?: string;
+  executeWorldTick: () => Promise<void>;
 }
 
 export const useMainGameLoop = ({
@@ -60,9 +61,10 @@ export const useMainGameLoop = ({
   setReceivedGeneralSubLocationResponsesLog,
   handleNonCombatDefeat,
   setRetrievedRagContextLog,
-  currentPageMessagesLog, // Destructure new prop
-  previousPageSummaries, // Destructure new prop
-  lastNarrationFromPreviousPage, // Destructure new prop
+  currentPageMessagesLog,
+  previousPageSummaries,
+  lastNarrationFromPreviousPage,
+  executeWorldTick,
 }: UseMainGameLoopProps) => {
 
     const [isSummarizingNextPageTransition, setIsSummarizingNextPageTransition] = useState<boolean>(false);
@@ -275,6 +277,13 @@ export const useMainGameLoop = ({
             const npcProgressionResult = progressNpcCultivation(finalKbForThisTurn);
             finalKbForThisTurn = npcProgressionResult.updatedKb;
             systemMessagesForThisTurn.push(...npcProgressionResult.systemMessages);
+            
+            // Check if it's time for a world tick
+            const shouldTickWorld = (finalKbForThisTurn.playerStats.turn % LIVING_WORLD_TICK_INTERVAL === 0) && finalKbForThisTurn.playerStats.turn > finalKbForThisTurn.lastWorldTickTurn;
+
+            if (shouldTickWorld) {
+                executeWorldTick(); // This function is passed in and handles its own state updates and messages
+            }
 
             const effectsToExpire: string[] = [];
             if (finalKbForThisTurn.playerStats.activeStatusEffects) {
@@ -515,7 +524,8 @@ export const useMainGameLoop = ({
         setCurrentPageDisplay, isAutoPlaying, setIsAutoPlaying, executeSaveGame,
         setSummarizationResponsesLog, setIsLoadingApi, logNpcAvatarPromptCallback, setSentEconomyPromptsLog, 
         setReceivedEconomyResponsesLog, setSentGeneralSubLocationPromptsLog, setReceivedGeneralSubLocationResponsesLog,
-        resetApiError, logSummarizationResponseCallback, handleNonCombatDefeat, setRetrievedRagContextLog
+        resetApiError, logSummarizationResponseCallback, handleNonCombatDefeat, setRetrievedRagContextLog,
+        executeWorldTick
         ]);
 
         const handleFindLocation = useCallback(async (params: FindLocationParams) => {

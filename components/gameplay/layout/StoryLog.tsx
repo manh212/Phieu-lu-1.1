@@ -1,5 +1,6 @@
+
 import React, { useRef, useEffect, useState, useMemo, useLayoutEffect } from 'react';
-import { GameMessage, KnowledgeBase, StyleSettings } from '../../../types';
+import { GameMessage, KnowledgeBase, StyleSettings, StyleSettingProperty } from '../../../types';
 import Button from '../../ui/Button';
 import Spinner from '../../ui/Spinner';
 import { VIETNAMESE } from '../../../constants';
@@ -144,7 +145,7 @@ const StoryLog: React.FC<StoryLogProps> = ({
     let currentSystemGroup: GameMessage[] = [];
 
     displayedMessages.forEach((msg) => {
-        // Only group 'system' messages. Other types like 'error' and 'page_summary' are distinct.
+        // Only group 'system' messages. Other types are distinct.
         if (msg.type === 'system') {
             currentSystemGroup.push(msg);
         } else {
