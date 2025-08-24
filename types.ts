@@ -503,6 +503,7 @@ export interface NpcProfile {
     currentPlan: string[];
     mood: 'Vui Vẻ' | 'Hài Lòng' | 'Bình Thường' | 'Bực Bội' | 'Giận Dữ' | 'Nghi Ngờ';
     relationships: Record<string, { type: string; affinity: number; }>;
+    recentActivities?: string[]; // NEW: NPC Memory
 }
 
 export type NpcActionType =

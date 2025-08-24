@@ -85,7 +85,8 @@ Trong đó, mỗi phần tử của mảng \`npcUpdates\` là một đối tư�
           "shortTermGoal": "Tìm thức ăn cho bữa tối.",
           "currentPlan": ["Đi đến quán trọ."],
           "mood": "Bực Bội",
-          "relationships": {}
+          "relationships": {},
+          "recentActivities": ["Đi dạo quanh quảng trường.", "Nói chuyện phiếm với một tiểu thương."]
         }
         \`\`\`
     *   **Kế hoạch hành động (Output):**
@@ -120,7 +121,8 @@ Trong đó, mỗi phần tử của mảng \`npcUpdates\` là một đối tư�
           "shortTermGoal": "Đột phá Luyện Khí tầng 5.",
           "currentPlan": ["Bế quan tu luyện Hỏa Vân Quyết."],
           "mood": "Bình Thường",
-          "relationships": {}
+          "relationships": {},
+          "recentActivities": ["Nhận tài nguyên tu luyện hàng tháng.", "Hoàn thành một nhiệm vụ tông môn đơn giản."]
         }
         \`\`\`
     *   **Kế hoạch hành động (Output):**
@@ -162,11 +164,15 @@ Trong đó, mỗi phần tử của mảng \`npcUpdates\` là một đối tư�
         shortTermGoal: npc.shortTermGoal,
         currentPlan: npc.currentPlan,
         mood: npc.mood,
-        relationships: npc.relationships
+        relationships: npc.relationships,
+        recentActivities: (npc.activityLog || [])
+            .slice(-5) // Get the last 5 entries
+            .map(log => log.description) // Extract only the description string
     }));
     
     const npcProfilesSection = `
 **HỒ SƠ CÁC NPC CẦN XỬ LÝ TRONG LƯỢT NÀY:**
+(Lưu ý: "recentActivities" là "trí nhớ" của NPC về 5 hành động gần đây nhất. Hãy dùng nó để đảm bảo hành động tiếp theo có tính logic và kế thừa.)
 \`\`\`json
 ${JSON.stringify(npcProfiles, null, 2)}
 \`\`\`
