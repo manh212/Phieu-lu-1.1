@@ -1,6 +1,7 @@
 
 
 
+
 import { HarmCategory, HarmBlockThreshold } from "@google/genai";
 import * as GameTemplates from './templates'; // Import all templates
 import { Operation as JsonPatchOperation } from 'fast-json-patch'; // Import Operation from fast-json-patch
@@ -62,7 +63,6 @@ export interface AIContextConfig {
     // Rules
     sendFormattingRules: boolean; // NEW: Replaces part of core narration
     sendShowDontTellRule: boolean; // NEW: Part of core narration
-    sendLivingWorldRule: boolean; // NEW: Part of core narration
     sendProactiveNpcRule: boolean; // NEW: Part of core narration
     sendRumorMillRule: boolean; // NEW: Part of core narration
     sendWorldProgressionRules: boolean;

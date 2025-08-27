@@ -12,7 +12,6 @@ export const DEFAULT_AI_CONTEXT_CONFIG: AIContextConfig = {
     sendNsfwGuidance: true,
     sendFormattingRules: true,
     sendShowDontTellRule: true,
-    sendLivingWorldRule: true,
     sendProactiveNpcRule: true,
     sendRumorMillRule: true,
     sendWorldProgressionRules: true,

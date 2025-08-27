@@ -174,13 +174,6 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                             isEnabled={settings.sendShowDontTellRule}
                             onToggle={() => handleToggle('sendShowDontTellRule')}
                         />
-                         <ToggleRow
-                            id="toggle-rule-living-world"
-                            label="Quy Tắc 'Thế giới sống động'"
-                            description="Yêu cầu AI mô tả các sự kiện nền đang diễn ra xung quanh người chơi."
-                            isEnabled={settings.sendLivingWorldRule}
-                            onToggle={() => handleToggle('sendLivingWorldRule')}
-                        />
                         <ToggleRow
                             id="toggle-rule-proactive-npc"
                             label="Quy Tắc 'NPC chủ động'"
