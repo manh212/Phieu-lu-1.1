@@ -1,3 +1,4 @@
+
 import { KnowledgeBase, GameMessage, NPC, PlayerStats, ApiConfig, TuChatTier, ItemCategoryValues, VectorMetadata, GameLocation, ActivityLogEntry } from '../../types';
 import { NPCTemplate } from '../../templates';
 import { ALL_FACTION_ALIGNMENTS, VIETNAMESE, DEFAULT_MORTAL_STATS, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL, TU_CHAT_TIERS } from '../../constants';
@@ -7,6 +8,7 @@ import { getApiSettings, generateImageUnified } from '../../services/geminiServi
 import { uploadImageToCloudinary } from '../../services/cloudinaryService';
 import { diceCoefficient, normalizeStringForComparison, normalizeLocationName } from '../questUtils';
 import { formatPersonForEmbedding } from '../ragUtils';
+import { getDeterministicAvatarSrc } from '../avatarUtils';
 
 const SIMILARITY_THRESHOLD = 0.8;
 
@@ -286,16 +288,17 @@ export const processNpc = async (
         });
     }
     
+    // First, ensure there's always a placeholder if no URL is provided by AI or user
+    if (!npcToProcess.avatarUrl) { 
+         npcToProcess.avatarUrl = getDeterministicAvatarSrc(npcToProcess);
+    }
+   
+    const isPlaceholderAvatar = npcToProcess.avatarUrl.startsWith(MALE_AVATAR_PLACEHOLDER_URL) || npcToProcess.avatarUrl.startsWith(FEMALE_AVATAR_BASE_URL);
     const apiSettings = getApiSettings();
     const npcIdToUpdate = npcToProcess.id; 
 
-    if (apiSettings.autoGenerateNpcAvatars && (isNewNpc || !npcToProcess.avatarUrl || npcToProcess.avatarUrl.startsWith('https://via.placeholder.com') || npcToProcess.avatarUrl.includes('FEMALE_AVATAR_BASE_URL_placeholder'))) {
-        
-        if (!npcToProcess.avatarUrl || npcToProcess.avatarUrl.startsWith('https://via.placeholder.com') || npcToProcess.avatarUrl.includes('FEMALE_AVATAR_BASE_URL_placeholder'))) {
-            npcToProcess.avatarUrl = npcToProcess.gender === 'Nữ'
-                ? `${FEMALE_AVATAR_BASE_URL}${Math.floor(Math.random() * MAX_FEMALE_AVATAR_INDEX) + 1}.png` 
-                : MALE_AVATAR_PLACEHOLDER_URL;
-        }
+    // Now, check if we should trigger AI generation
+    if (apiSettings.autoGenerateNpcAvatars && (isNewNpc || isPlaceholderAvatar)) {
         systemMessages.push({
             id: `npc-avatar-generating-${npcIdToUpdate}`, type: 'system',
             content: `Đang tạo ảnh đại diện AI cho NPC ${npcName}...`,
@@ -334,18 +337,13 @@ export const processNpc = async (
                 const newKbState = JSON.parse(JSON.stringify(prevKb));
                 const targetNpc = newKbState.discoveredNPCs.find((n: NPC) => n.id === npcIdToUpdate);
                 if (targetNpc) {
-                    targetNpc.avatarUrl = cloudinaryUrl || (npcToProcess.gender === 'Nữ' ? `${FEMALE_AVATAR_BASE_URL}${Math.floor(Math.random() * MAX_FEMALE_AVATAR_INDEX) + 1}.png` : MALE_AVATAR_PLACEHOLDER_URL);
+                    targetNpc.avatarUrl = cloudinaryUrl || getDeterministicAvatarSrc(targetNpc);
                 }
                 return newKbState;
             });
           }
         })();
-    } else if (!npcToProcess.avatarUrl) { 
-         npcToProcess.avatarUrl = npcToProcess.gender === 'Nữ'
-            ? `${FEMALE_AVATAR_BASE_URL}${Math.floor(Math.random() * MAX_FEMALE_AVATAR_INDEX) + 1}.png`
-            : MALE_AVATAR_PLACEHOLDER_URL;
     }
-
 
     let calculatedBaseStats: Partial<PlayerStats> = {};
     if (npcToProcess.realm && newKb.worldConfig?.isCultivationEnabled) {
@@ -652,11 +650,10 @@ export const processNpcUpdate = async (
             npcToUpdate.stats!.linhLuc = Math.max(0, Math.min(npcToUpdate.stats!.linhLuc, npcToUpdate.stats!.maxLinhLuc));
         }
 
+        const isPlaceholderAvatar = !npcToUpdate.avatarUrl || npcToUpdate.avatarUrl.startsWith(MALE_AVATAR_PLACEHOLDER_URL) || npcToUpdate.avatarUrl.startsWith(FEMALE_AVATAR_BASE_URL);
         const apiSettings = getApiSettings();
-        if (apiSettings.autoGenerateNpcAvatars && detailsChangedForAvatar && (!npcToUpdate.avatarUrl || npcToUpdate.avatarUrl.startsWith('https://via.placeholder.com') || npcToUpdate.avatarUrl.includes('FEMALE_AVATAR_BASE_URL_placeholder'))) {
-            npcToUpdate.avatarUrl = npcToUpdate.gender === 'Nữ'
-                ? `${FEMALE_AVATAR_BASE_URL}${Math.floor(Math.random() * MAX_FEMALE_AVATAR_INDEX) + 1}.png`
-                : MALE_AVATAR_PLACEHOLDER_URL;
+
+        if (apiSettings.autoGenerateNpcAvatars && detailsChangedForAvatar && isPlaceholderAvatar) {
             systemMessages.push({
                 id: `npc-avatar-regenerating-${npcIdToUpdate}`, type: 'system',
                 content: `Đang tạo lại ảnh đại diện AI cho NPC ${npcToUpdate.name} do thông tin thay đổi...`,
@@ -694,7 +691,7 @@ export const processNpcUpdate = async (
                     const newKbState = JSON.parse(JSON.stringify(prevKb));
                     const targetNpc = newKbState.discoveredNPCs.find((n: NPC) => n.id === npcIdToUpdate);
                     if (targetNpc) {
-                        targetNpc.avatarUrl = cloudinaryUrl || (npcToUpdate.gender === 'Nữ' ? `${FEMALE_AVATAR_BASE_URL}${Math.floor(Math.random() * MAX_FEMALE_AVATAR_INDEX) + 1}.png` : MALE_AVATAR_PLACEHOLDER_URL);
+                        targetNpc.avatarUrl = cloudinaryUrl || getDeterministicAvatarSrc(targetNpc);
                     }
                     return newKbState;
                 });
