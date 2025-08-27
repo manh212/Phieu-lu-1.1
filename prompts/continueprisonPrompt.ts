@@ -4,6 +4,7 @@ import * as GameTemplates from '../templates';
 import { prisonContinuePromptSystemRules } from '../constants/systemRulesPrison';
 import { getWorldDateDifferenceString } from '../utils/dateUtils';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
+import { getNsfwGuidance } from './promptUtils';
 
 export const generateContinuePrisonPrompt = (
   knowledgeBase: KnowledgeBase,
@@ -20,10 +21,7 @@ export const generateContinuePrisonPrompt = (
   const genre = worldConfig?.genre || "Tu Tiên (Mặc định)";
   const customGenreName = worldConfig?.customGenreName;
   const effectiveGenre = (genre === CUSTOM_GENRE_VALUE && customGenreName) ? customGenreName : genre;
-  const nsfwMode = worldConfig?.nsfwMode || false;
-  const currentNsfwStyle = worldConfig?.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE;
-  const currentViolenceLevel = worldConfig?.violenceLevel || DEFAULT_VIOLENCE_LEVEL;
-  const currentStoryTone = worldConfig?.storyTone || DEFAULT_STORY_TONE;
+  
   const currentDifficultyName = worldConfig?.difficulty || 'Thường';
 
   const specialStatus = playerStats.playerSpecialStatus;
@@ -58,46 +56,8 @@ export const generateContinuePrisonPrompt = (
 
 
   let nsfwGuidanceCombined = "";
-  if (aiContextConfig.sendNsfwGuidance && nsfwMode) {
-      let nsfwStyleGuidance = "";
-      switch (currentNsfwStyle) {
-          case 'Hoa Mỹ': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy; break;
-          case 'Trần Tục': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceTranTuc; break;
-          case 'Gợi Cảm': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceGoiCam; break;
-          case 'Mạnh Bạo (BDSM)': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceManhBaoBDSM; break;
-          default: nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy;
-      }
-
-      let violenceGuidance = "";
-      switch (currentViolenceLevel) {
-          case 'Nhẹ Nhàng': violenceGuidance = VIETNAMESE.violenceLevelGuidanceNheNhang; break;
-          case 'Thực Tế': violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe; break;
-          case 'Cực Đoan': violenceGuidance = VIETNAMESE.violenceLevelGuidanceCucDoan; break;
-          default: violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe;
-      }
-
-      let toneGuidance = "";
-      switch (currentStoryTone) {
-          case 'Tích Cực': toneGuidance = VIETNAMESE.storyToneGuidanceTichCuc; break;
-          case 'Trung Tính': toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh; break;
-          case 'Đen Tối': toneGuidance = VIETNAMESE.storyToneGuidanceDenToi; break;
-          case 'Dâm Dục': toneGuidance = VIETNAMESE.storyToneGuidanceDamDuc; break;
-          case 'Hoang Dâm': toneGuidance = VIETNAMESE.storyToneGuidanceHoangDam; break;
-          case 'Dâm Loạn': toneGuidance = VIETNAMESE.storyToneGuidanceDamLoan; break;
-          default: toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh;
-      }
-      nsfwGuidanceCombined = `
-**Hướng Dẫn Nội Dung Người Lớn (18+ ĐANG BẬT):**
-- **Phong Cách Miêu Tả Tình Dục:** ${currentNsfwStyle}.
-  ${nsfwStyleGuidance}
-- **Mức Độ Miêu Tả Bạo Lực:** ${currentViolenceLevel}.
-  ${violenceGuidance}
-- **Tông Màu Câu Chuyện:** ${currentStoryTone}.
-  ${toneGuidance}
-**Đặc Biệt Với ${statusType}:** Khi tương tác tình dục, hãy để họ và người chơi sử dụng nhiều lời nói dâm đãng, tục tĩu, và tiếng rên rỉ hơn. Thể hiện sự thống trị của người chơi và sự phục tùng (hoặc miễn cưỡng) của ${statusType}. Mức độ và phong cách của lời nói phải phù hợp với mối quan hệ và phong cách 18+ đã chọn.
-**YÊU CẦU ĐẶC BIỆT VỀ CẢNH TÌNH DỤC (QUAN TRỌNG):** Khi miêu tả các cảnh quan hệ tình dục, hãy viết một cách **CHI TIẾT, DÀI và MẠNH BẠO** hơn. Đừng ngần ngại đi sâu vào các hành vi thể xác, mô tả cường độ, sự thô bạo (nếu phù hợp với bối cảnh và tông màu), và những cảm xúc mãnh liệt của nhân vật. Tập trung vào sự tương tác vật lý, những âm thanh, và sức mạnh trong từng hành động. Hãy để các cảnh này kéo dài và có sự leo thang về cường độ.`;
-  } else if (aiContextConfig.sendNsfwGuidance) {
-      nsfwGuidanceCombined = "LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đang TẮT. Tiếp tục duy trì nội dung phù hợp với mọi lứa tuổi, tập trung vào phiêu lưu và phát triển nhân vật. Tránh các chủ đề nhạy cảm, bạo lực quá mức hoặc tình dục.";
+  if (aiContextConfig.sendNsfwGuidance) {
+      nsfwGuidanceCombined = getNsfwGuidance(worldConfig);
   }
   
   // NEW: World Event Guidance Logic (for consistency, though less likely to trigger in prison)
@@ -189,7 +149,7 @@ ${currentPageMessagesLog || "Chưa có diễn biến nào trong trang này."}` :
   - Tâm trạng: ${master?.mood}
   - Sủng ái: ${master?.favor ?? 0}
   - Nhu cầu hiện tại (JSON): ${JSON.stringify(master?.needs)}
-  - Mục tiêu hiện tại: ${master?.currentGoal}
+  - Mục tiêu ngắn hạn: ${master?.shortTermGoal || 'Chưa có'}
 
 **HƯỚNG DẪN CƠ CHẾ CHỦ NHÂN & THÂN PHẬN (CỰC KỲ QUAN TRỌNG):**
 Đây là các quy tắc để bạn diễn tả câu chuyện khi người chơi là ${statusType}. Phản ứng của bạn PHẢI dựa trên các chỉ số này và các mốc cực trị của chúng.
@@ -267,8 +227,8 @@ Chủ nhân không phải là một nhân vật tĩnh. Họ có tâm trạng, nh
     *   **Sủng ái cao (70+):** Bạn được đối xử tốt hơn, có thể nhận được vật phẩm tốt, điều kiện sống cải thiện. Chủ nhân có thể bảo vệ bạn trước người khác. Mở khóa các tương tác tình cảm.
     *   **Sủng ái thấp (30-):** Bạn bị coi thường, bỏ mặc. Có thể bị đem ra làm vật trao đổi hoặc lá chắn.
 
-*   **Mục Tiêu Hiện Tại (Current Goal - Hiện tại: '${master?.currentGoal}'):**
-    *   Đây là mục tiêu dài hạn của chủ nhân. Hãy tạo ra các diễn biến và nhiệm vụ giúp chủ nhân hoàn thành mục tiêu này.
+*   **Mục Tiêu Ngắn Hạn (Short-Term Goal - Hiện tại: '${master?.shortTermGoal}'):**
+    *   Đây là mục tiêu hiện tại của chủ nhân. Hãy tạo ra các diễn biến và nhiệm vụ giúp chủ nhân hoàn thành mục tiêu này.
 
 **C. Quy Tắc Tạo Diễn Biến:**
 *   **Chủ Nhân Chủ Động:** Đừng chỉ chờ người chơi hành động. Trong lời kể của bạn, hãy mô tả chủ nhân tự tìm đến người chơi và ra lệnh, hỏi chuyện, hoặc thực hiện một hành động dựa trên 'Tâm Trạng' và 'Nhu Cầu' của họ.
@@ -357,7 +317,7 @@ Nhiệm vụ của bạn là vẽ nên những bức tranh sống động và t�
     *   Nội dung hội thoại của NPC phải đa dạng (chính trị, kinh tế, sự kiện, nhân vật nổi tiếng, chuyện lạ).
     *   **ĐỘ TIN CẬY:** Tin đồn có thể là **chính xác**, **bị phóng đại**, hoặc **hoàn toàn sai lệch**.
 
-**B. HƯỚN DẪN VỀ ĐỘ KHÓ:**
+**B. HƯỚNG DẪN VỀ ĐỘ KHÓ:**
 ${aiContextConfig.sendDifficultyGuidance ? `- **Dễ:** ${VIETNAMESE.difficultyGuidanceEasy}
 - **Thường:** ${VIETNAMESE.difficultyGuidanceNormal}
 - **Khó:** ${VIETNAMESE.difficultyGuidanceHard}

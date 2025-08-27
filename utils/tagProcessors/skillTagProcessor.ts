@@ -160,7 +160,7 @@ export const processSkillLearned = (
 
 
         newKb.playerSkills.push(newSkill);
-        newVectorMetadata = { entityId: newSkill.id, entityType: 'skill', text: formatSkillForEmbedding(newSkill) };
+        newVectorMetadata = { entityId: newSkill.id, entityType: 'skill', text: formatSkillForEmbedding(newSkill, newKb), turnNumber: turnForSystemMessages };
         systemMessages.push({
             id: 'skill-learned-' + newSkill.id, type: 'system',
             content: `Học được kỹ năng mới: ${skillName}!`,
@@ -324,7 +324,8 @@ export const processSkillUpdate = (
         updatedVectorMetadata = {
             entityId: skillToUpdate.id,
             entityType: 'skill',
-            text: formatSkillForEmbedding(skillToUpdate)
+            text: formatSkillForEmbedding(skillToUpdate, newKb),
+            turnNumber: turnForSystemMessages
         };
     } else if (updatedFieldsCount === 0 && !systemMessages.some(msg => msg.id.includes('error'))) { 
          console.warn(`SKILL_UPDATE: Tag for "${originalNameToDisplay}" received, but no valid fields were updated.`);

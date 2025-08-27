@@ -1,5 +1,4 @@
 
-
 import { KnowledgeBase, GameMessage, Master, VectorMetadata } from '../../types';
 import { formatPersonForEmbedding } from '../ragUtils';
 
@@ -14,7 +13,7 @@ export const processMasterUpdate = (
 
     if (!newKb.master) {
         console.warn("MASTER_UPDATE: Cannot update master, no master object exists.");
-        return { updatedKb: newKb, systemMessages };
+        return { updatedKb: newKb, systemMessages, updatedVectorMetadata: undefined };
     }
 
     const masterToUpdate = newKb.master;
@@ -29,8 +28,10 @@ export const processMasterUpdate = (
             } else {
                 console.warn(`MASTER_UPDATE: Invalid mood value "${paramValue}".`);
             }
-        } else if (key === 'currentGoal') {
-            masterToUpdate.currentGoal = paramValue;
+        } else if (key === 'currentGoal' || key === 'shortTermGoal') {
+            masterToUpdate.shortTermGoal = paramValue;
+        } else if (key === 'longTermGoal') {
+            masterToUpdate.longTermGoal = paramValue;
         } else if (key === 'favor') {
             if (paramValue.startsWith('+=')) {
                 const change = parseInt(paramValue.substring(2), 10);
@@ -87,7 +88,8 @@ export const processMasterUpdate = (
     updatedVectorMetadata = {
         entityId: masterToUpdate.id,
         entityType: 'master',
-        text: formatPersonForEmbedding(masterToUpdate)
+        text: formatPersonForEmbedding(masterToUpdate, newKb),
+        turnNumber: turnForSystemMessages
     };
     
     return { updatedKb: newKb, systemMessages, updatedVectorMetadata };

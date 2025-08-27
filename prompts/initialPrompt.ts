@@ -3,6 +3,7 @@ import { SUB_REALM_NAMES, VIETNAMESE, AVAILABLE_GENRES, CUSTOM_GENRE_VALUE, DEFA
 import * as GameTemplates from '../templates';
 import { continuePromptSystemRules, storytellingRulesSection } from '../constants/systemRulesNormal';
 import { getTimeOfDayContext } from '../utils/dateUtils';
+import { getNsfwGuidance } from './promptUtils';
 
 const buildSkillTag = (skill: StartingSkill): string => {
     let tag = `[SKILL_LEARNED: name="${skill.name.replace(/"/g, '\\"')}" description="${skill.description.replace(/"/g, '\\"')}" skillType="${skill.skillType || GameTemplates.SkillType.KHAC}"`;
@@ -52,9 +53,7 @@ export const generateInitialPrompt = (worldConfig: WorldSettings, aiContextConfi
   let realmSystemDescription = VIETNAMESE.noCultivationSystem;
   let subRealmNamesInstruction = "";
   const effectiveGenre = (genre === CUSTOM_GENRE_VALUE && customGenreName) ? customGenreName : genre;
-  const currentNsfwStyle = nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE;
-  const currentViolenceLevel = violenceLevel || DEFAULT_VIOLENCE_LEVEL;
-  const currentStoryTone = storyTone || DEFAULT_STORY_TONE;
+  
   const mainRealms = getMainRealms(raceCultivationSystems[0]?.realmSystem || '');
 
   if (isCultivationEnabled) {
@@ -87,47 +86,7 @@ export const generateInitialPrompt = (worldConfig: WorldSettings, aiContextConfi
 
   let nsfwGuidanceCombined = "";
   if (aiContextConfig.sendNsfwGuidance) {
-      if (nsfwMode) {
-        let nsfwStyleGuidance = "";
-        switch (currentNsfwStyle) {
-          case 'Hoa Mỹ': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy; break;
-          case 'Trần Tục': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceTranTuc; break;
-          case 'Gợi Cảm': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceGoiCam; break;
-          case 'Mạnh Bạo (BDSM)': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceManhBaoBDSM; break;
-          default: nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy;
-        }
-
-        let violenceGuidance = "";
-        switch (currentViolenceLevel) {
-            case 'Nhẹ Nhàng': violenceGuidance = VIETNAMESE.violenceLevelGuidanceNheNhang; break;
-            case 'Thực Tế': violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe; break;
-            case 'Cực Đoan': violenceGuidance = VIETNAMESE.violenceLevelGuidanceCucDoan; break;
-            default: violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe;
-        }
-
-        let toneGuidance = "";
-        switch (currentStoryTone) {
-            case 'Tích Cực': toneGuidance = VIETNAMESE.storyToneGuidanceTichCuc; break;
-            case 'Trung Tính': toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh; break;
-            case 'Đen Tối': toneGuidance = VIETNAMESE.storyToneGuidanceDenToi; break;
-            case 'Dâm Dục': toneGuidance = VIETNAMESE.storyToneGuidanceDamDuc; break;
-            case 'Hoang Dâm': toneGuidance = VIETNAMESE.storyToneGuidanceHoangDam; break;
-            case 'Dâm Loạn': toneGuidance = VIETNAMESE.storyToneGuidanceDamLoan; break;
-            default: toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh;
-        }
-        nsfwGuidanceCombined = `
-    **Hướng Dẫn Nội Dung Người Lớn (18+ ĐANG BẬT):**
-    - **Phong Cách Miêu Tả Tình Dục:** ${currentNsfwStyle}.
-      ${nsfwStyleGuidance}
-    - **Mức Độ Miêu Tả Bạo Lực:** ${currentViolenceLevel}.
-      ${violenceGuidance}
-    - **Tông Màu Câu Chuyện:** ${currentStoryTone}.
-      ${toneGuidance}
-    **LƯU Ý CHUNG KHI 18+ BẬT:** Hãy kết hợp các yếu tố trên để tạo ra trải nghiệm phù hợp. Ví dụ, một câu chuyện "Đen Tối" với bạo lực "Cực Đoan" và miêu tả "Mạnh Bạo (BDSM)" sẽ rất khác với một câu chuyện "Tích Cực" với bạo lực "Nhẹ Nhàng" và miêu tả "Hoa Mỹ", dù cả hai đều có thể có yếu tố 18+.`;
-
-      } else {
-        nsfwGuidanceCombined = "LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đã được TẮT. Vui lòng duy trì nội dung phù hợp với mọi lứa tuổi, tập trung vào phiêu lưu và phát triển nhân vật. Tránh các chủ đề nhạy cảm, bạo lực quá mức hoặc tình dục.";
-      }
+      nsfwGuidanceCombined = getNsfwGuidance(worldConfig);
   }
   
   const writingStyleGuideSection = (aiContextConfig.sendWritingStyle && writingStyleGuide) ? `
@@ -187,7 +146,7 @@ ${worldConfig.startingSkills && worldConfig.startingSkills.length > 0 ? worldCon
 - Vật phẩm khởi đầu cụ thể:
 ${worldConfig.startingItems && worldConfig.startingItems.length > 0 ? worldConfig.startingItems.map(item => `  - ${item.name} (x${item.quantity}, Loại: ${item.category}${item.equipmentDetails?.type ? ' - ' + item.equipmentDetails.type : item.potionDetails?.type ? ' - ' + item.potionDetails.type : item.materialDetails?.type ? ' - ' + item.materialDetails.type : ''}): ${item.description}`).join('\n') : "  Không có vật phẩm khởi đầu cụ thể."}
 - NPC khởi đầu cụ thể:
-${worldConfig.startingNPCs && worldConfig.startingNPCs.length > 0 ? worldConfig.startingNPCs.map(npc => `  - Tên: ${npc.name}, Giới tính: ${npc.gender || 'Không rõ'}, Chủng tộc: ${npc.race || 'Không rõ'}, Tính cách: ${npc.personality}, Độ thiện cảm ban đầu: ${npc.initialAffinity}, Chi tiết: ${npc.details}${isCultivationEnabled && npc.realm ? `, Cảnh giới: ${npc.realm}` : ''}${isCultivationEnabled && npc.tuChat ? `, Tư chất: ${npc.tuChat}` : ''}${npc.relationshipToPlayer ? `, Mối quan hệ: ${npc.relationshipToPlayer}` : ''}${isCultivationEnabled && npc.thoNguyen && npc.maxThoNguyen ? `, Thọ nguyên: ${npc.thoNguyen}/${npc.maxThoNguyen}` : ''}`).join('\n') : "  Không có NPC khởi đầu cụ thể."}
+${worldConfig.startingNPCs && worldConfig.startingNPCs.length > 0 ? worldConfig.startingNPCs.map(npc => `  - Tên: ${npc.name}, Giới tính: ${npc.gender || 'Không rõ'}, Chủng tộc: ${npc.race || 'Không rõ'}, Tính cách: ${npc.personality}, Độ thiện cảm ban đầu: ${npc.initialAffinity}, Chi tiết: ${npc.details}${isCultivationEnabled && npc.realm ? `, Cảnh giới: ${npc.realm}` : ''}${isCultivationEnabled && npc.tuChat ? `, Tư chất: ${npc.tuChat}` : ''}${npc.relationshipToPlayer ? `, Mối quan hệ: ${npc.relationshipToPlayer}` : ''}${isCultivationEnabled && npc.thoNguyen && npc.maxThoNguyen ? `, Thọ nguyên: ${npc.thoNguyen}/${npc.maxThoNguyen}` : ''}${npc.longTermGoal ? `, Mục tiêu dài hạn: ${npc.longTermGoal}` : ''}${npc.shortTermGoal ? `, Mục tiêu ngắn hạn: ${npc.shortTermGoal}` : ''}`).join('\n') : "  Không có NPC khởi đầu cụ thể."}
 - Yêu Thú khởi đầu cụ thể:
 ${worldConfig.startingYeuThu && worldConfig.startingYeuThu.length > 0 ? worldConfig.startingYeuThu.map(yt => `  - Tên: ${yt.name}, Loài: ${yt.species}, Mô tả: ${yt.description}, Cảnh giới: ${yt.realm}, Thù địch: ${yt.isHostile}`).join('\n') : "  Không có Yêu Thú khởi đầu cụ thể."}
 - Tri thức thế giới khởi đầu cụ thể:
@@ -260,8 +219,8 @@ ${isCultivationEnabled ? `2.  **Xác nhận Hệ thống Cảnh giới:** Hệ t
             - Ví dụ: \\\`[SKILL_LEARNED: name="Sơ Cấp Luyện Đan", description="Kiến thức cơ bản về luyện đan.", skillType="${GameTemplates.SkillType.NGHE_NGHIEP}", professionType="Luyện Đan Sư", skillDescription="Có thể luyện chế các loại đan dược phẩm cấp thấp.", professionGrade="Nhất phẩm"]\`\\\`
         - **Thuộc tính chiến đấu chung (cho Linh Kĩ, Thần Thông, Cấm Thuật):** \`manaCost=SỐ\`, \`cooldown=SỐ\`, \`baseDamage=SỐ\`, \`baseHealing=SỐ\`, \`damageMultiplier=SỐ_THẬP_PHÂN\`, \`healingMultiplier=SỐ_THẬP_PHÂN\`, \`otherEffects="Hiệu ứng 1;Hiệu ứng 2"\`.
         - **Lưu ý:** Thuộc tính \`effect\` cũ giờ được thay thế bằng \`otherEffects\` và các thuộc tính chi tiết hơn.
-    *   **NPC:** Sử dụng tag \\\`[NPC: name="Tên NPC", gender="Nam/Nữ/Khác/Không rõ", race="Chủng tộc (ví dụ: Nhân Tộc, Yêu Tộc)", description="Mô tả chi tiết", personality="Tính cách", affinity=Số, factionId="ID Phe (nếu có)", realm="Cảnh giới NPC (nếu có)", tuChat="CHỌN MỘT TRONG: ${TU_CHAT_TIERS.join(' | ')}" (TÙY CHỌN, nếu NPC có tu luyện), relationshipToPlayer="Mối quan hệ", spiritualRoot="Linh căn của NPC (nếu có)", specialPhysique="Thể chất của NPC (nếu có)", statsJSON='{"thoNguyen": X, "maxThoNguyen": Y}']\`\\\`.
-        ${worldConfig.startingNPCs && worldConfig.startingNPCs.map(npc => `[NPC: name="${npc.name.replace(/"/g, '\\"')}", gender="${npc.gender || 'Không rõ'}", race="${npc.race || 'Nhân Tộc'}", description="Chi tiết: ${npc.details.replace(/"/g, '\\"')}", personality="${npc.personality.replace(/"/g, '\\"')}", affinity=${npc.initialAffinity}${isCultivationEnabled && npc.realm ? `, realm="${npc.realm}"` : ''}${isCultivationEnabled && npc.tuChat ? `, tuChat="${npc.tuChat}"` : ''}${npc.relationshipToPlayer ? `, relationshipToPlayer="${npc.relationshipToPlayer.replace(/"/g, '\\"')}"` : ''}${isCultivationEnabled && npc.spiritualRoot ? `, spiritualRoot="${npc.spiritualRoot}"` : ''}${isCultivationEnabled && npc.specialPhysique ? `, specialPhysique="${npc.specialPhysique}"` : ''}${isCultivationEnabled && npc.thoNguyen && npc.maxThoNguyen ? `, statsJSON='{"thoNguyen":${npc.thoNguyen}, "maxThoNguyen":${npc.maxThoNguyen}}'` : ''}]`).join('\n')}
+    *   **NPC:** Sử dụng tag \\\`[NPC: name="Tên NPC", gender="Nam/Nữ/Khác/Không rõ", race="Chủng tộc (ví dụ: Nhân Tộc, Yêu Tộc)", description="Mô tả chi tiết", personality="Tính cách", affinity=Số, factionId="ID Phe (nếu có)", realm="Cảnh giới NPC (nếu có)", tuChat="CHỌN MỘT TRONG: ${TU_CHAT_TIERS.join(' | ')}" (TÙY CHỌN, nếu NPC có tu luyện), relationshipToPlayer="Mối quan hệ", spiritualRoot="Linh căn của NPC (nếu có)", specialPhysique="Thể chất của NPC (nếu có)", statsJSON='{"thoNguyen": X, "maxThoNguyen": Y}', longTermGoal="Mục tiêu dài hạn", shortTermGoal="Mục tiêu ngắn hạn"]\`\\\`.
+        ${worldConfig.startingNPCs && worldConfig.startingNPCs.map(npc => `[NPC: name="${npc.name.replace(/"/g, '\\"')}", gender="${npc.gender || 'Không rõ'}", race="${npc.race || 'Nhân Tộc'}", description="Chi tiết: ${npc.details.replace(/"/g, '\\"')}", personality="${npc.personality.replace(/"/g, '\\"')}", affinity=${npc.initialAffinity}${isCultivationEnabled && npc.realm ? `, realm="${npc.realm}"` : ''}${isCultivationEnabled && npc.tuChat ? `, tuChat="${npc.tuChat}"` : ''}${npc.relationshipToPlayer ? `, relationshipToPlayer="${npc.relationshipToPlayer.replace(/"/g, '\\"')}"` : ''}${isCultivationEnabled && npc.spiritualRoot ? `, spiritualRoot="${npc.spiritualRoot}"` : ''}${isCultivationEnabled && npc.specialPhysique ? `, specialPhysique="${npc.specialPhysique}"` : ''}${isCultivationEnabled && npc.thoNguyen && npc.maxThoNguyen ? `, statsJSON='{"thoNguyen":${npc.thoNguyen}, "maxThoNguyen":${npc.maxThoNguyen}}'` : ''}${npc.longTermGoal ? `, longTermGoal="${npc.longTermGoal.replace(/"/g, '\\"')}"` : ''}${npc.shortTermGoal ? `, shortTermGoal="${npc.shortTermGoal.replace(/"/g, '\\"')}"` : ''}]`).join('\n')}
     *   **Yêu Thú:** Sử dụng tag \\\`[YEUTHU: name="Tên", species="Loài", description="Mô tả", isHostile=true/false, realm="Cảnh giới (nếu có)"]\`\\\`.
         ${worldConfig.startingYeuThu && worldConfig.startingYeuThu.map(yt => `[YEUTHU: name="${yt.name.replace(/"/g, '\\"')}", species="${yt.species.replace(/"/g, '\\"')}", description="${yt.description.replace(/"/g, '\\"')}", isHostile=${yt.isHostile}${yt.realm ? `, realm="${yt.realm}"` : ''}]`).join('\n')}
     *   **Địa Điểm Chính (Top-level):** Sử dụng tag \\\`[MAINLOCATION: name="Tên Địa Điểm", description="Mô tả chi tiết về địa điểm.", locationType="CHỌN MỘT TRONG: ${Object.values(GameTemplates.LocationType).join(' | ')}", isSafeZone=true/false, regionId="ID Vùng (nếu có)", mapX=X (số, 0-1000, tùy chọn), mapY=Y (số, 0-1000, tùy chọn)]\`\\\`. **CẤM SỬ DỤNG TAG** \\\`[SUBLOCATION]\`\\\` **TRONG PHẢN HỒI NÀY.**

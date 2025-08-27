@@ -1,6 +1,6 @@
-
 import { KnowledgeBase, GameMessage } from '../types';
 import { VIETNAMESE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE } from '../constants';
+import { getNsfwGuidance } from './promptUtils';
 
 export const generateCombatTurnPrompt = (
     knowledgeBase: KnowledgeBase,
@@ -20,61 +20,8 @@ export const generateCombatTurnPrompt = (
     const player = combatants.find(c => c.id === 'player');
     const opponents = combatants.filter(c => c.id !== 'player');
     const currentDifficultyName = worldConfig?.difficulty || 'Thường';
-    const currentViolenceLevel = worldConfig?.violenceLevel || DEFAULT_VIOLENCE_LEVEL;
-    const currentStoryTone = worldConfig?.storyTone || DEFAULT_STORY_TONE;
-    const nsfwMode = worldConfig?.nsfwMode || false;
-    const nsfwStyle = worldConfig?.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE;
     
-    let nsfwGuidanceCombined = "";
-    if (nsfwMode) {
-        let nsfwStyleGuidance = "";
-        switch (nsfwStyle) {
-            case 'Hoa Mỹ': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy; break;
-            case 'Trần Tục': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceTranTuc; break;
-            case 'Gợi Cảm': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceGoiCam; break;
-            case 'Mạnh Bạo (BDSM)': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceManhBaoBDSM; break;
-            default: nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy;
-        }
-
-        let violenceGuidance = "";
-        switch (currentViolenceLevel) {
-            case 'Nhẹ Nhàng': violenceGuidance = VIETNAMESE.violenceLevelGuidanceNheNhang; break;
-            case 'Thực Tế': violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe; break;
-            case 'Cực Đoan': violenceGuidance = VIETNAMESE.violenceLevelGuidanceCucDoan; break;
-            default: violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe;
-        }
-
-        let toneGuidance = "";
-        switch (currentStoryTone) {
-            case 'Tích Cực': toneGuidance = VIETNAMESE.storyToneGuidanceTichCuc; break;
-            case 'Trung Tính': toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh; break;
-            case 'Đen Tối': toneGuidance = VIETNAMESE.storyToneGuidanceDenToi; break;
-            case 'Dâm Dục': toneGuidance = VIETNAMESE.storyToneGuidanceDamDuc; break;
-            case 'Hoang Dâm': toneGuidance = VIETNAMESE.storyToneGuidanceHoangDam; break;
-            case 'Dâm Loạn': toneGuidance = VIETNAMESE.storyToneGuidanceDamLoan; break;
-            default: toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh;
-        }
-        nsfwGuidanceCombined = `
-**Hướng Dẫn Nội Dung Người Lớn (18+ ĐANG BẬT):**
-- **Phong Cách Miêu Tả Tình Dục:** ${nsfwStyle}.
-  ${nsfwStyleGuidance}
-- **Mức Độ Miêu Tả Bạo Lực:** ${currentViolenceLevel}.
-  ${violenceGuidance}
-- **Tông Màu Câu Chuyện:** ${currentStoryTone}.
-  ${toneGuidance}
-**LƯU Ý CHUNG KHI 18+ BẬT:** Hãy kết hợp các yếu tố trên để tạo ra trải nghiệm phù hợp.
-**YÊU CẦU ĐẶC BIỆT VỀ CẢNH TÌNH DỤC (QUAN TRỌNG):** Khi miêu tả các cảnh quan hệ tình dục, hãy viết một cách **CHI TIẾT, DÀI và MẠNH BẠO** hơn. Đừng ngần ngại đi sâu vào các hành vi thể xác, mô tả cường độ, sự thô bạo (nếu phù hợp với bối cảnh và tông màu), và những cảm xúc mãnh liệt của nhân vật. Tập trung vào sự tương tác vật lý, những âm thanh, và sức mạnh trong từng hành động. Hãy để các cảnh này kéo dài và có sự leo thang về cường độ.
-**Hướng Dẫn Tình Dục Trong Chiến Đấu:**
-*   Khi Chế Độ 18+ Bật, các hành vi tình dục có thể xảy ra ngay trong trận chiến như một hình thức tấn công, kỹ năng đặc biệt, hoặc một lựa chọn chiến thuật.
-*   **Ví dụ về các tình huống:**
-    *   **Kỹ năng quyến rũ:** Một nhân vật (người chơi hoặc NPC) có thể sử dụng một kỹ năng quyến rũ. Thay vì gây sát thương trực tiếp, nó có thể gây ra hiệu ứng xấu như "Mê Hoặc" (khiến đối phương mất lượt), "Giảm Ý Chí Chiến Đấu", hoặc thậm chí là khiến đối phương tấn công đồng đội của mình.
-    *   **Tấn công mang tính chất tình dục:** Một số kẻ địch (ví dụ: ma nữ, dâm ma) có thể tấn công bằng cách hút tinh khí, gây sát thương linh lực thay vì sinh lực.
-    *   **Đòn kết liễu tình dục (Sexual Finishers):** Khi một đối thủ bị đánh bại (HP về 0), thay vì chỉ có lựa chọn "Kết liễu", người chơi có thể có thêm các lựa chọn mang tính 18+. Ví dụ: "[CHOICE: "Cưỡng hiếp kẻ bại trận"]". Nếu người chơi chọn hành động này, hãy mô tả cảnh đó một cách chi tiết theo phong cách đã chọn. Hành động này có thể có những hậu quả riêng, ví dụ như nhận được một debuff "Dâm tâm" nhưng hồi phục lại một phần linh lực, hoặc ảnh hưởng đến danh tiếng.
-*   **Cập nhật trạng thái:** Các hành động tình dục trong chiến đấu nên được thể hiện qua tag [COMBAT_STAT_UPDATE]. Ví dụ, một đòn hút tinh khí có thể là \`[COMBAT_STAT_UPDATE: targetId="player", stat="linhLuc", change=-50]\` và \`[COMBAT_STAT_UPDATE: targetId="id_ma_nu", stat="linhLuc", change=50]\`.
-`;
-    } else {
-        nsfwGuidanceCombined = "LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đang TẮT. Tiếp tục duy trì nội dung phù hợp với mọi lứa tuổi, tập trung vào phiêu lưu và phát triển nhân vật. Tránh các chủ đề nhạy cảm, bạo lực quá mức hoặc tình dục.";
-    }
+    const nsfwGuidanceCombined = getNsfwGuidance(worldConfig);
     
     const combatHistory = combatLog.length > 1 ? combatLog.slice(1).join('\n---\n') : "Đây là lượt đầu tiên của trận đấu.";
     
@@ -184,7 +131,7 @@ ${combatHistory}
 **HÀNH ĐỘNG CỦA NGƯỜI CHƠI TRONG LƯỢT NÀY:**
 - "${playerAction}"
 
-**HƯỚN DẪN VỀ ĐỘ KHÓ (Rất quan trọng để AI tuân theo):**
+**HƯỚNG DẪN VỀ ĐỘ KHÓ (Rất quan trọng để AI tuân theo):**
 - **Dễ:** ${VIETNAMESE.difficultyGuidanceEasy} Kẻ địch sẽ hành động kém thông minh hơn, ít dùng kỹ năng mạnh, và sát thương gây ra có thể thấp hơn một chút.
 - **Thường:** ${VIETNAMESE.difficultyGuidanceNormal} Kẻ địch có hành vi chiến đấu tiêu chuẩn, sử dụng kỹ năng và chiến thuật hợp lý.
 - **Khó:** ${VIETNAMESE.difficultyGuidanceHard} Kẻ địch hành động rất thông minh, biết tập trung tấn công mục tiêu yếu, sử dụng kỹ năng phối hợp và có thể có chỉ số cao hơn một chút.

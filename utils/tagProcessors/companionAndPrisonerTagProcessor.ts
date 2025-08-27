@@ -1,8 +1,7 @@
-
-import { KnowledgeBase, GameMessage, NPC, Prisoner, Wife, Slave, Skill, PersonBase, VectorMetadata } from '../../types';
+import { KnowledgeBase, GameMessage, NPC, Prisoner, Wife, Slave, Skill, PersonBase, VectorMetadata, ActivityLogEntry } from '../../types';
 import * as GameTemplates from '../../templates';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils'; // Import similarity utils
-import { formatPersonForEmbedding } from '../ragUtils'; // NEW: Import formatter
+import { formatPersonForEmbedding } from '../ragUtils';
 
 const SIMILARITY_THRESHOLD = 0.8;
 
@@ -47,6 +46,8 @@ const createBasePerson = (params: Record<string, string>, existingNpc?: NPC): Pe
         spiritualRoot: params.spiritualRoot || existingNpc?.spiritualRoot,
         stats: existingNpc?.stats,
         title: params.title || existingNpc?.title,
+        // FIX: Propagate locationId from tag parameters or the existing NPC.
+        locationId: params.locationId || existingNpc?.locationId,
     };
 };
 
@@ -55,7 +56,7 @@ export const processPrisonerAdd = (
     currentKb: KnowledgeBase,
     tagParams: Record<string, string>,
     turnForSystemMessages: number
-): { updatedKb: KnowledgeBase; systemMessages: GameMessage[]; newVectorMetadata?: VectorMetadata } => {
+): { updatedKb: KnowledgeBase; systemMessages: GameMessage[]; newVectorMetadata?: VectorMetadata; } => {
     const newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
     const systemMessages: GameMessage[] = [];
     let newVectorMetadata: VectorMetadata | undefined = undefined;
@@ -64,7 +65,7 @@ export const processPrisonerAdd = (
 
     if (!npcName) {
         console.warn("PRISONER_ADD: Missing name.", tagParams);
-        return { updatedKb: newKb, systemMessages };
+        return { updatedKb: newKb, systemMessages, newVectorMetadata: undefined };
     }
 
     const existingNpcIndex = newKb.discoveredNPCs.findIndex(n => n.name === npcName);
@@ -84,10 +85,15 @@ export const processPrisonerAdd = (
         willpower: parseInt(tagParams.willpower || '80', 10),
         resistance: parseInt(tagParams.resistance || '90', 10),
         obedience: parseInt(tagParams.obedience || '10', 10),
+        activityLog: [{
+            turnNumber: turnForSystemMessages,
+            description: `Bị ${currentKb.worldConfig?.playerName || 'người chơi'} đánh bại và bắt giữ.`,
+            locationId: basePerson.locationId || currentKb.currentLocationId || 'unknown'
+        }]
     };
 
     newKb.prisoners.push(newPrisoner);
-    newVectorMetadata = { entityId: newPrisoner.id, entityType: 'prisoner', text: formatPersonForEmbedding(newPrisoner) };
+    newVectorMetadata = { entityId: newPrisoner.id, entityType: 'prisoner', text: formatPersonForEmbedding(newPrisoner, newKb), turnNumber: turnForSystemMessages };
 
     systemMessages.push({
         id: `prisoner-added-${Date.now()}`,
@@ -111,6 +117,11 @@ export const processWifeAdd = (
     let newVectorMetadata: VectorMetadata | undefined = undefined;
 
     const npcName = tagParams.name;
+    if (!npcName) {
+        console.warn("WIFE_ADD: Missing name.", tagParams);
+        return { updatedKb: newKb, systemMessages, newVectorMetadata: undefined };
+    }
+
     const existingNpcIndex = newKb.discoveredNPCs.findIndex(n => n.name === npcName);
     const existingNpc = existingNpcIndex !== -1 ? newKb.discoveredNPCs[existingNpcIndex] : undefined;
     if (existingNpc) newKb.discoveredNPCs.splice(existingNpcIndex, 1);
@@ -123,9 +134,14 @@ export const processWifeAdd = (
         obedience: parseInt(tagParams.obedience || '100', 10),
         skills: existingNpc?.skills?.map(id => currentKb.playerSkills.find(s => s.id === id)).filter(Boolean) as Skill[] || [],
         equippedItems: { mainWeapon: null, offHandWeapon: null, head: null, body: null, hands: null, legs: null, artifact: null, pet: null, accessory1: null, accessory2: null },
+        activityLog: [{
+            turnNumber: turnForSystemMessages,
+            description: `Trở thành đạo lữ của ${currentKb.worldConfig?.playerName || 'người chơi'}.`,
+            locationId: basePerson.locationId || currentKb.currentLocationId || 'unknown'
+        }]
     };
     newKb.wives.push(newWife);
-    newVectorMetadata = { entityId: newWife.id, entityType: 'wife', text: formatPersonForEmbedding(newWife) };
+    newVectorMetadata = { entityId: newWife.id, entityType: 'wife', text: formatPersonForEmbedding(newWife, newKb), turnNumber: turnForSystemMessages };
 
     systemMessages.push({ id: `wife-added-${Date.now()}`, type: 'system', content: `Bạn đã có một đạo lữ mới: ${newWife.name}.`, timestamp: Date.now(), turnNumber: turnForSystemMessages });
     return { updatedKb: newKb, systemMessages, newVectorMetadata };
@@ -153,9 +169,14 @@ export const processSlaveAdd = (
         obedience: parseInt(tagParams.obedience || '100', 10),
         skills: existingNpc?.skills?.map(id => currentKb.playerSkills.find(s => s.id === id)).filter(Boolean) as Skill[] || [],
         equippedItems: { mainWeapon: null, offHandWeapon: null, head: null, body: null, hands: null, legs: null, artifact: null, pet: null, accessory1: null, accessory2: null },
+        activityLog: [{
+            turnNumber: turnForSystemMessages,
+            description: `Trở thành nô lệ của ${currentKb.worldConfig?.playerName || 'người chơi'}.`,
+            locationId: basePerson.locationId || currentKb.currentLocationId || 'unknown'
+        }]
     };
     newKb.slaves.push(newSlave);
-    newVectorMetadata = { entityId: newSlave.id, entityType: 'slave', text: formatPersonForEmbedding(newSlave) };
+    newVectorMetadata = { entityId: newSlave.id, entityType: 'slave', text: formatPersonForEmbedding(newSlave, newKb), turnNumber: turnForSystemMessages };
 
     systemMessages.push({ id: `slave-added-${Date.now()}`, type: 'system', content: `Bạn đã có một nữ nô mới: ${newSlave.name}.`, timestamp: Date.now(), turnNumber: turnForSystemMessages });
     return { updatedKb: newKb, systemMessages, newVectorMetadata };
@@ -266,7 +287,8 @@ export const processWifeUpdate = (
             updatedVectorMetadata = {
                 entityId: updatedPerson.id,
                 entityType: 'wife',
-                text: formatPersonForEmbedding(updatedPerson)
+                text: formatPersonForEmbedding(updatedPerson, newKb),
+                turnNumber: turnForSystemMessages
             };
         }
     }
@@ -289,7 +311,8 @@ export const processSlaveUpdate = (
             updatedVectorMetadata = {
                 entityId: updatedPerson.id,
                 entityType: 'slave',
-                text: formatPersonForEmbedding(updatedPerson)
+                text: formatPersonForEmbedding(updatedPerson, newKb),
+                turnNumber: turnForSystemMessages
             };
         }
     }
@@ -312,7 +335,8 @@ export const processPrisonerUpdate = (
             updatedVectorMetadata = {
                 entityId: updatedPerson.id,
                 entityType: 'prisoner',
-                text: formatPersonForEmbedding(updatedPerson)
+                text: formatPersonForEmbedding(updatedPerson, newKb),
+                turnNumber: turnForSystemMessages
             };
         }
     }

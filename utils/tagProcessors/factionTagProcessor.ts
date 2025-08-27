@@ -32,7 +32,7 @@ export const processFactionDiscovered = (
             playerReputation: isNaN(reputation) ? 0 : reputation,
         };
         newKb.discoveredFactions.push(newFaction);
-        newVectorMetadata = { entityId: newFaction.id, entityType: 'faction', text: formatFactionForEmbedding(newFaction) };
+        newVectorMetadata = { entityId: newFaction.id, entityType: 'faction', text: formatFactionForEmbedding(newFaction, newKb), turnNumber: turnForSystemMessages };
 
         systemMessages.push({
             id: 'faction-discovered-' + newFaction.id,
@@ -96,7 +96,8 @@ export const processFactionUpdate = (
         updatedVectorMetadata = {
             entityId: factionToUpdate.id,
             entityType: 'faction',
-            text: formatFactionForEmbedding(factionToUpdate)
+            text: formatFactionForEmbedding(factionToUpdate, newKb),
+            turnNumber: turnForSystemMessages
         };
     } else {
         console.warn(`FACTION_UPDATE: Faction "${name}" not found.`);

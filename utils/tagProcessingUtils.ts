@@ -50,6 +50,7 @@ import { processMasterUpdate } from './tagProcessors/masterTagProcessor';
 import { processSlaveForSale, processAuctionSlave } from './tagProcessors/slaveTagProcessor';
 import { processEventTriggered, processEventUpdate, processEventDetailRevealed } from './tagProcessors/eventTagProcessor';
 import { processWorldConfigUpdate } from './tagProcessors/worldConfigTagProcessor';
+import { processRelationshipEvent } from './tagProcessors/relationshipEventTagProcessor'; // NEW
 import { generateEmbeddings } from './../services/embeddingService';
 
 
@@ -118,6 +119,13 @@ export const performTagProcessing = async (
 
         try {
             switch (tagName) {
+                case 'RELATIONSHIP_EVENT': {
+                    const { updatedKb, systemMessages, newVectorMetadata } = processRelationshipEvent(workingKb, tagParams, turnForSystemMessages);
+                    workingKb = updatedKb;
+                    allSystemMessages.push(...systemMessages);
+                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
+                    break;
+                }
                  case 'EVENT_TRIGGERED': {
                     const { updatedKb, systemMessages } = processEventTriggered(workingKb, tagParams, turnForSystemMessages);
                     workingKb = updatedKb;

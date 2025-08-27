@@ -1,6 +1,8 @@
-import { Item, PlayerStats, WorldSettings, GenreType, NsfwDescriptionStyle, StoryTone, ViolenceLevel, GameMessage } from '../types';
+
+import { Item, PlayerStats, WorldSettings } from '../types';
 import * as GameTemplates from '../templates';
-import { VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_STORY_TONE, DEFAULT_VIOLENCE_LEVEL, STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS } from '../constants';
+import { VIETNAMESE, CUSTOM_GENRE_VALUE, STAT_POINT_VALUES } from '../constants';
+import { getNsfwGuidance } from './promptUtils';
 
 export const generateCraftItemPrompt = (
   desiredItemCategory: GameTemplates.ItemCategoryValues,
@@ -10,19 +12,14 @@ export const generateCraftItemPrompt = (
   worldConfig: WorldSettings | null,
   currentPageMessagesLog: string,
   previousPageSummaries: string[],
-  lastNarrationFromPreviousPage: string | undefined
+  lastNarrationFromPreviousPage?: string
 ): string => {
-  // Destructure properties from worldConfig for easier use
   const playerName = worldConfig?.playerName;
   const genre = worldConfig?.genre;
   const isCultivationEnabled = worldConfig?.isCultivationEnabled;
   const customGenreName = worldConfig?.customGenreName;
   const theme = worldConfig?.theme;
   const settingDescription = worldConfig?.settingDescription;
-  const nsfwMode = worldConfig?.nsfwMode || false;
-  const nsfwStyle = worldConfig?.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE;
-  const violenceLevel = worldConfig?.violenceLevel || DEFAULT_VIOLENCE_LEVEL;
-  const storyTone = worldConfig?.storyTone || DEFAULT_STORY_TONE;
   
   const playerRaceSystem = worldConfig?.raceCultivationSystems.find(s => s.raceName === (worldConfig.playerRace || 'Nhân Tộc')) || worldConfig?.raceCultivationSystems[0];
   const realmProgressionList = playerRaceSystem?.realmSystem ? playerRaceSystem.realmSystem.split(' - ').map(s => s.trim()) : [];
@@ -34,7 +31,6 @@ export const generateCraftItemPrompt = (
   const playerRealmOrLevel = isCultivationEnabled ? playerStats.realm : VIETNAMESE.mortalRealmName;
   const playerEnergyStat = isCultivationEnabled ? `Linh Lực: ${playerStats.linhLuc} / ${playerStats.maxLinhLuc}` : `Năng Lượng/Thể Lực: ${playerStats.linhLuc} / ${playerStats.maxLinhLuc}`;
 
-  // NEW LOGIC for target realm instruction
   const playerMainRealm = realmProgressionList.find(r => playerRealmOrLevel.startsWith(r));
   const playerRealmIndex = playerMainRealm ? realmProgressionList.indexOf(playerMainRealm) : -1;
 
@@ -56,54 +52,11 @@ export const generateCraftItemPrompt = (
       
       targetRealmInstruction = `Tạo ra vật phẩm có sức mạnh phù hợp với cấp độ/cảnh giới của nhân vật. **Tuy nhiên, bạn được phép tạo ra vật phẩm có \`itemRealm\` cao hơn cảnh giới hiện tại của người chơi tối đa 2 bậc** để tạo ra các vật phẩm đột phá, đáng giá.`;
   } else {
-      // Fallback for non-cultivation or if realm not found
       allowedRealmsForTag = realmProgressionList.length > 0 ? [realmProgressionList[0]] : [playerRealmOrLevel];
       targetRealmInstruction = `Tạo ra vật phẩm có cảnh giới phù hợp cho người mới bắt đầu.`;
   }
 
-  // NSFW Guidance Block
-  let nsfwGuidanceCombined = "";
-  if (nsfwMode) {
-      let nsfwStyleGuidance = "";
-      switch (nsfwStyle) {
-          case 'Hoa Mỹ': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy; break;
-          case 'Trần Tục': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceTranTuc; break;
-          case 'Gợi Cảm': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceGoiCam; break;
-          case 'Mạnh Bạo (BDSM)': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceManhBaoBDSM; break;
-          default: nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy;
-      }
-
-      let violenceGuidance = "";
-      switch (violenceLevel) {
-          case 'Nhẹ Nhàng': violenceGuidance = VIETNAMESE.violenceLevelGuidanceNheNhang; break;
-          case 'Thực Tế': violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe; break;
-          case 'Cực Đoan': violenceGuidance = VIETNAMESE.violenceLevelGuidanceCucDoan; break;
-          default: violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe;
-      }
-
-      let toneGuidance = "";
-      switch (storyTone) {
-          case 'Tích Cực': toneGuidance = VIETNAMESE.storyToneGuidanceTichCuc; break;
-          case 'Trung Tính': toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh; break;
-          case 'Đen Tối': toneGuidance = VIETNAMESE.storyToneGuidanceDenToi; break;
-          case 'Dâm Dục': toneGuidance = VIETNAMESE.storyToneGuidanceDamDuc; break;
-          case 'Hoang Dâm': toneGuidance = VIETNAMESE.storyToneGuidanceHoangDam; break;
-          case 'Dâm Loạn': toneGuidance = VIETNAMESE.storyToneGuidanceDamLoan; break;
-          default: toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh;
-      }
-      nsfwGuidanceCombined = `
-**CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH (QUAN TRỌNG):**
-- **Yêu cầu nội dung 18+:** BẬT. Tên và mô tả vật phẩm có thể mang yếu tố người lớn, nhạy cảm.
-- **Phong Cách Miêu Tả Tình Dục:** ${nsfwStyle}.
-  - ${nsfwStyleGuidance}
-- **Mức Độ Miêu Tả Bạo Lực:** ${violenceLevel}.
-  - ${violenceGuidance}
-- **Tông Màu Câu Chuyện:** ${storyTone}.
-  - ${toneGuidance}
-Lưu ý: Hãy đảm bảo tên gọi và mô tả của vật phẩm tạo ra phản ánh đúng các cài đặt này. Ví dụ, một vật phẩm trong thế giới "Đen Tối" với bạo lực "Cực Đoan" có thể có tên gọi và công dụng ghê rợn hơn.`;
-  } else {
-      nsfwGuidanceCombined = "**CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH:** Chế độ Người Lớn đang TẮT. Vui lòng tạo ra các vật phẩm có tên và mô tả phù hợp với mọi lứa tuổi.";
-  }
+  const nsfwGuidance = getNsfwGuidance(worldConfig);
   
   const contextBlock = `
 **BỐI CẢNH CÁC SỰ KIỆN GẦN ĐÂY (Để tham khảo và lấy cảm hứng):**
@@ -124,7 +77,7 @@ Người chơi muốn chế tạo một vật phẩm mới. Dưới đây là y�
 - **Bối cảnh chung:** ${settingDescription || 'Chưa xác định'}
 - **Hệ Thống Cảnh Giới:** ${realmProgressionList.join(' - ') || 'Không có'}
 
-${nsfwGuidanceCombined}
+${nsfwGuidance}
 ${contextBlock}
 
 **THÔNG TIN NHÂN VẬT HIỆN TẠI (ĐỂ THAM KHẢO):**
@@ -159,7 +112,7 @@ ${materialsList.length > 0 ? materialsList : "Không có nguyên liệu nào đ�
             *   **Loại Chính Hợp Lệ:** ${Object.values(GameTemplates.ItemCategory).join(' | ')}.
             *   Nếu Loại Chính là \`${GameTemplates.ItemCategory.EQUIPMENT}\`, Loại Phụ (\`equipmentType\`) PHẢI là một trong: ${Object.values(GameTemplates.EquipmentType).join(' | ')}.
                 *   **Tham số RIÊNG \`equipmentType\` cũng BẮT BUỘC**.
-                *   **Tham số RIÊNG \`statBonusesJSON\` BẮT BUỘC** (nếu không có, dùng \`statBonusesJSON='{}'\`). JSON phải hợp lệ. Các khóa trong JSON có thể là: \`${Object.keys(STAT_POINT_VALUES).join(', ')}\`.
+                *   **Tham số RIÊNG \`statBonusesJSON\` BẮT BUỘC** (nếu không có, dùng \`statBonusesJSON='{}'\`). JSON phải hợp lệ. Các khóa hợp lệ là: \`${Object.keys(STAT_POINT_VALUES).join(', ')}\`.
                 *   **Tham số RIÊNG \`uniqueEffectsList\` BẮT BUỘC** (nếu không có, dùng \`uniqueEffectsList="Không có gì đặc biệt"\`).
             *   Nếu Loại Chính là \`${GameTemplates.ItemCategory.POTION}\`, Loại Phụ (\`potionType\`) PHẢI là một trong: ${Object.values(GameTemplates.PotionType).join(' | ')}.
                 *   **Tham số RIÊNG \`potionType\` cũng BẮT BUỘC**.

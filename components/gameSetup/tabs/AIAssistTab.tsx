@@ -5,6 +5,81 @@ import InputField from '../../ui/InputField';
 import Spinner from '../../ui/Spinner';
 import { VIETNAMESE, MAX_TOKENS_FANFIC, CUSTOM_GENRE_VALUE, NSFW_DESCRIPTION_STYLES, VIOLENCE_LEVELS, STORY_TONES, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE } from '../../../constants';
 
+// --- START: Reusable NSFW Settings Component ---
+const NsfwSettingsBlock: React.FC<{
+    settings: WorldSettings;
+    handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+}> = ({ settings, handleChange }) => {
+    // The values in these arrays are now the display labels and the stored values.
+    const nsfwStyleOptions = NSFW_DESCRIPTION_STYLES;
+    const violenceLevelOptions = VIOLENCE_LEVELS;
+    const storyToneOptions = STORY_TONES;
+
+    return (
+        <>
+            <InputField
+                label={VIETNAMESE.nsfwModeLabel}
+                id="nsfwModeGlobal" // One global ID is enough now
+                name="nsfwMode"
+                type="checkbox"
+                checked={settings.nsfwMode || false}
+                onChange={handleChange}
+            />
+            {settings.nsfwMode && (
+                <div className="pl-4 mt-2 space-y-3 border-l-2 border-red-500/50">
+                    <InputField
+                        label={VIETNAMESE.nsfwDescriptionStyleLabel}
+                        id="nsfwDescriptionStyleGlobal"
+                        name="nsfwDescriptionStyle"
+                        type="select"
+                        options={nsfwStyleOptions}
+                        value={settings.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE}
+                        onChange={handleChange}
+                    />
+
+                    {/* Conditional Textarea for "Phòng Tối AI" */}
+                    {settings.nsfwDescriptionStyle === 'Tùy Chỉnh (Phòng Tối AI)' && (
+                        <div className="pl-4 mt-2 border-l-2 border-yellow-500/50">
+                            <InputField
+                                label={VIETNAMESE.customNsfwPromptLabel}
+                                id="customNsfwPromptGlobal"
+                                name="customNsfwPrompt"
+                                value={settings.customNsfwPrompt || ''}
+                                onChange={handleChange}
+                                textarea
+                                rows={6}
+                                placeholder="" // Plan specified no placeholder
+                            />
+                            <p className="text-xs text-gray-400 -mt-2 ml-1">{VIETNAMESE.customNsfwPromptNote}</p>
+                        </div>
+                    )}
+                    
+                    <InputField
+                        label={VIETNAMESE.violenceLevelLabel}
+                        id="violenceLevelGlobal"
+                        name="violenceLevel"
+                        type="select"
+                        options={violenceLevelOptions}
+                        value={settings.violenceLevel || DEFAULT_VIOLENCE_LEVEL}
+                        onChange={handleChange}
+                    />
+                    <InputField
+                        label={VIETNAMESE.storyToneLabel}
+                        id="storyToneGlobal"
+                        name="storyTone"
+                        type="select"
+                        options={storyToneOptions}
+                        value={settings.storyTone || DEFAULT_STORY_TONE}
+                        onChange={handleChange}
+                    />
+                </div>
+            )}
+        </>
+    );
+};
+// --- END: Reusable NSFW Settings Component ---
+
+
 interface AIAssistTabProps {
   settings: WorldSettings; 
   handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
@@ -73,24 +148,6 @@ const AIAssistTab: React.FC<AIAssistTabProps> = ({
     }
   }, [settings.writingStyleGuide, writingStyleSource]);
 
-  const nsfwStyleOptions: Array<{ value: NsfwDescriptionStyle; label: string }> = NSFW_DESCRIPTION_STYLES.map(style => {
-    const labelKey = `nsfwStyle${style.replace(/\s+/g, '')}` as keyof typeof VIETNAMESE;
-    const labelValue = VIETNAMESE[labelKey];
-    return { value: style, label: (typeof labelValue === 'string' ? labelValue : style) };
-  });
-
-  const violenceLevelOptions: Array<{ value: ViolenceLevel; label: string }> = VIOLENCE_LEVELS.map(level => {
-    const labelKey = `violenceLevel${level.replace(/\s+/g, '')}` as keyof typeof VIETNAMESE;
-    const labelValue = VIETNAMESE[labelKey];
-    return { value: level, label: (typeof labelValue === 'string' ? labelValue : level) };
-  });
-
-  const storyToneOptions: Array<{ value: StoryTone; label: string }> = STORY_TONES.map(tone => {
-    const labelKey = `storyTone${tone.replace(/\s+/g, '')}` as keyof typeof VIETNAMESE;
-    const labelValue = VIETNAMESE[labelKey];
-    return { value: tone, label: (typeof labelValue === 'string' ? labelValue : tone) };
-  });
-  
   const handleWritingStyleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -252,8 +309,13 @@ const AIAssistTab: React.FC<AIAssistTabProps> = ({
             </div>
         )}
       </fieldset>
-
-
+      
+      {/* --- REFACTORED: SHARED NSFW SETTINGS --- */}
+      <fieldset className="border border-red-700 p-4 rounded-md bg-red-900/10">
+        <legend className="text-lg font-semibold text-red-300 px-2">Cài Đặt Nội Dung Người Lớn (18+)</legend>
+        <NsfwSettingsBlock settings={settings} handleChange={handleChange} />
+      </fieldset>
+      
       <fieldset className="border border-indigo-700 p-4 rounded-md bg-indigo-900/10">
         <legend className="text-lg font-semibold text-indigo-300 px-2">{VIETNAMESE.storyIdeaGeneratorSection}</legend>
         <InputField
@@ -266,57 +328,6 @@ const AIAssistTab: React.FC<AIAssistTabProps> = ({
           rows={4}
           placeholder={VIETNAMESE.storyIdeaDescriptionPlaceholder}
         />
-        <InputField
-          label={VIETNAMESE.nsfwIdeaCheckboxLabel} // This now controls settings.nsfwMode
-          id="nsfwModeStory" // Unique ID for this checkbox instance
-          name="nsfwMode"
-          type="checkbox"
-          checked={settings.nsfwMode || false}
-          onChange={handleChange} // Updates settings.nsfwMode in parent
-        />
-        {settings.nsfwMode && (
-          <div className="pl-4 mt-2 space-y-3 border-l-2 border-indigo-500/50">
-            <InputField
-              label={VIETNAMESE.nsfwDescriptionStyleLabel}
-              id="nsfwDescriptionStyleStory"
-              name="nsfwDescriptionStyle"
-              type="select"
-              options={nsfwStyleOptions.map(opt => opt.label)}
-              value={nsfwStyleOptions.find(opt => opt.value === (settings.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE))?.label || nsfwStyleOptions[0].label}
-              onChange={(e) => {
-                const selectedLabel = e.target.value;
-                const selectedValue = nsfwStyleOptions.find(opt => opt.label === selectedLabel)?.value || DEFAULT_NSFW_DESCRIPTION_STYLE;
-                handleChange({ target: { name: 'nsfwDescriptionStyle', value: selectedValue } } as any);
-              }}
-            />
-            <InputField
-              label={VIETNAMESE.violenceLevelLabel}
-              id="violenceLevelStory"
-              name="violenceLevel"
-              type="select"
-              options={violenceLevelOptions.map(opt => opt.label)}
-              value={violenceLevelOptions.find(opt => opt.value === (settings.violenceLevel || DEFAULT_VIOLENCE_LEVEL))?.label || violenceLevelOptions[1].label}
-              onChange={(e) => {
-                  const selectedLabel = e.target.value;
-                  const selectedValue = violenceLevelOptions.find(opt => opt.label === selectedLabel)?.value || DEFAULT_VIOLENCE_LEVEL;
-                  handleChange({ target: { name: 'violenceLevel', value: selectedValue } } as any);
-              }}
-            />
-            <InputField
-              label={VIETNAMESE.storyToneLabel}
-              id="storyToneStory"
-              name="storyTone"
-              type="select"
-              options={storyToneOptions.map(opt => opt.label)}
-              value={storyToneOptions.find(opt => opt.value === (settings.storyTone || DEFAULT_STORY_TONE))?.label || storyToneOptions[1].label}
-              onChange={(e) => {
-                  const selectedLabel = e.target.value;
-                  const selectedValue = storyToneOptions.find(opt => opt.label === selectedLabel)?.value || DEFAULT_STORY_TONE;
-                  handleChange({ target: { name: 'storyTone', value: selectedValue } } as any);
-              }}
-            />
-          </div>
-        )}
         <Button
           onClick={handleGenerateFromStoryIdea}
           isLoading={isGeneratingDetails}
@@ -375,57 +386,6 @@ const AIAssistTab: React.FC<AIAssistTabProps> = ({
           rows={2}
           placeholder={VIETNAMESE.fanficPlayerDescriptionPlaceholder}
         />
-        <InputField
-          label={VIETNAMESE.nsfwIdeaCheckboxLabel} // This now controls settings.nsfwMode
-          id="nsfwModeFanfic" // Unique ID for this checkbox instance
-          name="nsfwMode"
-          type="checkbox"
-          checked={settings.nsfwMode || false}
-          onChange={handleChange} // Updates settings.nsfwMode in parent
-        />
-         {settings.nsfwMode && (
-          <div className="pl-4 mt-2 space-y-3 border-l-2 border-teal-500/50">
-            <InputField
-              label={VIETNAMESE.nsfwDescriptionStyleLabel}
-              id="nsfwDescriptionStyleFanfic"
-              name="nsfwDescriptionStyle"
-              type="select"
-              options={nsfwStyleOptions.map(opt => opt.label)}
-              value={nsfwStyleOptions.find(opt => opt.value === (settings.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE))?.label || nsfwStyleOptions[0].label}
-              onChange={(e) => {
-                const selectedLabel = e.target.value;
-                const selectedValue = nsfwStyleOptions.find(opt => opt.label === selectedLabel)?.value || DEFAULT_NSFW_DESCRIPTION_STYLE;
-                handleChange({ target: { name: 'nsfwDescriptionStyle', value: selectedValue } } as any);
-              }}
-            />
-            <InputField
-              label={VIETNAMESE.violenceLevelLabel}
-              id="violenceLevelFanfic"
-              name="violenceLevel"
-              type="select"
-              options={violenceLevelOptions.map(opt => opt.label)}
-              value={violenceLevelOptions.find(opt => opt.value === (settings.violenceLevel || DEFAULT_VIOLENCE_LEVEL))?.label || violenceLevelOptions[1].label}
-              onChange={(e) => {
-                  const selectedLabel = e.target.value;
-                  const selectedValue = violenceLevelOptions.find(opt => opt.label === selectedLabel)?.value || DEFAULT_VIOLENCE_LEVEL;
-                  handleChange({ target: { name: 'violenceLevel', value: selectedValue } } as any);
-              }}
-            />
-            <InputField
-              label={VIETNAMESE.storyToneLabel}
-              id="storyToneFanfic"
-              name="storyTone"
-              type="select"
-              options={storyToneOptions.map(opt => opt.label)}
-              value={storyToneOptions.find(opt => opt.value === (settings.storyTone || DEFAULT_STORY_TONE))?.label || storyToneOptions[1].label}
-              onChange={(e) => {
-                  const selectedLabel = e.target.value;
-                  const selectedValue = storyToneOptions.find(opt => opt.label === selectedLabel)?.value || DEFAULT_STORY_TONE;
-                  handleChange({ target: { name: 'storyTone', value: selectedValue } } as any);
-              }}
-            />
-          </div>
-        )}
         <Button
           onClick={handleGenerateFromFanfic}
           isLoading={isGeneratingFanficDetails}

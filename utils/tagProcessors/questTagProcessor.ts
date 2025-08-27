@@ -1,6 +1,6 @@
 import { VIETNAMESE } from '../../constants'; // VIETNAMESE might be needed for quest related strings in the future
-import { KnowledgeBase, GameMessage, QuestObjective, Quest, VectorMetadata } from '../../types';
-import { formatQuestForEmbedding } from '../ragUtils'; // NEW: Import formatter
+import { KnowledgeBase, GameMessage, QuestObjective, Quest, VectorMetadata, ActivityLogEntry, NPC, Wife, Slave, Prisoner } from '../../types';
+import { formatQuestForEmbedding } from '../ragUtils';
 import { diceCoefficient, normalizeStringForComparison, formatObjectiveForSystemMessage } from '../questUtils';
 
 const SIMILARITY_THRESHOLD = 0.75; // 75% similarity required to match an objective/quest
@@ -64,13 +64,31 @@ export const processQuestAssigned = (
             };
             
             newKb.allQuests.push(newQuest);
-            newVectorMetadata = { entityId: newQuest.id, entityType: 'quest', text: formatQuestForEmbedding(newQuest) };
+            newVectorMetadata = { entityId: newQuest.id, entityType: 'quest', text: formatQuestForEmbedding(newQuest, newKb), turnNumber: turnForSystemMessages };
 
             systemMessages.push({
                 id: 'quest-assigned-' + Date.now(), type: 'system',
                 content: `Nhiệm vụ mới: ${questTitle}!`,
                 timestamp: Date.now(), turnNumber: turnForSystemMessages
             });
+
+            const assignerName = tagParams.assignerName;
+            if (assignerName) {
+                const allPeople: (NPC | Wife | Slave | Prisoner)[] = [...newKb.discoveredNPCs, ...newKb.wives, ...newKb.slaves, ...newKb.prisoners];
+                const assignerNpc = allPeople.find(n => n.name === assignerName);
+                if (assignerNpc) {
+                    if (!assignerNpc.activityLog) assignerNpc.activityLog = [];
+                    const logEntry: ActivityLogEntry = {
+                        turnNumber: turnForSystemMessages,
+                        description: `Đã giao nhiệm vụ "${questTitle}" cho ${newKb.worldConfig?.playerName || 'người chơi'}.`,
+                        locationId: assignerNpc.locationId || newKb.currentLocationId || 'unknown'
+                    };
+                    assignerNpc.activityLog.push(logEntry);
+                    if (assignerNpc.activityLog.length > 30) assignerNpc.activityLog.shift();
+                }
+            }
+
+
         } else {
             console.warn(`QUEST_ASSIGNED: Quest with title "${questTitle}" already exists. Not adding duplicate.`);
         }

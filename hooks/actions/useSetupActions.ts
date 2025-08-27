@@ -1,8 +1,10 @@
 import { useCallback } from 'react';
-import { KnowledgeBase, GameMessage, WorldSettings, GameScreen, RealmBaseStatDefinition, TurnHistoryEntry, WorldDate } from '../../types';
-import { INITIAL_KNOWLEDGE_BASE, APP_VERSION, DEFAULT_PLAYER_STATS, DEFAULT_TIERED_STATS, VIETNAMESE, MAX_AUTO_SAVE_SLOTS } from '../../constants';
+import { KnowledgeBase, GameMessage, WorldSettings, GameScreen, RealmBaseStatDefinition, TurnHistoryEntry, WorldDate, StartingLocation } from '../../types';
+import { INITIAL_KNOWLEDGE_BASE, APP_VERSION, DEFAULT_PLAYER_STATS, DEFAULT_TIERED_STATS, VIETNAMESE, MAX_AUTO_SAVE_SLOTS, DEFAULT_MODEL_ID } from '../../constants';
 import { generateInitialStory } from '../../services/geminiService';
-import { performTagProcessing, calculateRealmBaseStats, addTurnHistoryEntryRaw, calculateEffectiveStats, vectorizeKnowledgeBase, DEFAULT_AI_CONTEXT_CONFIG } from '../../utils/gameLogicUtils'; // Import vectorizeKnowledgeBase
+import { performTagProcessing, calculateRealmBaseStats, addTurnHistoryEntryRaw, calculateEffectiveStats, vectorizeKnowledgeBase, DEFAULT_AI_CONTEXT_CONFIG, normalizeLocationName } from '../../utils/gameLogicUtils'; // Import vectorizeKnowledgeBase
+import * as GameTemplates from '../../templates';
+
 
 interface UseSetupActionsProps {
   setIsLoadingApi: React.Dispatch<React.SetStateAction<boolean>>;
@@ -34,6 +36,43 @@ export const useSetupActions = ({
     setIsLoadingApi(true);
     resetApiError();
     
+    const worldConfigForKb = { ...settings }; // Use a mutable copy
+
+    // --- STEP 5: LOCATION AUTO-GENERATION & NPC-LOCATION LINKING ---
+    // Part 1: Auto-generate locations based on NPC starting points.
+    
+    const updatedLocations: StartingLocation[] = [...worldConfigForKb.startingLocations];
+    const locationNameToObjectMap = new Map<string, StartingLocation>();
+    
+    // Seed the map with user-defined locations
+    updatedLocations.forEach(location => {
+        locationNameToObjectMap.set(normalizeLocationName(location.name), location);
+    });
+
+    // Process NPCs to find or create their starting locations
+    (worldConfigForKb.startingNPCs || []).forEach(npc => {
+        if (npc.locationName && npc.locationName.trim()) {
+            const normalizedLocationName = normalizeLocationName(npc.locationName);
+            if (!locationNameToObjectMap.has(normalizedLocationName)) {
+                // Location doesn't exist, create it.
+                const newLocation: StartingLocation = {
+                    name: npc.locationName.trim(), // Use the original, non-normalized name
+                    description: `Một địa điểm được nhắc đến, có liên quan đến ${npc.name}. Chi tiết chưa được khám phá.`,
+                    isSafeZone: false, // Default to not safe
+                    locationType: GameTemplates.LocationType.LANDMARK, // Default to a landmark
+                };
+                updatedLocations.push(newLocation);
+                // Add the new location to the map to prevent duplicates in this loop
+                locationNameToObjectMap.set(normalizedLocationName, newLocation);
+            }
+        }
+    });
+    
+    // Update the config with the new locations before building the KB
+    worldConfigForKb.startingLocations = updatedLocations;
+    
+    // --- End of Location Auto-Generation ---
+
     const playerRaceTrimmed = settings.playerRace.trim();
     let playerRaceSystem = settings.raceCultivationSystems.find(s => s.raceName.trim() === playerRaceTrimmed);
 
@@ -57,8 +96,6 @@ export const useSetupActions = ({
     
     const initialCalculatedStats = calculateRealmBaseStats(initialRealm, realmProgression, generatedBaseStats);
     
-    const worldConfigForKb = { ...settings }; 
-
     // Failsafe: Ensure the startingDate object has the 'buoi' property.
     const dateToUse = { ...settings.startingDate };
     if (typeof (dateToUse as any).buoi !== 'undefined') {
@@ -123,6 +160,16 @@ export const useSetupActions = ({
         JSON.parse(JSON.stringify(minimalInitialKB)), // Snapshot of the very initial KB
         []  // No messages before the game starts
     );
+    
+    // Add default AI Copilot configuration
+    const DEFAULT_COPILOT_CONFIG_ID = 'default-copilot';
+    minimalInitialKB.aiCopilotConfigs = [{
+        id: DEFAULT_COPILOT_CONFIG_ID,
+        name: 'Siêu Trợ Lý Mặc Định',
+        model: DEFAULT_MODEL_ID,
+        systemInstruction: ''
+    }];
+    minimalInitialKB.activeAICopilotConfigId = DEFAULT_COPILOT_CONFIG_ID;
 
     setKnowledgeBase(minimalInitialKB); 
     setCurrentPageDisplay(1);
@@ -143,6 +190,36 @@ export const useSetupActions = ({
       } = await performTagProcessing(workingKbForProcessing, response.tags, 1, setKnowledgeBase, logNpcAvatarPromptCallback); 
       
       let finalKbForDisplay = kbAfterTags;
+      
+      // Part 2: Link NPCs to their correct location IDs.
+      if (finalKbForDisplay.discoveredNPCs.length > 0 && settings.startingNPCs.length > 0) {
+        const locationNameToIdMap = new Map<string, string>();
+        finalKbForDisplay.discoveredLocations.forEach(location => {
+            locationNameToIdMap.set(normalizeLocationName(location.name), location.id);
+        });
+
+        settings.startingNPCs.forEach(startingNpc => {
+            if (startingNpc.locationName && startingNpc.locationName.trim()) {
+                // Find the corresponding NPC created by the AI in the knowledge base
+                const discoveredNpc = finalKbForDisplay.discoveredNPCs.find(
+                    n => n.name === startingNpc.name
+                );
+
+                if (discoveredNpc) {
+                    const normalizedLocationName = normalizeLocationName(startingNpc.locationName);
+                    const locationId = locationNameToIdMap.get(normalizedLocationName);
+
+                    if (locationId) {
+                        discoveredNpc.locationId = locationId;
+                    } else {
+                        console.warn(`[Setup Linking] Could not find a location ID for "${startingNpc.locationName}" for NPC "${startingNpc.name}". The location should have been auto-created.`);
+                    }
+                }
+            }
+        });
+      }
+      
+      // --- End of NPC-Location Linking ---
       
       // FIX: Re-apply the user's settings for lifespan over any values the AI might have generated.
       // This ensures user input from the setup screen is always respected.
@@ -176,9 +253,12 @@ export const useSetupActions = ({
       finalKbForDisplay.playerStats = calculateEffectiveStats(finalKbForDisplay.playerStats, finalKbForDisplay.equippedItems, finalKbForDisplay.inventory);
       
       // Set initial location based on the first discovered location from the setup
-      const firstLocation = finalKbForDisplay.discoveredLocations?.[0];
-      if (firstLocation) {
-          finalKbForDisplay.currentLocationId = firstLocation.id;
+      // This is now redundant since NPCs are linked, but good as a fallback
+      if (!finalKbForDisplay.currentLocationId) {
+          const firstLocation = finalKbForDisplay.discoveredLocations?.[0];
+          if (firstLocation) {
+              finalKbForDisplay.currentLocationId = firstLocation.id;
+          }
       }
 
       const newMessages: GameMessage[] = [];

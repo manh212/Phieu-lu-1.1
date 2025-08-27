@@ -187,7 +187,7 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                              <DetailSection title="Trạng Thái Hiện Tại">
                                 <StatField 
                                     label="Vị Trí & Hoạt Động" 
-                                    value={`${person.shortTermGoal || 'Đang nghỉ ngơi'} tại ${knowledgeBase.discoveredLocations.find(l => l.id === person.locationId)?.name || 'Vị trí không xác định'}`} 
+                                    value={`${(person.currentPlan && person.currentPlan.length > 0 ? person.currentPlan.join(' -> ') : 'Đang nghỉ ngơi')} tại ${knowledgeBase.discoveredLocations.find(l => l.id === person.locationId)?.name || 'Vị trí không xác định'}`} 
                                 />
                              </DetailSection>
                              <DetailSection title="Mục Tiêu">

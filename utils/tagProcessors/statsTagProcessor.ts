@@ -1,3 +1,4 @@
+
 import { KnowledgeBase, PlayerStats, GameMessage, RealmBaseStatDefinition, PlayerSpecialStatus, Master, PersonBase, VectorMetadata } from '../../types';
 import { DEFAULT_PLAYER_STATS, VIETNAMESE, SUB_REALM_NAMES } from '../../constants';
 import { calculateRealmBaseStats, calculateEffectiveStats } from '../statsCalculationUtils';
@@ -398,13 +399,13 @@ export const processBecomeSpecialStatus = (
         ...personBaseData,
         mood: 'Bình Thường',
         needs: { 'Dục Vọng': 50, 'Tham Vọng': 50, 'An Toàn': 50, 'Giải Trí': 50 },
-        currentGoal: `Quan sát ${statusType} mới.`,
+        shortTermGoal: `Quan sát ${statusType} mới.`,
         favor: 0,
     };
     newKb.master = newMaster;
 
     // Create vector metadata for the new master
-    newVectorMetadata = { entityId: newMaster.id, entityType: 'master', text: formatPersonForEmbedding(newMaster) };
+    newVectorMetadata = { entityId: newMaster.id, entityType: 'master', text: formatPersonForEmbedding(newMaster, newKb), turnNumber: turnForSystemMessages };
 
     // Remove the NPC from the regular list
     newKb.discoveredNPCs.splice(ownerNpcIndex, 1);

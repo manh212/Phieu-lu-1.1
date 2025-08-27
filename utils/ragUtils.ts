@@ -1,233 +1,368 @@
+
 // src/utils/ragUtils.ts
-import { KnowledgeBase, VectorStore, Item, NPC, YeuThu, Skill, GameLocation, Faction, WorldLoreEntry, Quest, Wife, Slave, Prisoner, PlayerStats, VectorMetadata, Master } from '../types';
-import { generateEmbeddings } from '../services/embeddingService';
+import {
+    KnowledgeBase, Item, NPC, YeuThu, Skill, GameLocation, Faction,
+    WorldLoreEntry, Quest, Wife, Slave, Prisoner, Master, VectorStore, VectorMetadata, PersonBase, ActivityLogEntry
+} from '../types';
 import * as GameTemplates from '../templates';
+import { generateEmbeddings } from '../services/embeddingService';
 
-// --- Text Chunking and Formatting ---
+// --- HÀM TIỆN ÍCH (HELPER FUNCTIONS) ---
 
 /**
- * Creates a descriptive string for an Item for embedding.
- * @param item The item object.
- * @returns A formatted string.
+ * Tìm tên của một địa điểm dựa vào ID.
+ * @param locationId ID của địa điểm cần tìm.
+ * @param kb Toàn bộ tri thức của game.
+ * @returns Tên của địa điểm hoặc một chuỗi báo không xác định.
  */
-export const formatItemForEmbedding = (item: Item): string => {
-    let details = `Vật phẩm: ${item.name} (ID: ${item.id}). Loại: ${item.category}. Độ hiếm: ${item.rarity}. Mô tả: ${item.description}.`;
-    if (item.category === GameTemplates.ItemCategory.EQUIPMENT) {
-        const equip = item as GameTemplates.EquipmentTemplate;
-        const bonuses = Object.entries(equip.statBonuses).filter(([_, val]) => val !== 0 && val !== undefined).map(([key, val]) => `${key}: ${val}`).join(', ');
-        if (bonuses) details += ` Chỉ số cộng thêm: ${bonuses}.`;
-        if (equip.uniqueEffects.length > 0) details += ` Hiệu ứng đặc biệt: ${equip.uniqueEffects.join('; ')}.`;
-        details += ` Loại trang bị: ${equip.equipmentType}. Vị trí: ${equip.slot || 'Không rõ'}.`;
-    } else if (item.category === GameTemplates.ItemCategory.POTION) {
-        const potion = item as GameTemplates.PotionTemplate;
-        if (potion.effects.length > 0) details += ` Hiệu ứng: ${potion.effects.join('; ')}.`;
-        if (potion.durationTurns) details += ` Thời gian: ${potion.durationTurns} lượt.`;
+const _findLocationNameById = (locationId: string | undefined, kb: KnowledgeBase): string => {
+    if (!locationId) {
+        return "một nơi không xác định";
     }
-    return details;
+    const location = kb.discoveredLocations.find(loc => loc.id === locationId);
+    return location ? `"${location.name}"` : "một nơi không xác định";
 };
 
 /**
- * Creates a descriptive string for an NPC/Person for embedding.
- * @param person The person object (NPC, Wife, Slave, Prisoner).
- * @returns A formatted string.
+ * Tìm tên của một nhân vật dựa vào ID, tìm kiếm trong tất cả các danh sách có thể chứa nhân vật.
+ * @param personId ID của nhân vật cần tìm.
+ * @param kb Toàn bộ tri thức của game.
+ * @returns Tên của nhân vật hoặc null nếu không tìm thấy.
  */
-export const formatPersonForEmbedding = (person: NPC | Wife | Slave | Prisoner | Master): string => {
-    const entityType = 'entityType' in person ? (person as Wife | Slave | Prisoner).entityType : ('mood' in person ? 'master' : 'npc');
-    let details = `Nhân vật (${entityType}): ${person.name} (ID: ${person.id}).`;
-    details += ` Chức danh: ${person.title || 'Không'}.`;
-    details += ` Giới tính: ${person.gender || 'Không rõ'}.`;
-    details += ` Chủng tộc: ${person.race || 'Không rõ'}.`;
-    details += ` Cảnh giới: ${person.realm || 'Không rõ'}.`;
-    if ('relationshipToPlayer' in person) {
-        details += ` Mối quan hệ với người chơi: ${(person as NPC).relationshipToPlayer || 'Chưa rõ'}.`;
+const _findPersonNameById = (personId: string, kb: KnowledgeBase): string | null => {
+    if (personId === 'player') {
+        return kb.worldConfig?.playerName || 'Người chơi';
     }
-    details += ` Thiện cảm: ${person.affinity}.`;
-    details += ` Linh căn: ${person.spiritualRoot || 'Không rõ'}.`;
-    details += ` Thể chất: ${person.specialPhysique || 'Không rõ'}.`;
-    details += ` Tư chất: ${person.tuChat || 'Không rõ'}.`;
-
-    if (person.stats) {
-        let statsParts: string[] = [];
-        if (person.stats.maxSinhLuc) statsParts.push(`HP ${person.stats.sinhLuc}/${person.stats.maxSinhLuc}`);
-        if (person.stats.maxLinhLuc) statsParts.push(`MP ${person.stats.linhLuc}/${person.stats.maxLinhLuc}`);
-        if (person.stats.sucTanCong) statsParts.push(`ATK ${person.stats.sucTanCong}`);
-        if (person.stats.maxThoNguyen) statsParts.push(`Thọ nguyên ${Math.floor(person.stats.thoNguyen || 0)}/${person.stats.maxThoNguyen}`);
-        if (statsParts.length > 0) details += ` Chỉ số: ${statsParts.join(', ')}.`;
-    }
-    
-    if (entityType === 'prisoner') {
-        const prisoner = person as Prisoner;
-        details += ` Trạng thái tù nhân: Ý chí ${prisoner.willpower}, Phản kháng ${prisoner.resistance}, Phục tùng ${prisoner.obedience}.`;
-    } else if (entityType === 'wife' || entityType === 'slave') {
-        const companion = person as Wife | Slave;
-        details += ` Trạng thái bạn đồng hành: Ý chí ${companion.willpower}, Phục tùng ${companion.obedience}.`;
-    } else if (entityType === 'master') {
-        const master = person as Master;
-        details += ` Trạng thái chủ nhân: Tâm trạng ${master.mood}, Mục tiêu ${master.currentGoal}, Sủng ái ${master.favor || 0}.`;
-    }
-
-    details += ` Mô tả: ${person.description}.`;
-    
-    return details;
-};
-
-/**
- * Creates a descriptive string for a YeuThu for embedding.
- * @param beast The YeuThu object.
- * @returns A formatted string.
- */
-export const formatYeuThuForEmbedding = (beast: YeuThu): string => {
-    let details = `Yêu thú: ${beast.name} (ID: ${beast.id}). Loài: ${beast.species}. Cảnh giới: ${beast.realm || 'Không rõ'}. Thái độ: ${beast.isHostile ? 'Thù địch' : 'Trung lập'}. Mô tả: ${beast.description}.`;
-    if (beast.stats) {
-        let statsParts: string[] = [];
-        if (beast.stats.maxSinhLuc) statsParts.push(`HP ${beast.stats.sinhLuc}/${beast.stats.maxSinhLuc}`);
-        if (beast.stats.maxLinhLuc) statsParts.push(`MP ${beast.stats.linhLuc}/${beast.stats.maxLinhLuc}`);
-        if (beast.stats.sucTanCong) statsParts.push(`ATK ${beast.stats.sucTanCong}`);
-        if (statsParts.length > 0) details += ` Chỉ số: ${statsParts.join(', ')}.`;
-    }
-    return details;
-};
-
-/**
- * Creates a descriptive string for a Skill for embedding.
- * @param skill The skill object.
- * @returns A formatted string.
- */
-export const formatSkillForEmbedding = (skill: Skill): string => {
-    let details = `Kỹ năng: ${skill.name} (ID: ${skill.id}). Loại: ${skill.skillType}. Độ thuần thục: ${skill.proficiencyTier || 'Sơ Nhập'}. Mô tả: ${skill.description}. Hiệu ứng: ${skill.detailedEffect}.`;
-    if (skill.manaCost > 0 || skill.cooldown > 0 || skill.baseDamage > 0) {
-        let statsParts: string[] = [];
-        if (skill.manaCost > 0) statsParts.push(`Tiêu hao ${skill.manaCost} MP`);
-        if (skill.cooldown > 0) statsParts.push(`Hồi ${skill.cooldown} lượt`);
-        if (skill.baseDamage > 0) statsParts.push(`Sát thương cơ bản ${skill.baseDamage}`);
-        if (skill.damageMultiplier > 0) statsParts.push(`Sát thương theo ${skill.damageMultiplier * 100}% ATK`);
-        if (skill.healingAmount > 0) statsParts.push(`Hồi ${skill.healingAmount} HP`);
-        if (statsParts.length > 0) details += ` Thuộc tính: ${statsParts.join('; ')}.`;
-    }
-    return details;
-};
-
-/**
- * Creates a descriptive string for a Location for embedding.
- * @param location The location object.
- * @returns A formatted string.
- */
-export const formatLocationForEmbedding = (location: GameLocation): string => {
-    let details = `Địa điểm: ${location.name} (ID: ${location.id}). Loại: ${location.locationType || 'Không rõ'}. Khu vực an toàn: ${location.isSafeZone ? 'Có' : 'Không'}. Mô tả: ${location.description}.`;
-    return details;
-};
-
-/**
- * Creates a descriptive string for a Faction for embedding.
- * @param faction The faction object.
- * @returns A formatted string.
- */
-export const formatFactionForEmbedding = (faction: Faction): string => {
-    return `Phe phái: ${faction.name} (ID: ${faction.id}). phe: ${faction.alignment}. Uy tín với người chơi: ${faction.playerReputation}. Mô tả: ${faction.description}`;
-};
-
-/**
- * Creates a descriptive string for a Lore entry for embedding.
- * @param lore The lore object.
- * @returns A formatted string.
- */
-export const formatLoreForEmbedding = (lore: WorldLoreEntry): string => {
-    return `Tri thức thế giới: ${lore.title} (ID: ${lore.id}). Nội dung: ${lore.content}`;
-};
-
-/**
- * Creates a descriptive string for an active Quest for embedding.
- * @param quest The quest object.
- * @returns A formatted string.
- */
-export const formatQuestForEmbedding = (quest: Quest): string => {
-    const objectives = quest.objectives.filter(o => !o.completed).map(o => o.text).join('; ');
-    return `Nhiệm vụ đang làm: ${quest.title} (ID: ${quest.id}). Mô tả: ${quest.description}. Mục tiêu còn lại: ${objectives}`;
-};
-
-/**
- * NEW: Explicitly extracts context for known entities mentioned in an action string.
- * This guarantees the AI gets context about the direct subjects of the player's action.
- * @param action The player's action string.
- * @param kb The full KnowledgeBase object.
- * @returns An array of context strings for matched entities.
- */
-export const extractEntityContextsFromString = (action: string, kb: KnowledgeBase): string[] => {
-    if (!kb.ragVectorStore || kb.ragVectorStore.metadata.length === 0) {
-        return [];
-    }
-
-    const foundContexts = new Set<string>();
-    const normalizedAction = action.toLowerCase();
-
-    const allEntities = [
-        ...kb.discoveredNPCs, ...kb.wives, ...kb.slaves, ...kb.prisoners,
-        ...kb.discoveredYeuThu, ...kb.inventory, ...kb.playerSkills,
-        ...kb.discoveredLocations, ...kb.discoveredFactions
+    const allPeople: (NPC | Wife | Slave | Prisoner | Master)[] = [
+        ...kb.discoveredNPCs,
+        ...kb.wives,
+        ...kb.slaves,
+        ...kb.prisoners,
     ];
-
-    allEntities.sort((a, b) => (b.name || (b as any).title).length - (a.name || (a as any).title).length);
-
-    for (const entity of allEntities) {
-        const entityName = (entity as any).name || (entity as any).title;
-        if (!entityName || typeof entityName !== 'string' || entityName.length < 3) {
-            continue;
+    if (kb.master) {
+        // Đảm bảo không bị trùng lặp nếu master cũng có trong danh sách NPC (dù logic đã xóa)
+        if (!allPeople.some(p => p.id === kb.master!.id)) {
+            allPeople.push(kb.master);
         }
+    }
+    
+    const foundPerson = allPeople.find(p => p.id === personId);
+    return foundPerson ? foundPerson.name : null;
+};
 
-        if (normalizedAction.includes(entityName.toLowerCase())) {
-            const contextItem = kb.ragVectorStore.metadata.find(meta => meta.entityId === entity.id);
-            if (contextItem) {
-                foundContexts.add(contextItem.text);
+
+// --- CÁC HÀM ĐỊNH DẠNG CHÍNH ---
+
+/**
+ * Tạo ra một chuỗi văn xuôi mô tả một vật phẩm để cung cấp cho AI.
+ * @param item Đối tượng vật phẩm.
+ * @param knowledgeBase Toàn bộ tri thức của game.
+ * @returns Một chuỗi văn xuôi mô tả.
+ */
+export const formatItemForEmbedding = (item: Item, knowledgeBase: KnowledgeBase): string => {
+    const categoryMap: Record<GameTemplates.ItemCategoryValues, string> = {
+        [GameTemplates.ItemCategory.EQUIPMENT]: "Trang Bị",
+        [GameTemplates.ItemCategory.POTION]: "Đan Dược",
+        [GameTemplates.ItemCategory.MATERIAL]: "Nguyên Liệu",
+        [GameTemplates.ItemCategory.QUEST_ITEM]: "Vật Phẩm Nhiệm Vụ",
+        [GameTemplates.ItemCategory.MISCELLANEOUS]: "Linh Tinh",
+        [GameTemplates.ItemCategory.CONG_PHAP]: "Công Pháp",
+        [GameTemplates.ItemCategory.LINH_KI]: "Linh Kĩ",
+        [GameTemplates.ItemCategory.PROFESSION_SKILL_BOOK]: "Sách Kỹ Năng Nghề",
+        [GameTemplates.ItemCategory.PROFESSION_TOOL]: "Dụng Cụ Nghề",
+    };
+    const categoryText = categoryMap[item.category] || "Không rõ";
+    let prose = `[Vật phẩm: ${categoryText}] ${item.name} (ID: ${item.id})`;
+
+    switch (item.category) {
+        case GameTemplates.ItemCategory.EQUIPMENT:
+            const equip = item as GameTemplates.EquipmentTemplate;
+            prose += ` là một món trang bị loại ${equip.equipmentType}, độ hiếm ${equip.rarity}. ${equip.description}`;
+            break;
+        case GameTemplates.ItemCategory.POTION:
+            const potion = item as GameTemplates.PotionTemplate;
+            prose += ` là một loại đan dược ${potion.potionType}, độ hiếm ${potion.rarity}. ${potion.description}`;
+            break;
+        case GameTemplates.ItemCategory.MATERIAL:
+            const material = item as GameTemplates.MaterialTemplate;
+            prose += ` là một loại nguyên liệu ${material.materialType}, độ hiếm ${material.rarity}, thường dùng để ${material.description}`;
+            break;
+        default:
+            prose += `, độ hiếm ${item.rarity}. ${item.description}`;
+            break;
+    }
+    return prose;
+};
+
+/**
+ * [BƯỚC 4 - HOÀN THÀNH]
+ * Tạo ra một chuỗi văn xuôi mô tả một nhân vật (NPC, Vợ, Nô lệ, Tù nhân, Sư phụ) để cung cấp cho AI.
+ * Đã tích hợp đầy đủ 4 tầng thông tin: Cơ bản, Nội tâm & Mục tiêu, Mối quan hệ, và Nhật ký gần đây.
+ * @param person Đối tượng nhân vật.
+ * @param knowledgeBase Toàn bộ tri thức của game.
+ * @returns Một chuỗi văn xuôi mô tả.
+ */
+export const formatPersonForEmbedding = (person: NPC | Wife | Slave | Prisoner | Master, knowledgeBase: KnowledgeBase): string => {
+    const getEntityType = () => {
+        if ('entityType' in person && person.entityType) {
+            switch(person.entityType) {
+                case 'wife': return 'Đạo Lữ';
+                case 'slave': return 'Nô Lệ';
+                case 'prisoner': return 'Tù Nhân';
             }
         }
+        if ('mood' in person && !('entityType' in person)) return 'Sư Phụ';
+        return 'NPC';
+    };
+    const entityTypeText = getEntityType();
+
+    const pronoun = person.gender === 'Nữ' ? 'Nàng' : (person.gender === 'Nam' ? 'Hắn' : 'Người này');
+    const role = person.title || 'người';
+    const genderNoun = person.gender === 'Nữ' ? 'nữ tử' : (person.gender === 'Nam' ? 'nam tử' : 'người');
+    const race = person.race || 'Nhân Tộc';
+    const realm = person.realm || 'Không rõ';
+    const tuChat = person.tuChat || 'Không rõ';
+
+    // === Phần 1: Mô tả cơ bản & Vị trí ===
+    let baseProse = `[Nhân vật: ${entityTypeText}] ${person.name} (ID: ${person.id}) là một ${role}.`;
+    baseProse += ` Đây là một ${genderNoun} thuộc chủng tộc ${race}, có tu vi ${realm} và tư chất ${tuChat}.`;
+    
+    const locationName = _findLocationNameById(person.locationId, knowledgeBase);
+    baseProse += ` Hiện đang ở tại ${locationName}.`;
+    
+    // === Phần 2: Nội tâm & Mục tiêu (Chiều sâu Nội tâm) ===
+    let internalStateProse = '';
+    if (person.mood || person.shortTermGoal || person.longTermGoal) {
+        internalStateProse = `\n\n[Nội tâm & Mục tiêu]`;
+        const sentences: string[] = [];
+        
+        // Xử lý tâm trạng và suy luận nguyên nhân
+        if (person.mood) {
+            let moodSentence = `Hiện tại, tâm trạng của ${pronoun} có vẻ đang ${person.mood}`;
+            
+            // Logic suy luận nâng cao
+            const latestActivity = person.activityLog?.slice().sort((a, b) => b.turnNumber - a.turnNumber)[0];
+            if (latestActivity) {
+                const negativeMoods = ['Bực Bội', 'Giận Dữ'];
+                const positiveMoods = ['Vui Vẻ', 'Hài Lòng'];
+                const negativeKeywords = ['tranh cãi', 'bị trừng phạt', 'thất bại', 'bị đánh bại', 'bị từ chối'];
+                const positiveKeywords = ['được khen', 'thắng lợi', 'đột phá', 'thành công', 'nhận được'];
+                const lowerDesc = latestActivity.description.toLowerCase();
+
+                if (negativeMoods.includes(person.mood) && negativeKeywords.some(kw => lowerDesc.includes(kw))) {
+                     moodSentence += `, có lẽ vì ${pronoun} vừa ${lowerDesc}`;
+                } else if (positiveMoods.includes(person.mood) && positiveKeywords.some(kw => lowerDesc.includes(kw))) {
+                     moodSentence += `, có lẽ vì ${pronoun} vừa ${lowerDesc}`;
+                }
+            }
+            sentences.push(moodSentence + ".");
+        }
+
+        // Xử lý mục tiêu
+        if (person.shortTermGoal && person.longTermGoal) {
+            sentences.push(`Dường như mục tiêu ngắn hạn của ${pronoun} là "${person.shortTermGoal}", hướng tới tham vọng dài hạn là "${person.longTermGoal}".`);
+        } else if (person.shortTermGoal) {
+            sentences.push(`Mục tiêu trước mắt của ${pronoun} là "${person.shortTermGoal}".`);
+        } else if (person.longTermGoal) {
+            sentences.push(`Tham vọng dài hạn của ${pronoun} là "${person.longTermGoal}".`);
+        }
+        
+        if(sentences.length > 0) {
+            internalStateProse += '\n' + sentences.join(' ');
+        }
     }
 
-    return Array.from(foundContexts);
+    // === Phần 3: Mối quan hệ ===
+    let relationshipProse = '';
+    if (person.relationships && Object.keys(person.relationships).length > 0) {
+        const relationshipSentences: string[] = [];
+        for (const targetId in person.relationships) {
+            const relationshipData = person.relationships[targetId];
+            if (relationshipData.type.toLowerCase() !== 'người lạ') {
+                const targetName = _findPersonNameById(targetId, knowledgeBase);
+                if (targetName) {
+                    relationshipSentences.push(`${relationshipData.type} với ${targetName} (thiện cảm: ${relationshipData.affinity})`);
+                }
+            }
+        }
+        
+        if (relationshipSentences.length > 0) {
+            relationshipProse = `\n\n[Mối quan hệ]\n${pronoun} có các mối quan hệ sau: ${relationshipSentences.join('; ')}.`;
+        }
+    }
+    
+    // === Phần 4: Nhật ký gần đây (Trí nhớ ngắn hạn) ===
+    let activityLogProse = '';
+    if (person.activityLog && person.activityLog.length > 0) {
+        const recentActivities = person.activityLog
+            .slice() // Tạo một bản sao nông để tránh thay đổi mảng gốc
+            .sort((a, b) => b.turnNumber - a.turnNumber) // Sắp xếp giảm dần theo lượt
+            .slice(0, 3); // Lấy 3 hoạt động gần nhất
+
+        if (recentActivities.length > 0) {
+            const activityStrings = recentActivities.map((log, index) => {
+                const prefix = index === 0 ? "Mới nhất" : "Trước đó";
+                return `• ${prefix} (Lượt ${log.turnNumber}): ${log.description}`;
+            });
+            activityLogProse = `\n\n[Nhật ký gần đây]\n${activityStrings.join('\n')}`;
+        }
+    }
+    
+    // Ghép nối theo thứ tự cuối cùng mong muốn
+    return baseProse + internalStateProse + relationshipProse + activityLogProse;
 };
 
+/**
+ * Tạo ra một chuỗi văn xuôi mô tả một Yêu Thú để cung cấp cho AI.
+ * @param beast Đối tượng Yêu thú.
+ * @param knowledgeBase Toàn bộ tri thức của game.
+ * @returns Một chuỗi văn xuôi mô tả.
+ */
+export const formatYeuThuForEmbedding = (beast: YeuThu, knowledgeBase: KnowledgeBase): string => {
+    let prose = `[Yêu Thú] ${beast.name} (ID: ${beast.id}) là một con ${beast.species} có cảnh giới ${beast.realm || 'Không rõ'}.`;
+    prose += ` Nó ${beast.isHostile ? 'là loài thù địch' : 'tương đối ôn hòa'}. ${beast.description}`;
+    return prose;
+};
 
 /**
- * Extracts all relevant textual information from the KnowledgeBase, formats it into clean strings,
- * generates embeddings for them, and returns a populated VectorStore.
- * @param kb The full KnowledgeBase object.
- * @returns A Promise that resolves to a VectorStore object.
+ * Tạo ra một chuỗi văn xuôi mô tả một Kỹ Năng để cung cấp cho AI.
+ * @param skill Đối tượng kỹ năng.
+ * @param knowledgeBase Toàn bộ tri thức của game.
+ * @returns Một chuỗi văn xuôi mô tả.
  */
+export const formatSkillForEmbedding = (skill: Skill, knowledgeBase: KnowledgeBase): string => {
+    return `[Kỹ năng: ${skill.skillType}] ${skill.name} (ID: ${skill.id}) là một kỹ năng loại ${skill.skillType}. Mô tả: ${skill.description}. Hiệu ứng chi tiết: ${skill.detailedEffect}`;
+};
+
+/**
+ * Tạo ra một chuỗi văn xuôi mô tả một Địa Điểm để cung cấp cho AI.
+ * @param location Đối tượng địa điểm.
+ * @param knowledgeBase Toàn bộ tri thức của game.
+ * @returns Một chuỗi văn xuôi mô tả.
+ */
+export const formatLocationForEmbedding = (location: GameLocation, knowledgeBase: KnowledgeBase): string => {
+    const locationTypeText = location.locationType || "Chung";
+    const safetyText = location.isSafeZone ? 'an toàn' : 'nguy hiểm';
+    return `[Địa điểm: ${locationTypeText}] ${location.name} (ID: ${location.id}) là một khu vực ${safetyText}. ${location.description}`;
+};
+
+/**
+ * Tạo ra một chuỗi văn xuôi mô tả một Phe Phái để cung cấp cho AI.
+ * @param faction Đối tượng phe phái.
+ * @param knowledgeBase Toàn bộ tri thức của game.
+ * @returns Một chuỗi văn xuôi mô tả.
+ */
+export const formatFactionForEmbedding = (faction: Faction, knowledgeBase: KnowledgeBase): string => {
+    return `[Phe phái] ${faction.name} (ID: ${faction.id}) là một phe phái ${faction.alignment}. Uy tín của người chơi với phe này là ${faction.playerReputation}. ${faction.description}`;
+};
+
+/**
+ * Tạo ra một chuỗi văn xuôi mô tả một Tri Thức Thế Giới để cung cấp cho AI.
+ * @param lore Đối tượng tri thức.
+ * @param knowledgeBase Toàn bộ tri thức của game.
+ * @returns Một chuỗi văn xuôi mô tả.
+ */
+export const formatLoreForEmbedding = (lore: WorldLoreEntry, knowledgeBase: KnowledgeBase): string => {
+    return `[Tri thức] ${lore.title} (ID: ${lore.id}): ${lore.content}`;
+};
+
+/**
+ * Tạo ra một chuỗi văn xuôi mô tả một Nhiệm Vụ đang hoạt động để cung cấp cho AI.
+ * @param quest Đối tượng nhiệm vụ.
+ * @param knowledgeBase Toàn bộ tri thức của game.
+ * @returns Một chuỗi văn xuôi mô tả.
+ */
+export const formatQuestForEmbedding = (quest: Quest, knowledgeBase: KnowledgeBase): string => {
+    const objectives = quest.objectives.filter(o => !o.completed).map(o => o.text).join('; ');
+    return `[Nhiệm vụ: ${quest.status}] ${quest.title} (ID: ${quest.id}). Mô tả: ${quest.description}. Các mục tiêu cần làm tiếp theo: ${objectives || 'Không có'}.`;
+};
+
+/**
+ * Tạo ra một chuỗi văn xuôi mô tả một ký ức quan hệ để cung cấp cho AI.
+ * @param sourceName Tên của người khởi xướng sự kiện.
+ * @param targetName Tên của người bị ảnh hưởng.
+ * @param reason Mô tả về những gì đã xảy ra.
+ * @param turnNumber Lượt mà sự kiện xảy ra.
+ * @returns Một chuỗi văn xuôi mô tả.
+ */
+export const formatRelationshipMemoryForEmbedding = (
+    sourceName: string,
+    targetName: string,
+    reason: string,
+    turnNumber: number
+): string => {
+    return `[Ký ức quan hệ - Lượt ${turnNumber}] Giữa ${sourceName} và ${targetName}: ${reason}.`;
+};
+
+// --- CÁC HÀM LIÊN QUAN ĐẾN VECTOR STORE ---
+
 export const vectorizeKnowledgeBase = async (kb: KnowledgeBase): Promise<VectorStore> => {
-    const metadataToEmbed: VectorMetadata[] = [];
+    const metadataToVectorize: VectorMetadata[] = [];
+    const currentTurn = kb.playerStats.turn;
 
-    // 1. World & Player Info (These don't have IDs, so we can skip them for now or assign pseudo-IDs)
-    // For simplicity, we will focus on entities with IDs first.
-    // textsToEmbed.push(`Bối cảnh chung của thế giới: ${kb.worldConfig.theme}. Mô tả: ${kb.worldConfig.settingDescription}`);
-    // textsToEmbed.push(`Mục tiêu chính của người chơi (${kb.worldConfig.playerName}): ${kb.worldConfig.playerGoal}`);
-    // textsToEmbed.push(`Thông tin người chơi: Chủng tộc ${kb.worldConfig.playerRace}, Linh căn ${kb.playerStats.spiritualRoot}, Thể chất ${kb.playerStats.specialPhysique}`);
-
-    // 2. Format all entities with IDs
-    kb.discoveredNPCs.forEach(e => metadataToEmbed.push({ entityId: e.id, entityType: 'npc', text: formatPersonForEmbedding(e) }));
-    kb.wives.forEach(e => metadataToEmbed.push({ entityId: e.id, entityType: 'wife', text: formatPersonForEmbedding(e) }));
-    kb.slaves.forEach(e => metadataToEmbed.push({ entityId: e.id, entityType: 'slave', text: formatPersonForEmbedding(e) }));
-    kb.prisoners.forEach(e => metadataToEmbed.push({ entityId: e.id, entityType: 'prisoner', text: formatPersonForEmbedding(e) }));
+    // Gather all entities
+    kb.inventory.forEach(e => metadataToVectorize.push({ entityId: e.id, entityType: 'item', text: formatItemForEmbedding(e, kb), turnNumber: currentTurn }));
+    kb.playerSkills.forEach(e => metadataToVectorize.push({ entityId: e.id, entityType: 'skill', text: formatSkillForEmbedding(e, kb), turnNumber: currentTurn }));
+    kb.allQuests.filter(q => q.status === 'active').forEach(e => metadataToVectorize.push({ entityId: e.id, entityType: 'quest', text: formatQuestForEmbedding(e, kb), turnNumber: currentTurn }));
+    kb.discoveredNPCs.forEach(e => metadataToVectorize.push({ entityId: e.id, entityType: 'npc', text: formatPersonForEmbedding(e, kb), turnNumber: currentTurn }));
+    kb.discoveredYeuThu.forEach(e => metadataToVectorize.push({ entityId: e.id, entityType: 'yeuThu', text: formatYeuThuForEmbedding(e, kb), turnNumber: currentTurn }));
+    kb.wives.forEach(e => metadataToVectorize.push({ entityId: e.id, entityType: 'wife', text: formatPersonForEmbedding(e, kb), turnNumber: currentTurn }));
+    kb.slaves.forEach(e => metadataToVectorize.push({ entityId: e.id, entityType: 'slave', text: formatPersonForEmbedding(e, kb), turnNumber: currentTurn }));
+    kb.prisoners.forEach(e => metadataToVectorize.push({ entityId: e.id, entityType: 'prisoner', text: formatPersonForEmbedding(e, kb), turnNumber: currentTurn }));
+    kb.discoveredLocations.forEach(e => metadataToVectorize.push({ entityId: e.id, entityType: 'location', text: formatLocationForEmbedding(e, kb), turnNumber: currentTurn }));
+    kb.worldLore.forEach(e => metadataToVectorize.push({ entityId: e.id, entityType: 'lore', text: formatLoreForEmbedding(e, kb), turnNumber: currentTurn }));
+    kb.discoveredFactions.forEach(e => metadataToVectorize.push({ entityId: e.id, entityType: 'faction', text: formatFactionForEmbedding(e, kb), turnNumber: currentTurn }));
     if (kb.master) {
-        metadataToEmbed.push({ entityId: kb.master.id, entityType: 'master', text: formatPersonForEmbedding(kb.master) });
+        metadataToVectorize.push({ entityId: kb.master.id, entityType: 'master', text: formatPersonForEmbedding(kb.master, kb), turnNumber: currentTurn });
     }
-    kb.discoveredYeuThu.forEach(e => metadataToEmbed.push({ entityId: e.id, entityType: 'yeuThu', text: formatYeuThuForEmbedding(e) }));
-    kb.inventory.forEach(e => metadataToEmbed.push({ entityId: e.id, entityType: 'item', text: formatItemForEmbedding(e) }));
-    kb.playerSkills.forEach(e => metadataToEmbed.push({ entityId: e.id, entityType: 'skill', text: formatSkillForEmbedding(e) }));
-    kb.discoveredLocations.forEach(e => metadataToEmbed.push({ entityId: e.id, entityType: 'location', text: formatLocationForEmbedding(e) }));
-    kb.discoveredFactions.forEach(e => metadataToEmbed.push({ entityId: e.id, entityType: 'faction', text: formatFactionForEmbedding(e) }));
-    kb.worldLore.forEach(e => metadataToEmbed.push({ entityId: e.id, entityType: 'lore', text: formatLoreForEmbedding(e) }));
-    kb.allQuests.filter(q => q.status === 'active').forEach(e => metadataToEmbed.push({ entityId: e.id, entityType: 'quest', text: formatQuestForEmbedding(e) }));
 
-    // 3. Generate embeddings
-    if (metadataToEmbed.length === 0) {
+    if (metadataToVectorize.length === 0) {
         return { vectors: [], metadata: [] };
     }
-    
-    const textChunks = metadataToEmbed.map(meta => meta.text);
-    const vectors = await generateEmbeddings(textChunks);
-    
-    // 4. Return the populated VectorStore
+
+    const textChunks = metadataToVectorize.map(m => m.text);
+    const newVectors = await generateEmbeddings(textChunks);
+
     return {
-        vectors: vectors,
-        metadata: metadataToEmbed
+        vectors: newVectors,
+        metadata: metadataToVectorize
     };
+};
+
+export const extractEntityContextsFromString = (text: string, kb: KnowledgeBase): Set<string> => {
+    const foundContexts = new Set<string>();
+    const lowerText = text.toLowerCase();
+
+    const checkAndAdd = (entity: { name?: string; title?: string, id: string }, type: 'item' | 'skill' | 'quest' | 'npc' | 'yeuThu' | 'wife' | 'slave' | 'prisoner' | 'location' | 'lore' | 'faction' | 'master') => {
+        const name = 'name' in entity ? entity.name : ('title' in entity ? entity.title : '');
+        if (name && lowerText.includes(name.toLowerCase())) {
+            switch(type) {
+                case 'item': foundContexts.add(formatItemForEmbedding(entity as Item, kb)); break;
+                case 'skill': foundContexts.add(formatSkillForEmbedding(entity as Skill, kb)); break;
+                case 'quest': foundContexts.add(formatQuestForEmbedding(entity as Quest, kb)); break;
+                case 'npc': case 'wife': case 'slave': case 'prisoner': case 'master': foundContexts.add(formatPersonForEmbedding(entity as NPC | Wife | Slave | Prisoner | Master, kb)); break;
+                case 'yeuThu': foundContexts.add(formatYeuThuForEmbedding(entity as YeuThu, kb)); break;
+                case 'location': foundContexts.add(formatLocationForEmbedding(entity as GameLocation, kb)); break;
+                case 'lore': foundContexts.add(formatLoreForEmbedding(entity as WorldLoreEntry, kb)); break;
+                case 'faction': foundContexts.add(formatFactionForEmbedding(entity as Faction, kb)); break;
+            }
+        }
+    };
+    
+    kb.inventory.forEach(e => checkAndAdd(e, 'item'));
+    kb.playerSkills.forEach(e => checkAndAdd(e, 'skill'));
+    kb.allQuests.filter(q => q.status === 'active').forEach(e => checkAndAdd(e, 'quest'));
+    kb.discoveredNPCs.forEach(e => checkAndAdd(e, 'npc'));
+    kb.discoveredYeuThu.forEach(e => checkAndAdd(e, 'yeuThu'));
+    kb.wives.forEach(e => checkAndAdd(e, 'wife'));
+    kb.slaves.forEach(e => checkAndAdd(e, 'slave'));
+    kb.prisoners.forEach(e => checkAndAdd(e, 'prisoner'));
+    kb.discoveredLocations.forEach(e => checkAndAdd(e, 'location'));
+    kb.worldLore.forEach(e => checkAndAdd(e, 'lore'));
+    kb.discoveredFactions.forEach(e => checkAndAdd(e, 'faction'));
+    if (kb.master) {
+        checkAndAdd(kb.master, 'master');
+    }
+
+    return foundContexts;
 };

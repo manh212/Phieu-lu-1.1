@@ -66,45 +66,50 @@ const ImportExportScreen: React.FC<ImportExportScreenProps> = ({
         let lastFullKbSnapshot: KnowledgeBase | null = null;
         let lastFullMessagesSnapshot: GameMessage[] | null = null;
         const reconstructedTurnHistory: TurnHistoryEntry[] = [];
+        let isChainBroken = false; // Add a flag
 
         for (const entry of gameData.knowledgeBase.turnHistory) {
             if (entry.type === 'keyframe') {
-                // Keyframes are the base. They have full snapshots.
                 lastFullKbSnapshot = JSON.parse(JSON.stringify(entry.knowledgeBaseSnapshot));
                 lastFullMessagesSnapshot = JSON.parse(JSON.stringify(entry.gameMessagesSnapshot));
                 reconstructedTurnHistory.push(entry);
+                isChainBroken = false; // Chain is restored by a keyframe
             } else if (entry.type === 'delta') {
-                if (!lastFullKbSnapshot || !lastFullMessagesSnapshot || !entry.knowledgeBaseDelta || !entry.gameMessagesDelta) {
+                if (isChainBroken || !lastFullKbSnapshot || !lastFullMessagesSnapshot || !entry.knowledgeBaseDelta || !entry.gameMessagesDelta) {
                     console.error('Cannot reconstruct delta frame for export, missing keyframe or delta data.', entry);
-                    // Push a best-effort entry to avoid crashing the export.
+                    // Push a best-effort entry to avoid crashing the export, but mark the chain as broken.
                     reconstructedTurnHistory.push({ ...entry, knowledgeBaseSnapshot: {} as KnowledgeBase, gameMessagesSnapshot: [] });
-                    // We can't continue from here as the chain is broken, so we nullify the snapshots
-                    lastFullKbSnapshot = null;
-                    lastFullMessagesSnapshot = null;
-                    continue;
+                    isChainBroken = true; // The chain is now broken until the next keyframe
+                    continue; // Skip to next entry
                 }
 
-                // Apply patch to the LAST FULL snapshot to get the CURRENT FULL snapshot
-                const newKbSnapshotForDelta = jsonpatch.applyPatch(
-                    JSON.parse(JSON.stringify(lastFullKbSnapshot)),
-                    entry.knowledgeBaseDelta as readonly Operation[]
-                ).newDocument as KnowledgeBase;
-               
-                const newMessagesSnapshotForDelta = jsonpatch.applyPatch(
-                    JSON.parse(JSON.stringify(lastFullMessagesSnapshot)),
-                    entry.gameMessagesDelta as readonly Operation[]
-                ).newDocument as GameMessage[];
+                try {
+                    const newKbSnapshotForDelta = jsonpatch.applyPatch(
+                        JSON.parse(JSON.stringify(lastFullKbSnapshot)),
+                        entry.knowledgeBaseDelta as readonly Operation[]
+                    ).newDocument as KnowledgeBase;
                 
-                const reconstructedEntry = {
-                    ...entry,
-                    knowledgeBaseSnapshot: newKbSnapshotForDelta,
-                    gameMessagesSnapshot: newMessagesSnapshotForDelta,
-                };
-                reconstructedTurnHistory.push(reconstructedEntry);
-                
-                // The newly reconstructed snapshot becomes the base for the next delta
-                lastFullKbSnapshot = newKbSnapshotForDelta;
-                lastFullMessagesSnapshot = newMessagesSnapshotForDelta;
+                    const newMessagesSnapshotForDelta = jsonpatch.applyPatch(
+                        JSON.parse(JSON.stringify(lastFullMessagesSnapshot)),
+                        entry.gameMessagesDelta as readonly Operation[]
+                    ).newDocument as GameMessage[];
+                    
+                    const reconstructedEntry = {
+                        ...entry,
+                        knowledgeBaseSnapshot: newKbSnapshotForDelta,
+                        gameMessagesSnapshot: newMessagesSnapshotForDelta,
+                    };
+                    reconstructedTurnHistory.push(reconstructedEntry);
+                    
+                    // The newly reconstructed snapshot becomes the base for the next delta
+                    lastFullKbSnapshot = newKbSnapshotForDelta;
+                    lastFullMessagesSnapshot = newMessagesSnapshotForDelta;
+                } catch (patchError) {
+                    console.error('Error applying patch during export reconstruction:', patchError, 'for entry:', entry);
+                    reconstructedTurnHistory.push({ ...entry, knowledgeBaseSnapshot: {} as KnowledgeBase, gameMessagesSnapshot: [] });
+                    isChainBroken = true; // The patch failed, chain is broken
+                }
+
             } else {
                 reconstructedTurnHistory.push(entry);
             }
@@ -356,3 +361,4 @@ const ImportExportScreen: React.FC<ImportExportScreenProps> = ({
 };
 
 export default ImportExportScreen;
+    

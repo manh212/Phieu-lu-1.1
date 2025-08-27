@@ -27,7 +27,7 @@ export const processWorldLoreAdd = (
             content: content,
         };
         newKb.worldLore.push(newLore);
-        newVectorMetadata = { entityId: newLore.id, entityType: 'lore', text: formatLoreForEmbedding(newLore) };
+        newVectorMetadata = { entityId: newLore.id, entityType: 'lore', text: formatLoreForEmbedding(newLore, newKb), turnNumber: turnForSystemMessages };
 
         systemMessages.push({
             id: 'world-lore-added-' + newLore.id,
@@ -75,7 +75,8 @@ export const processWorldLoreUpdate = (
         updatedVectorMetadata = {
             entityId: loreToUpdate.id,
             entityType: 'lore',
-            text: formatLoreForEmbedding(loreToUpdate)
+            text: formatLoreForEmbedding(loreToUpdate, newKb),
+            turnNumber: turnForSystemMessages
         };
     } else {
         console.warn(`WORLD_LORE_UPDATE: Lore with title "${title}" not found.`);

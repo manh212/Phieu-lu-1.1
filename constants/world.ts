@@ -56,6 +56,7 @@ export const DEFAULT_WORLD_SETTINGS: WorldSettings = {
     // violenceLevel: DEFAULT_VIOLENCE_LEVEL_VALUE, (from nsfw.ts)
     // storyTone: DEFAULT_STORY_TONE_VALUE, (from nsfw.ts)
     // However, these specific defaults are handled when AI Assist Tab populates settings.
+    customNsfwPrompt: '',
     originalStorySummary: "",
     genre: AVAILABLE_GENRES[0],
     customGenreName: "",

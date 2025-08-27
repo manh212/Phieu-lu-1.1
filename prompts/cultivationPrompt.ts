@@ -3,6 +3,7 @@
 import { KnowledgeBase, Skill, NPC, Wife, Slave } from '../types';
 import * as GameTemplates from '../templates';
 import { VIETNAMESE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE } from '../constants';
+import { getNsfwGuidance } from './promptUtils';
 
 export const generateCultivationSessionPrompt = (
     kb: KnowledgeBase,
@@ -19,8 +20,6 @@ export const generateCultivationSessionPrompt = (
     const isNsfw = worldConfig?.nsfwMode || false;
     const nsfwStyle = worldConfig?.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE;
     const currentDifficultyName = worldConfig?.difficulty || 'Thường';
-    const currentViolenceLevel = worldConfig?.violenceLevel || DEFAULT_VIOLENCE_LEVEL;
-    const currentStoryTone = worldConfig?.storyTone || DEFAULT_STORY_TONE;
     const currentLocation = kb.discoveredLocations.find(l => l.id === kb.currentLocationId);
 
     let difficultyGuidanceText = "";
@@ -32,47 +31,12 @@ export const generateCultivationSessionPrompt = (
         default: difficultyGuidanceText = VIETNAMESE.difficultyGuidanceNormal;
     }
 
-    let nsfwGuidanceCombined = "";
-    if (isNsfw) {
-        let nsfwStyleGuidance = "";
-        switch (nsfwStyle) {
-            case 'Hoa Mỹ': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy; break;
-            case 'Trần Tục': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceTranTuc; break;
-            case 'Gợi Cảm': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceGoiCam; break;
-            case 'Mạnh Bạo (BDSM)': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceManhBaoBDSM; break;
-            default: nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy;
-        }
+    let nsfwGuidance = getNsfwGuidance(worldConfig);
 
-        let violenceGuidance = "";
-        switch (currentViolenceLevel) {
-            case 'Nhẹ Nhàng': violenceGuidance = VIETNAMESE.violenceLevelGuidanceNheNhang; break;
-            case 'Thực Tế': violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe; break;
-            case 'Cực Đoan': violenceGuidance = VIETNAMESE.violenceLevelGuidanceCucDoan; break;
-            default: violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe;
-        }
-
-        let toneGuidance = "";
-        switch (currentStoryTone) {
-            case 'Tích Cực': toneGuidance = VIETNAMESE.storyToneGuidanceTichCuc; break;
-            case 'Trung Tính': toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh; break;
-            case 'Đen Tối': toneGuidance = VIETNAMESE.storyToneGuidanceDenToi; break;
-            case 'Dâm Dục': toneGuidance = VIETNAMESE.storyToneGuidanceDamDuc; break;
-            case 'Hoang Dâm': toneGuidance = VIETNAMESE.storyToneGuidanceHoangDam; break;
-            case 'Dâm Loạn': toneGuidance = VIETNAMESE.storyToneGuidanceDamLoan; break;
-            default: toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh;
-        }
-        nsfwGuidanceCombined = `
-**Hướng Dẫn Nội Dung Người Lớn (18+ ĐANG BẬT):**
-- **Phong Cách Miêu Tả Tình Dục:** ${nsfwStyle}.
-  ${nsfwStyleGuidance}
-- **Mức Độ Miêu Tả Bạo Lực:** ${currentViolenceLevel}.
-  ${violenceGuidance}
-- **Tông Màu Câu Chuyện:** ${currentStoryTone}.
-  ${toneGuidance}
-**LƯU Ý CHUNG KHI 18+ BẬT:** Hãy kết hợp các yếu tố trên để tạo ra trải nghiệm phù hợp.
+    // Thêm hướng dẫn đặc biệt cho Song Tu khi chế độ 18+ đang bật
+    if (worldConfig?.nsfwMode && partner && method?.congPhapDetails?.type === GameTemplates.CongPhapType.SONG_TU) {
+        nsfwGuidance += `
 **YÊU CẦU ĐẶC BIỆT VỀ CẢNH TÌNH DỤC (QUAN TRỌNG):** Khi miêu tả các cảnh quan hệ tình dục, hãy viết một cách **CHI TIẾT, DÀI và MẠNH BẠO** hơn. Đừng ngần ngại đi sâu vào các hành vi thể xác, mô tả cường độ, sự thô bạo (nếu phù hợp với bối cảnh và tông màu), và những cảm xúc mãnh liệt của nhân vật. Tập trung vào sự tương tác vật lý, những âm thanh, và sức mạnh trong từng hành động. Hãy để các cảnh này kéo dài và có sự leo thang về cường độ.`;
-    } else {
-        nsfwGuidanceCombined = "LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đang TẮT. Tiếp tục duy trì nội dung phù hợp với mọi lứa tuổi, tập trung vào phiêu lưu và phát triển nhân vật. Tránh các chủ đề nhạy cảm, bạo lực quá mức hoặc tình dục.";
     }
 
 
@@ -174,7 +138,7 @@ ${mainRequest}
 Hiện tại người chơi đang ở độ khó: **${currentDifficultyName}**. Hãy điều chỉnh kết quả tu luyện (lượng kinh nghiệm, độ thuần thục nhận được) và khả năng gặp tâm ma/trở ngại dựa trên độ khó này.
 
 **CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH:**
-${nsfwGuidanceCombined}
+${nsfwGuidance}
 
 **NHIỆM VỤ CỦA BẠN (AI):**
 

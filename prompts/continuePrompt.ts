@@ -4,6 +4,7 @@ import * as GameTemplates from '../templates';
 import { continuePromptSystemRules, storytellingRulesSection } from '../constants/systemRulesNormal';
 import { getWorldDateDifferenceString } from '../utils/dateUtils';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
+import { getNsfwGuidance } from './promptUtils';
 
 export const generateContinuePrompt = (
   knowledgeBase: KnowledgeBase,
@@ -22,10 +23,7 @@ export const generateContinuePrompt = (
   const customGenreName = worldConfig?.customGenreName;
   const isCultivationEnabled = worldConfig?.isCultivationEnabled !== undefined ? worldConfig.isCultivationEnabled : true;
   const effectiveGenre = (genre === CUSTOM_GENRE_VALUE && customGenreName) ? customGenreName : genre;
-  const nsfwMode = worldConfig?.nsfwMode || false;
-  const currentNsfwStyle = worldConfig?.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE;
-  const currentViolenceLevel = worldConfig?.violenceLevel || DEFAULT_VIOLENCE_LEVEL;
-  const currentStoryTone = worldConfig?.storyTone || DEFAULT_STORY_TONE;
+  
   const currentDifficultyName = worldConfig?.difficulty || 'Thường';
   const writingStyleGuide = worldConfig?.writingStyleGuide; // NEW
 
@@ -79,48 +77,7 @@ export const generateContinuePrompt = (
 
   let nsfwGuidanceCombined = "";
   if (aiContextConfig.sendNsfwGuidance) {
-      if (nsfwMode) {
-        let nsfwStyleGuidance = "";
-        switch (currentNsfwStyle) {
-          case 'Hoa Mỹ': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy; break;
-          case 'Trần Tục': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceTranTuc; break;
-          case 'Gợi Cảm': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceGoiCam; break;
-          case 'Mạnh Bạo (BDSM)': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceManhBaoBDSM; break;
-          default: nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy; 
-        }
-
-        let violenceGuidance = "";
-        switch (currentViolenceLevel) {
-            case 'Nhẹ Nhàng': violenceGuidance = VIETNAMESE.violenceLevelGuidanceNheNhang; break;
-            case 'Thực Tế': violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe; break;
-            case 'Cực Đoan': violenceGuidance = VIETNAMESE.violenceLevelGuidanceCucDoan; break;
-            default: violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe;
-        }
-
-        let toneGuidance = "";
-        switch (currentStoryTone) {
-            case 'Tích Cực': toneGuidance = VIETNAMESE.storyToneGuidanceTichCuc; break;
-            case 'Trung Tính': toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh; break;
-            case 'Đen Tối': toneGuidance = VIETNAMESE.storyToneGuidanceDenToi; break;
-            case 'Dâm Dục': toneGuidance = VIETNAMESE.storyToneGuidanceDamDuc; break;
-            case 'Hoang Dâm': toneGuidance = VIETNAMESE.storyToneGuidanceHoangDam; break;
-            case 'Dâm Loạn': toneGuidance = VIETNAMESE.storyToneGuidanceDamLoan; break;
-            default: toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh;
-        }
-        nsfwGuidanceCombined = `
-    **Hướng Dẫn Nội Dung Người Lớn (18+ ĐANG BẬT):**
-    - **Phong Cách Miêu Tả Tình Dục:** ${currentNsfwStyle}.
-      ${nsfwStyleGuidance}
-    - **Mức Độ Miêu Tả Bạo Lực:** ${currentViolenceLevel}.
-      ${violenceGuidance}
-    - **Tông Màu Câu Chuyện:** ${currentStoryTone}.
-      ${toneGuidance}
-    **LƯU Ý CHUNG KHI 18+ BẬT:** Hãy kết hợp các yếu tố trên để tạo ra trải nghiệm phù hợp.
-    **YÊU CẦU ĐẶC BIỆT VỀ CẢNH TÌNH DỤC (QUAN TRỌNG):** Khi miêu tả các cảnh quan hệ tình dục, hãy viết một cách **CHI TIẾT, DÀI và MẠNH BẠO** hơn. Đừng ngần ngại đi sâu vào các hành vi thể xác, mô tả cường độ, sự thô bạo (nếu phù hợp với bối cảnh và tông màu), và những cảm xúc mãnh liệt của nhân vật. Tập trung vào sự tương tác vật lý, những âm thanh, và sức mạnh trong từng hành động. Hãy để các cảnh này kéo dài và có sự leo thang về cường độ.`;
-
-      } else {
-        nsfwGuidanceCombined = "LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đang TẮT. Tiếp tục duy trì nội dung phù hợp với mọi lứa tuổi, tập trung vào phiêu lưu và phát triển nhân vật. Tránh các chủ đề nhạy cảm, bạo lực quá mức hoặc tình dục.";
-      }
+      nsfwGuidanceCombined = getNsfwGuidance(worldConfig);
   }
   
   let specialEventInstruction = "";

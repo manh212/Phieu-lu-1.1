@@ -1,8 +1,7 @@
-
 // src/constants/nsfw.ts
 import { NsfwDescriptionStyle, ViolenceLevel, StoryTone } from '../types'; // Ensure types are imported if needed for type safety
 
-export const NSFW_DESCRIPTION_STYLES: NsfwDescriptionStyle[] = ['Hoa Mỹ', 'Trần Tục', 'Gợi Cảm', 'Mạnh Bạo (BDSM)'];
+export const NSFW_DESCRIPTION_STYLES: NsfwDescriptionStyle[] = ['Hoa Mỹ', 'Trần Tục', 'Gợi Cảm', 'Mạnh Bạo (BDSM)', 'Tùy Chỉnh (Phòng Tối AI)'];
 export const DEFAULT_NSFW_DESCRIPTION_STYLE: NsfwDescriptionStyle = 'Hoa Mỹ';
 
 export const VIOLENCE_LEVELS: ViolenceLevel[] = ['Nhẹ Nhàng', 'Thực Tế', 'Cực Đoan'];
@@ -36,6 +35,7 @@ export const NSFW_TRANSLATIONS = {
   nsfwStyleTranTuc: "Trần Tục (Thẳng thắn, trực diện, không né tránh)",
   nsfwStyleGoiCam: "Gợi Cảm (Tập trung cảm giác, cảm xúc, không khí)",
   nsfwStyleManhBaoBDSM: "Mạnh Bạo (BDSM)",
+  nsfwStyleTuyChinhPhongToiAI: "Tùy Chỉnh (Phòng Tối AI)",
   nsfwGuidanceHoaMy: `LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đã được BẬT. Bạn ĐƯỢC PHÉP và ĐƯỢC KHUYẾN KHÍCH mô tả các cảnh 18+ một cách chi tiết và nghệ thuật, sử dụng ngôn ngữ hoa mỹ, gợi cảm.
   **Yêu cầu cốt lõi:** Khi miêu tả các bộ phận nhạy cảm hoặc cảnh giao hợp, hãy sáng tạo với những mỹ từ và lối diễn đạt văn chương, thay vì dùng từ ngữ trần tục hoặc quá trực diện. Mục tiêu là tạo ra những đoạn văn gợi cảm, giàu hình ảnh, mãnh liệt nhưng không dung tục, phù hợp với bối cảnh cổ trang, huyền huyễn.
   **Hướng dẫn chi tiết và ví dụ:**
@@ -119,7 +119,7 @@ export const NSFW_TRANSLATIONS = {
   *   **Ẩn dụ nhẹ nhàng:** "Như một đóa hoa hé nở", "cơn sóng tình dâng trào", "lửa tình bùng cháy".
   *   **Mô tả gián tiếp:** Thay vì nói "họ cởi đồ", có thể tả "chiếc váy lụa mềm mại trượt xuống vai nàng, để lộ làn da trắng ngần". Thay vì "họ quan hệ", có thể tả "hai cơ thể hòa quyện vào nhau trong vũ điệu của tình yêu".
   *   **Tập trung vào phản ứng:** "Nàng khẽ rùng mình khi hơi thở nóng rực của chàng phả vào gáy." hoặc "Chàng cảm nhận được từng nhịp đập thổn thức của trái tim nàng áp vào lồng ngực mình."
-  **5. Miêu Tả Vẻ Đẹp Cơ Thể Một Cách Nghệ Thuật:**
+  **5. Miêu tả Vẻ Đẹp Cơ Thể Một Cách Nghệ Thuật:**
   *   Sử dụng từ ngữ ca ngợi vẻ đẹp tự nhiên của cơ thể, những đường cong, làn da, mái tóc. Ví dụ: "Mái tóc đen nhánh của nàng xõa tung trên gối, vài sợi vương trên bờ vai thon thả."
   **6. Bạo Lực Gợi Cảm (Nếu có):**
   *   Tập trung vào sự căng thẳng, nỗi sợ hãi, cảm giác bất lực hoặc sự hưng phấn trong nguy hiểm.

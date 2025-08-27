@@ -1,4 +1,5 @@
 
+
 import { useCallback, useState } from 'react';
 import { KnowledgeBase, GameMessage, WorldSettings, PlayerActionInputType, ResponseLength, GameScreen, RealmBaseStatDefinition, TurnHistoryEntry, AuctionState, Item, AuctionCommentaryEntry, FindLocationParams, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, NPC, CombatDispositionMap, AiChoice, ActivityLogEntry } from './../types';
 import { countTokens, getApiSettings as getGeminiApiSettings, handleCompanionInteraction, handlePrisonerInteraction, summarizeCompanionInteraction, summarizePrisonerInteraction, generateNonCombatDefeatConsequence, generateSlaveAuctionData, runSlaveAuctionTurn, runSlaveAuctioneerCall, generateVictoryConsequence, summarizeCombat, generateDefeatConsequence, generateCraftedItemViaAI, findLocationWithAI, generateNextTurn, generateRefreshedChoices, generateCopilotResponse, generateWorldTickUpdate } from './../services/geminiService';
@@ -8,7 +9,7 @@ import { useMainGameLoop } from './actions/useMainGameLoop';
 import { useCultivationActions } from './actions/useCultivationActions';
 import { performTagProcessing } from '../utils/tagProcessingUtils';
 import { VIETNAMESE, LIVING_WORLD_TICK_INTERVAL } from '../constants';
-import { calculateSlaveValue, scheduleWorldTick, PROMPT_FUNCTIONS, parseAndValidateResponse, convertNpcActionToTag } from '../utils/gameLogicUtils';
+import { calculateSlaveValue, scheduleWorldTick, PROMPT_FUNCTIONS, parseAndValidateResponse, convertNpcActionToTag, searchVectors } from '../utils/gameLogicUtils';
 
 interface UseGameActionsProps {
   knowledgeBase: KnowledgeBase;

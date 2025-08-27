@@ -1,6 +1,6 @@
-
 import { KnowledgeBase, CombatEndPayload, NPC, GameMessage } from '../types';
-import { VIETNAMESE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, TU_CHAT_TIERS } from '../constants';
+import { VIETNAMESE, TU_CHAT_TIERS } from '../constants';
+import { getNsfwGuidance } from './promptUtils';
 
 export const generateDefeatConsequencePrompt = (
     kb: KnowledgeBase, 
@@ -13,57 +13,11 @@ export const generateDefeatConsequencePrompt = (
     const { summary, dispositions } = combatResult;
     
     // Find the victor(s) based on the dispositions map from combat
-    const victorIds = kb.pendingCombat?.opponentIds?.filter(id => !Object.keys(dispositions).includes(id)) || [];
+    const victorIds = combatResult.opponentIds?.filter(id => !Object.keys(dispositions).includes(id)) || [];
     const victors = discoveredNPCs.filter(n => victorIds.includes(n.id));
 
-    const nsfwMode = worldConfig?.nsfwMode || false;
-    const nsfwStyle = worldConfig?.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE;
     const currentDifficultyName = worldConfig?.difficulty || 'Thường';
-    const currentViolenceLevel = worldConfig?.violenceLevel || DEFAULT_VIOLENCE_LEVEL;
-    const currentStoryTone = worldConfig?.storyTone || DEFAULT_STORY_TONE;
-
-    let nsfwGuidanceCombined = "";
-    if (nsfwMode) {
-        let nsfwStyleGuidance = "";
-        switch (nsfwStyle) {
-            case 'Hoa Mỹ': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy; break;
-            case 'Trần Tục': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceTranTuc; break;
-            case 'Gợi Cảm': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceGoiCam; break;
-            case 'Mạnh Bạo (BDSM)': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceManhBaoBDSM; break;
-            default: nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy;
-        }
-
-        let violenceGuidance = "";
-        switch (currentViolenceLevel) {
-            case 'Nhẹ Nhàng': violenceGuidance = VIETNAMESE.violenceLevelGuidanceNheNhang; break;
-            case 'Thực Tế': violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe; break;
-            case 'Cực Đoan': violenceGuidance = VIETNAMESE.violenceLevelGuidanceCucDoan; break;
-            default: violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe;
-        }
-
-        let toneGuidance = "";
-        switch (currentStoryTone) {
-            case 'Tích Cực': toneGuidance = VIETNAMESE.storyToneGuidanceTichCuc; break;
-            case 'Trung Tính': toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh; break;
-            case 'Đen Tối': toneGuidance = VIETNAMESE.storyToneGuidanceDenToi; break;
-            case 'Dâm Dục': toneGuidance = VIETNAMESE.storyToneGuidanceDamDuc; break;
-            case 'Hoang Dâm': toneGuidance = VIETNAMESE.storyToneGuidanceHoangDam; break;
-            case 'Dâm Loạn': toneGuidance = VIETNAMESE.storyToneGuidanceDamLoan; break;
-            default: toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh;
-        }
-        nsfwGuidanceCombined = `
-**Hướng Dẫn Nội Dung Người Lớn (18+ ĐANG BẬT):**
-- **Phong Cách Miêu Tả Tình Dục:** ${nsfwStyle}.
-  ${nsfwStyleGuidance}
-- **Mức Độ Miêu Tả Bạo Lực:** ${currentViolenceLevel}.
-  ${violenceGuidance}
-- **Tông Màu Câu Chuyện:** ${currentStoryTone}.
-  ${toneGuidance}
-**LƯU Ý CHUNG KHI 18+ BẬT:** Hãy kết hợp các yếu tố trên để tạo ra trải nghiệm phù hợp.
-**Đặc Biệt Với Hậu Quả Thất Bại:** Nếu người chơi bị bắt, hãy dựa vào Tông Màu và Phong Cách để quyết định số phận của họ. "Đen Tối" và "Cực Đoan" có thể dẫn đến tra tấn, làm nô lệ khổ sai. "Dâm Dục" và "Mạnh Bạo (BDSM)" có thể dẫn đến việc bị biến thành nô lệ tình dục, đồ chơi cho kẻ bắt được. Hãy mô tả chi tiết, trần trụi và phù hợp với bối cảnh.`;
-    } else {
-        nsfwGuidanceCombined = "LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đang TẮT. Tránh các hậu quả liên quan đến tình dục hoặc bạo lực quá mức. Tập trung vào việc mất mát vật phẩm, bị thương, hoặc bị giam giữ thông thường.";
-    }
+    const nsfwGuidance = getNsfwGuidance(worldConfig);
 
     const contextBlock = `
 **BỐI CẢNH DẪN ĐẾN THẤT BẠI (LỊCH SỬ GẦN ĐÂY):**
@@ -87,7 +41,7 @@ ${contextBlock}
 - **Độ khó của game:** ${currentDifficultyName}
 
 **CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH:**
-${nsfwGuidanceCombined}
+${nsfwGuidance}
 
 **NHIỆM VỤ CỦA BẠN:**
 Dựa vào tất cả các thông tin trên, hãy tạo ra một kịch bản hậu quả logic và hấp dẫn. **Bắt đầu ngay bằng lời kể**, không có lời dẫn hay giới thiệu nào.

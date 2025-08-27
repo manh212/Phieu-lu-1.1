@@ -181,10 +181,10 @@ export const convertNpcActionToTag = (action: NpcAction, npc: NPC): string | nul
     const params = action.parameters;
     switch (action.type) {
         case 'MOVE':
-            // The existing LOCATION_CHANGE tag works for NPCs as well.
-            return `[LOCATION_CHANGE: name="${npc.name}", destination="${params.destinationLocationId}"]`;
+            // FIX: Generate the correct tag format that the updated processor expects.
+            return `[LOCATION_CHANGE: characterName="${npc.name.replace(/"/g, '\\"')}", destination="${params.destinationLocationId}"]`;
         case 'UPDATE_GOAL':
-            let goalTag = `[NPC_UPDATE: name="${npc.name}", shortTermGoal="${params.newShortTermGoal.replace(/"/g, '\\"')}"`;
+            let goalTag = `[NPC_UPDATE: name="${npc.name.replace(/"/g, '\\"')}", shortTermGoal="${params.newShortTermGoal.replace(/"/g, '\\"')}"`;
             if (params.newLongTermGoal) {
                 goalTag += `, longTermGoal="${params.newLongTermGoal.replace(/"/g, '\\"')}"`;
             }
@@ -192,7 +192,7 @@ export const convertNpcActionToTag = (action: NpcAction, npc: NPC): string | nul
             return goalTag;
         case 'UPDATE_PLAN':
             const planString = params.newPlanSteps.join('; ');
-            return `[NPC_UPDATE: name="${npc.name}", currentPlan="${planString.replace(/"/g, '\\"')}" ]`;
+            return `[NPC_UPDATE: name="${npc.name.replace(/"/g, '\\"')}", currentPlan="${planString.replace(/"/g, '\\"')}" ]`;
         // Other actions like IDLE, INTERACT_NPC, ACQUIRE_ITEM, etc.,
         // are handled through narration via the world_event message system
         // and do not produce a direct system tag for game state change.

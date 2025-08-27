@@ -118,9 +118,12 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
                 }
             }
 
-            // Process uniqueEffectsString into an array
-            if (newItem.equipmentDetails.uniqueEffectsString && !newItem.equipmentDetails.uniqueEffects) {
+            // Process uniqueEffectsString into an array (Defensive Programming)
+            if (typeof newItem.equipmentDetails.uniqueEffectsString === 'string' && !newItem.equipmentDetails.uniqueEffects) {
                 newItem.equipmentDetails.uniqueEffects = newItem.equipmentDetails.uniqueEffectsString.split(';').map(s => s.trim()).filter(Boolean);
+            } else if (!newItem.equipmentDetails.uniqueEffects) {
+                // If the string is missing or not a string, and the array isn't already there, create a safe default.
+                newItem.equipmentDetails.uniqueEffects = [];
             }
             return newItem;
         }
@@ -174,7 +177,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
             ...prev,
             startingDate: {
                 ...prev.startingDate,
-                [field]: isNaN(numValue) ? 0 : numValue, // Default to 0 for time
+                [field]: isNaN(numValue) ? 0 : numValue,
             },
         }));
         return; // Exit after handling nested object
@@ -217,16 +220,14 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     if (sentWorldGenPrompt) setSentWorldGenPrompt(null);
   }, [generatorMessage, rawApiResponseText, sentWorldGenPrompt, settings.saveGameName]);
 
-  const handleOriginalStorySummaryChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleOriginalStorySummaryChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newSummary = e.target.value;
     setOriginalStorySummary(newSummary);
-    // Also update settings directly if needed, or rely on handleSubmit to consolidate
     setSettings(prev => ({ ...prev, originalStorySummary: newSummary }));
     if (rawApiResponseText) setRawApiResponseText(null);
     if (sentWorldGenPrompt) setSentWorldGenPrompt(null);
-  };
+  }, [rawApiResponseText, sentWorldGenPrompt]);
   
-  // Handlers for Race Cultivation Systems
   const handleRaceSystemChange = useCallback((index: number, field: keyof Omit<RaceCultivationSystem, 'id'>, value: string) => {
     setSettings(prev => {
         const newSystems = [...prev.raceCultivationSystems];
@@ -252,30 +253,25 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     }));
   }, []);
 
-
-  // Handlers for Starting Elements
-  const handleStartingSkillChange = (index: number, field: string, value: any) => {
+  const handleStartingSkillChange = useCallback((index: number, field: string, value: any) => {
     setSettings(prev => {
       const newSkills = [...(prev.startingSkills || [])];
       let skillToUpdate = { ...(newSkills[index] || {}) } as StartingSkill;
   
       const fieldParts = field.split('.');
       if (fieldParts.length > 1) {
-        // It's a nested property
         let currentLevel: any = skillToUpdate;
         for (let i = 0; i < fieldParts.length - 1; i++) {
           if (currentLevel[fieldParts[i]] === undefined) {
-            currentLevel[fieldParts[i]] = {}; // Create nested object if it doesn't exist
+            currentLevel[fieldParts[i]] = {};
           }
           currentLevel = currentLevel[fieldParts[i]];
         }
         currentLevel[fieldParts[fieldParts.length - 1]] = value;
       } else {
-        // It's a direct property
         (skillToUpdate as any)[field] = value;
       }
       
-      // When skillType changes, clear out details of other types to avoid inconsistent state
       if (field === 'skillType') {
         if (value !== GameTemplates.SkillType.CONG_PHAP_TU_LUYEN) delete skillToUpdate.congPhapDetails;
         if (value !== GameTemplates.SkillType.LINH_KI) delete skillToUpdate.linhKiDetails;
@@ -287,8 +283,9 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
       newSkills[index] = skillToUpdate;
       return { ...prev, startingSkills: newSkills };
     });
-  };
-  const addStartingSkill = (type: GameTemplates.SkillTypeValues) => {
+  }, []);
+
+  const addStartingSkill = useCallback((type: GameTemplates.SkillTypeValues) => {
     setSettings(prev => ({
       ...prev,
       startingSkills: [
@@ -296,14 +293,11 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         { name: '', description: '', skillType: type }
       ]
     }));
-  };
-  const removeStartingSkill = (index: number) => setSettings(prev => ({ ...prev, startingSkills: (prev.startingSkills || []).filter((_, i) => i !== index) }));
+  }, []);
 
-  const handleStartingItemChange = (
-    index: number,
-    field: string,
-    value: any
-  ) => {
+  const removeStartingSkill = useCallback((index: number) => setSettings(prev => ({ ...prev, startingSkills: (prev.startingSkills || []).filter((_, i) => i !== index) })), []);
+
+  const handleStartingItemChange = useCallback((index: number, field: string, value: any) => {
       setSettings(prev => {
           const newItems = [...(prev.startingItems || [])];
           const itemToUpdate = { ...(newItems[index] || {}) } as StartingItem;
@@ -350,21 +344,23 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
           newItems[index] = itemToUpdate;
           return { ...prev, startingItems: newItems };
       });
-  };
-  const addStartingItem = () => setSettings(prev => ({ ...prev, startingItems: [...(prev.startingItems || []), { name: '', description: '', quantity: 1, category: GameTemplates.ItemCategory.MISCELLANEOUS, rarity: GameTemplates.ItemRarity.PHO_THONG, value: 0, equipmentDetails: {}, potionDetails: {}, materialDetails: {}, questItemDetails: {}, miscDetails: {} }] }));
-  const removeStartingItem = (index: number) => setSettings(prev => ({ ...prev, startingItems: (prev.startingItems || []).filter((_, i) => i !== index) }));
+  }, []);
 
-  const handleStartingNPCChange = (index: number, field: keyof StartingNPC, value: string | number | undefined) => setSettings(prev => {
+  const addStartingItem = useCallback(() => setSettings(prev => ({ ...prev, startingItems: [...(prev.startingItems || []), { name: '', description: '', quantity: 1, category: GameTemplates.ItemCategory.MISCELLANEOUS, rarity: GameTemplates.ItemRarity.PHO_THONG, value: 0, equipmentDetails: {}, potionDetails: {}, materialDetails: {}, questItemDetails: {}, miscDetails: {} }] })), []);
+  const removeStartingItem = useCallback((index: number) => setSettings(prev => ({ ...prev, startingItems: (prev.startingItems || []).filter((_, i) => i !== index) })), []);
+
+  const handleStartingNPCChange = useCallback((index: number, field: keyof StartingNPC, value: string | number | undefined) => setSettings(prev => {
     const newNPCs = [...(prev.startingNPCs || [])];
     const npcToUpdate = { ...newNPCs[index] };
     (npcToUpdate as any)[field] = value;
     newNPCs[index] = npcToUpdate;
     return { ...prev, startingNPCs: newNPCs };
-  });
-  const addStartingNPC = () => setSettings(prev => ({ ...prev, startingNPCs: [...(prev.startingNPCs || []), { name: '', personality: '', initialAffinity: 0, details: '', gender: 'Không rõ', race: 'Nhân Tộc', realm: '', tuChat: 'Trung Đẳng', thoNguyen: 120, maxThoNguyen: 120 }] }));
-  const removeStartingNPC = (index: number) => setSettings(prev => ({ ...prev, startingNPCs: (prev.startingNPCs || []).filter((_, i) => i !== index) }));
+  }), []);
 
-  const handleStartingYeuThuChange = (index: number, field: keyof StartingYeuThu, value: string | boolean) => {
+  const addStartingNPC = useCallback(() => setSettings(prev => ({ ...prev, startingNPCs: [...(prev.startingNPCs || []), { name: '', personality: '', initialAffinity: 0, details: '', gender: 'Không rõ', race: 'Nhân Tộc', realm: '', tuChat: 'Trung Đẳng', thoNguyen: 120, maxThoNguyen: 120 }] })), []);
+  const removeStartingNPC = useCallback((index: number) => setSettings(prev => ({ ...prev, startingNPCs: (prev.startingNPCs || []).filter((_, i) => i !== index) })), []);
+
+  const handleStartingYeuThuChange = useCallback((index: number, field: keyof StartingYeuThu, value: string | boolean) => {
     setSettings(prev => {
         const newYeuThu = [...(prev.startingYeuThu || [])];
         const yeuThuToUpdate = { ...newYeuThu[index] };
@@ -372,22 +368,23 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         newYeuThu[index] = yeuThuToUpdate;
         return { ...prev, startingYeuThu: newYeuThu };
     });
-  };
-  const addStartingYeuThu = () => setSettings(prev => ({ ...prev, startingYeuThu: [...(prev.startingYeuThu || []), { name: '', species: '', description: '', isHostile: true }] }));
-  const removeStartingYeuThu = (index: number) => setSettings(prev => ({ ...prev, startingYeuThu: (prev.startingYeuThu || []).filter((_, i) => i !== index) }));
+  }, []);
 
+  const addStartingYeuThu = useCallback(() => setSettings(prev => ({ ...prev, startingYeuThu: [...(prev.startingYeuThu || []), { name: '', species: '', description: '', isHostile: true }] })), []);
+  const removeStartingYeuThu = useCallback((index: number) => setSettings(prev => ({ ...prev, startingYeuThu: (prev.startingYeuThu || []).filter((_, i) => i !== index) })), []);
 
-  const handleStartingLoreChange = (index: number, field: keyof StartingLore, value: string) => setSettings(prev => {
+  const handleStartingLoreChange = useCallback((index: number, field: keyof StartingLore, value: string) => setSettings(prev => {
     const newLore = [...(prev.startingLore || [])];
     const loreToUpdate = { ...newLore[index] };
     (loreToUpdate as any)[field] = value;
     newLore[index] = loreToUpdate;
     return { ...prev, startingLore: newLore };
-  });
-  const addStartingLore = () => setSettings(prev => ({ ...prev, startingLore: [...(prev.startingLore || []), { title: '', content: '' }] }));
-  const removeStartingLore = (index: number) => setSettings(prev => ({ ...prev, startingLore: (prev.startingLore || []).filter((_, i) => i !== index) }));
+  }), []);
 
-  const handleStartingLocationChange = (index: number, field: keyof StartingLocation, value: string | boolean) => {
+  const addStartingLore = useCallback(() => setSettings(prev => ({ ...prev, startingLore: [...(prev.startingLore || []), { title: '', content: '' }] })), []);
+  const removeStartingLore = useCallback((index: number) => setSettings(prev => ({ ...prev, startingLore: (prev.startingLore || []).filter((_, i) => i !== index) })), []);
+
+  const handleStartingLocationChange = useCallback((index: number, field: keyof StartingLocation, value: string | boolean) => {
     setSettings(prev => {
       const newLocations = [...(prev.startingLocations || [])];
       const locToUpdate = { ...newLocations[index] };
@@ -402,21 +399,23 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
       newLocations[index] = locToUpdate;
       return { ...prev, startingLocations: newLocations };
     });
-  };
-  const addStartingLocation = () => setSettings(prev => ({ ...prev, startingLocations: [...(prev.startingLocations || []), { name: '', description: '', isSafeZone: false, regionId: '', mapX: undefined, mapY: undefined, locationType: GameTemplates.LocationType.DEFAULT }] }));
-  const removeStartingLocation = (index: number) => setSettings(prev => ({ ...prev, startingLocations: (prev.startingLocations || []).filter((_, i) => i !== index) }));
+  }, []);
 
-  const handleStartingFactionChange = (index: number, field: keyof StartingFaction, value: string | number) => setSettings(prev => {
+  const addStartingLocation = useCallback(() => setSettings(prev => ({ ...prev, startingLocations: [...(prev.startingLocations || []), { name: '', description: '', isSafeZone: false, regionId: '', mapX: undefined, mapY: undefined, locationType: GameTemplates.LocationType.DEFAULT }] })), []);
+  const removeStartingLocation = useCallback((index: number) => setSettings(prev => ({ ...prev, startingLocations: (prev.startingLocations || []).filter((_, i) => i !== index) })), []);
+
+  const handleStartingFactionChange = useCallback((index: number, field: keyof StartingFaction, value: string | number) => setSettings(prev => {
     const newFactions = [...(prev.startingFactions || [])];
     const factionToUpdate = { ...newFactions[index] };
     (factionToUpdate as any)[field] = value;
     newFactions[index] = factionToUpdate;
     return { ...prev, startingFactions: newFactions };
-  });
-  const addStartingFaction = () => setSettings(prev => ({ ...prev, startingFactions: [...(prev.startingFactions || []), { name: '', description: '', alignment: GameTemplates.FactionAlignment.TRUNG_LAP, initialPlayerReputation: 0 }] }));
-  const removeStartingFaction = (index: number) => setSettings(prev => ({ ...prev, startingFactions: (prev.startingFactions || []).filter((_, i) => i !== index) }));
+  }), []);
 
-  const handleAnalyzeWritingStyle = async () => {
+  const addStartingFaction = useCallback(() => setSettings(prev => ({ ...prev, startingFactions: [...(prev.startingFactions || []), { name: '', description: '', alignment: GameTemplates.FactionAlignment.TRUNG_LAP, initialPlayerReputation: 0 }] })), []);
+  const removeStartingFaction = useCallback((index: number) => setSettings(prev => ({ ...prev, startingFactions: (prev.startingFactions || []).filter((_, i) => i !== index) })), []);
+
+  const handleAnalyzeWritingStyle = useCallback(async () => {
     if (!settings.writingStyleGuide?.trim()) {
         setAnalysisError("Vui lòng nhập hoặc tải lên văn bản mẫu trước khi phân tích.");
         return;
@@ -433,10 +432,9 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     } finally {
         setIsAnalyzingStyle(false);
     }
-};
+  }, [settings.writingStyleGuide]);
 
-  // AI Assist Generation Handlers
-  const handleGenerateFromStoryIdea = async () => {
+  const handleGenerateFromStoryIdea = useCallback(async () => {
     if (!storyIdea.trim()) { setGeneratorMessage({ text: 'Vui lòng nhập ý tưởng cốt truyện.', type: 'error' }); return; }
     setIsGeneratingDetails(true); setGeneratorMessage(null); setRawApiResponseText(null); setSentWorldGenPrompt(null);
     try {
@@ -478,7 +476,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         raceCultivationSystems: response.raceCultivationSystems && response.raceCultivationSystems.length > 0 ? response.raceCultivationSystems : prev.raceCultivationSystems,
         yeuThuRealmSystem: response.yeuThuRealmSystem || prev.yeuThuRealmSystem,
         canhGioiKhoiDau: settings.isCultivationEnabled && response.canhGioiKhoiDau ? response.canhGioiKhoiDau : (settings.isCultivationEnabled ? prev.canhGioiKhoiDau : VIETNAMESE.mortalRealmName),
-        genre: response.genre || prev.genre, customGenreName: response.genre === CUSTOM_GENRE_VALUE && response.customGenreName ? response.customGenreName : (response.genre === CUSTOM_GENRE_VALUE ? prev.customGenreName : ""), isCultivationEnabled: response.isCultivationEnabled !== undefined ? response.isCultivationEnabled : prev.isCultivationEnabled,
+        genre: response.genre || prev.genre, customGenreName: response.genre === CUSTOM_GENRE_VALUE && response.customGenreName ? response.customGenreName : (response.genre === CUSTOM_GENRE_VALUE ? prev.customGenreName : ""),
         nsfwDescriptionStyle: settings.nsfwMode && response.nsfwDescriptionStyle ? response.nsfwDescriptionStyle : prev.nsfwDescriptionStyle,
         violenceLevel: settings.nsfwMode && response.violenceLevel ? response.violenceLevel : prev.violenceLevel,
         storyTone: settings.nsfwMode && response.storyTone ? response.storyTone : prev.storyTone,
@@ -489,16 +487,15 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         playerMaxThoNguyen: response.playerMaxThoNguyen || prev.playerMaxThoNguyen,
         startingCurrency: response.startingCurrency || prev.startingCurrency,
       }));
-      // If AI provided an avatar URL, set it to playerUploadedAvatarData for preview and App.tsx processing
       if (response.playerAvatarUrl && response.playerAvatarUrl.startsWith('http')) {
         setPlayerUploadedAvatarData(response.playerAvatarUrl);
       }
       setGeneratorMessage({ text: VIETNAMESE.worldDetailsGeneratedSuccess, type: 'success' });
     } catch (e) { const errorMsg = e instanceof Error ? e.message : String(e); setGeneratorMessage({ text: `${VIETNAMESE.errorGeneratingWorldDetails} ${errorMsg}`, type: 'error' });
     } finally { setIsGeneratingDetails(false); }
-  };
+  }, [storyIdea, settings]);
 
-  const handleFanficFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFanficFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     setGeneratorMessage(null); setRawApiResponseText(null); setSentWorldGenPrompt(null);
     const file = e.target.files?.[0];
     if (file) {
@@ -511,9 +508,9 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
       } catch (err) { const errorMsg = err instanceof Error ? err.message : String(err); setGeneratorMessage({ text: `Lỗi xử lý file: ${errorMsg}`, type: 'error' });
       } finally { setIsLoadingTokens(false); }
     } else { setFanficFile(null); setFanficFileContent(null); setFanficTokenCount(null); }
-  };
+  }, []);
 
-  const handleGenerateFromFanfic = async () => {
+  const handleGenerateFromFanfic = useCallback(async () => {
     let sourceMaterialContent = ''; let isContentProvided = false;
     if (fanficSourceType === 'file') {
       if (!fanficFile || !fanficFileContent) { setGeneratorMessage({ text: VIETNAMESE.pleaseSelectFile, type: 'error' }); return; }
@@ -566,7 +563,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         raceCultivationSystems: response.raceCultivationSystems && response.raceCultivationSystems.length > 0 ? response.raceCultivationSystems : prev.raceCultivationSystems,
         yeuThuRealmSystem: response.yeuThuRealmSystem || prev.yeuThuRealmSystem,
         canhGioiKhoiDau: settings.isCultivationEnabled && response.canhGioiKhoiDau ? response.canhGioiKhoiDau : (settings.isCultivationEnabled ? prev.canhGioiKhoiDau : VIETNAMESE.mortalRealmName),
-        genre: response.genre || prev.genre, customGenreName: response.genre === CUSTOM_GENRE_VALUE && response.customGenreName ? response.customGenreName : (response.genre === CUSTOM_GENRE_VALUE ? prev.customGenreName : ""), isCultivationEnabled: response.isCultivationEnabled !== undefined ? response.isCultivationEnabled : prev.isCultivationEnabled,
+        genre: response.genre || prev.genre, customGenreName: response.genre === CUSTOM_GENRE_VALUE && response.customGenreName ? response.customGenreName : (response.genre === CUSTOM_GENRE_VALUE ? prev.customGenreName : ""),
         nsfwDescriptionStyle: settings.nsfwMode && response.nsfwDescriptionStyle ? response.nsfwDescriptionStyle : prev.nsfwDescriptionStyle,
         violenceLevel: settings.nsfwMode && response.violenceLevel ? response.violenceLevel : prev.violenceLevel,
         storyTone: settings.nsfwMode && response.storyTone ? response.storyTone : prev.storyTone,
@@ -577,7 +574,6 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         playerMaxThoNguyen: response.playerMaxThoNguyen || prev.playerMaxThoNguyen,
         startingCurrency: response.startingCurrency || prev.startingCurrency,
       }));
-      // If AI provided an avatar URL, set it to playerUploadedAvatarData for preview and App.tsx processing
       if (response.playerAvatarUrl && response.playerAvatarUrl.startsWith('http')) {
         setPlayerUploadedAvatarData(response.playerAvatarUrl);
       }
@@ -585,9 +581,9 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
       setGeneratorMessage({ text: VIETNAMESE.fanficDetailsGeneratedSuccess, type: 'success' });
     } catch (e) { const errorMsg = e instanceof Error ? e.message : String(e); setGeneratorMessage({ text: `${VIETNAMESE.errorGeneratingFanficDetails} ${errorMsg}`, type: 'error' });
     } finally { setIsGeneratingFanficDetails(false); }
-  };
+  }, [fanficSourceType, fanficFile, fanficFileContent, fanficTokenCount, fanficStoryName, fanficPlayerDescription, settings]);
 
-  const handleGenerateCompletion = async () => {
+  const handleGenerateCompletion = useCallback(async () => {
     setIsGeneratingCompletion(true);
     setGeneratorMessage(null);
     setRawApiResponseText(null);
@@ -600,7 +596,6 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         setRawApiResponseText(rawText);
         setSentWorldGenPrompt(constructedPrompt);
 
-        // Conditional Merging Logic
         setSettings(prev => {
             const newSettings = { ...prev };
             const mergedResponse: GeneratedWorldElements = response;
@@ -653,9 +648,9 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     } finally {
         setIsGeneratingCompletion(false);
     }
-  };
+  }, [settings]);
   
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     if(!settings.saveGameName.trim()){ setGeneratorMessage({text: VIETNAMESE.saveGameNameRequiredError, type: 'error'}); setActiveTab('worldSettings'); return; }
     let missingFieldsError = "Vui lòng điền đầy đủ các trường thông tin cơ bản: "; const missingFields: string[] = [];
     if (!settings.theme.trim()) missingFields.push("Chủ đề"); if (!settings.settingDescription.trim()) missingFields.push("Bối cảnh"); if (!settings.writingStyle.trim()) missingFields.push("Văn phong"); if (!settings.playerName.trim()) missingFields.push("Tên nhân vật"); if (!settings.playerPersonality.trim()) missingFields.push("Tính cách NV"); if (!settings.playerBackstory.trim()) missingFields.push("Tiểu sử NV"); if (!settings.playerGoal.trim()) missingFields.push("Mục tiêu NV");
@@ -671,44 +666,33 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     }
     if (finalSettings.genre !== CUSTOM_GENRE_VALUE) finalSettings.customGenreName = "";
     
-    // Ensure playerAvatarUrl in settings reflects the chosen avatar data source
-    // playerUploadedAvatarData holds the actual data (base64 or URL)
-    // settings.playerAvatarUrl is more like a state descriptor for how it was set
     if (playerUploadedAvatarData) {
       if (playerUploadedAvatarData.startsWith('data:')) {
-        finalSettings.playerAvatarUrl = "uploaded_via_file"; // Or the specific AI gen fail state if that's in playerUploadedAvatarData
+        finalSettings.playerAvatarUrl = "uploaded_via_file";
       } else if (playerUploadedAvatarData.startsWith('http')) {
         finalSettings.playerAvatarUrl = playerUploadedAvatarData;
       } else {
-        // This case handles placeholders like 'upload_pending_after_ai_gen_cloudinary_fail'
-        // if it somehow ended up in playerUploadedAvatarData. Or if playerUploadedAvatarData is not a recognized format.
-        // We need to ensure finalSettings.playerAvatarUrl reflects the correct state description.
-        // If playerUploadedAvatarData is 'upload_pending_after_ai_gen_cloudinary_fail', then finalSettings.playerAvatarUrl should be too.
-        // If playerUploadedAvatarData is 'uploaded_via_file' (e.g., from CharacterStoryTab handleChange), then that's fine.
-        // For now, let's be explicit:
         if (settings.playerAvatarUrl === 'upload_pending_after_ai_gen_cloudinary_fail') {
              finalSettings.playerAvatarUrl = 'upload_pending_after_ai_gen_cloudinary_fail';
         } else if (settings.playerAvatarUrl === 'uploaded_via_file') {
              finalSettings.playerAvatarUrl = 'uploaded_via_file';
         } else {
-             finalSettings.playerAvatarUrl = undefined; // If unsure, clear it
+             finalSettings.playerAvatarUrl = undefined;
         }
       }
-    } else { // No playerUploadedAvatarData
+    } else {
         finalSettings.playerAvatarUrl = undefined;
     }
 
     onSetupComplete(finalSettings, playerUploadedAvatarData); 
-  };
+  }, [settings, originalStorySummary, onSetupComplete, playerUploadedAvatarData]);
 
-  const handleExportSettings = () => {
+  const handleExportSettings = useCallback(() => {
     try {
-      // Explicitly construct the object to ensure all relevant fields,
-      // especially those managed in separate states like originalStorySummary, are included.
       const settingsToExport: WorldSettings = {
         ...settings,
         originalStorySummary: originalStorySummary,
-        writingStyleGuide: settings.writingStyleGuide, // Explicitly include to prevent being missed
+        writingStyleGuide: settings.writingStyleGuide,
       };
       const jsonString = JSON.stringify(settingsToExport, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
@@ -725,22 +709,21 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
       console.error("Error exporting world settings:", error);
       setGeneratorMessage({ text: VIETNAMESE.errorExportingWorldSettings, type: 'error' });
     }
-  };
+  }, [settings, originalStorySummary]);
 
-  const handleImportSettingsFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImportSettingsFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const content = e.target?.result as string; const importedSettings = JSON.parse(content) as WorldSettings & {startingDate: {buoi?: any}}; // Allow buoi for migration
+          const content = e.target?.result as string; const importedSettings = JSON.parse(content) as WorldSettings & {startingDate?: {buoi?: any}};
           if (importedSettings && importedSettings.theme !== undefined && importedSettings.playerName !== undefined) {
             
             const importedDate = { ...(importedSettings.startingDate || DEFAULT_WORLD_SETTINGS.startingDate) };
-            // MIGRATION LOGIC: Convert 'buoi' to 'hour' and 'minute'
-            if (importedSettings.startingDate && typeof importedSettings.startingDate.buoi !== 'undefined') {
-                const buoi = importedSettings.startingDate.buoi;
-                delete importedDate.buoi; // Remove old property
+            if (importedSettings.startingDate && typeof (importedSettings.startingDate as any).buoi !== 'undefined') {
+                const buoi = (importedSettings.startingDate as any).buoi;
+                delete (importedDate as any).buoi;
                 switch(buoi) {
                     case 'Sáng Sớm': (importedDate as WorldDate).hour = 6; (importedDate as WorldDate).minute = 0; break;
                     case 'Buổi Sáng': (importedDate as WorldDate).hour = 8; (importedDate as WorldDate).minute = 0; break;
@@ -755,7 +738,6 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
             if (typeof (importedDate as WorldDate).hour === 'undefined') (importedDate as WorldDate).hour = 8;
             if (typeof (importedDate as WorldDate).minute === 'undefined') (importedDate as WorldDate).minute = 0;
 
-
             const isCultivationEnabled = importedSettings.isCultivationEnabled === undefined ? true : importedSettings.isCultivationEnabled;
 
             setSettings({ 
@@ -763,7 +745,6 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
               ...importedSettings,
               isCultivationEnabled: isCultivationEnabled,
               startingDate: importedDate as WorldDate, 
-              // Correctly set cultivation-dependent fields
               raceCultivationSystems: isCultivationEnabled 
                 ? (importedSettings.raceCultivationSystems || DEFAULT_WORLD_SETTINGS.raceCultivationSystems) 
                 : [{ id: 'default-human-1', raceName: 'Nhân Tộc', realmSystem: VIETNAMESE.noCultivationSystem }],
@@ -773,7 +754,6 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
               canhGioiKhoiDau: isCultivationEnabled 
                 ? (importedSettings.canhGioiKhoiDau || DEFAULT_WORLD_SETTINGS.canhGioiKhoiDau) 
                 : VIETNAMESE.mortalRealmName,
-              // Keep other fallbacks for robustness
               playerRace: importedSettings.playerRace || DEFAULT_WORLD_SETTINGS.playerRace, 
               genre: importedSettings.genre || DEFAULT_WORLD_SETTINGS.genre, 
               customGenreName: importedSettings.genre === CUSTOM_GENRE_VALUE ? (importedSettings.customGenreName || '') : '', 
@@ -801,7 +781,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
       reader.readAsText(file);
     }
     if (importSettingsFileRef.current) importSettingsFileRef.current.value = "";
-  };
+  }, []);
   
 
   return (
@@ -829,73 +809,81 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         )}
 
         <div className="border-b border-gray-700 sticky top-0 bg-gray-900 z-10 -mx-6 px-6 mb-2">
-          <nav className="-mb-px flex space-x-2 sm:space-x-4 overflow-x-auto pb-px hide-scrollbar" aria-label="Tabs">
-            <button onClick={() => setActiveTab('aiAssist')} className={activeTab === 'aiAssist' ? activeTabStyle : inactiveTabStyle}>AI Hỗ Trợ</button>
-            <button onClick={() => setActiveTab('characterStory')} className={activeTab === 'characterStory' ? activeTabStyle : inactiveTabStyle}>Nhân Vật & Cốt Truyện</button>
-            <button onClick={() => setActiveTab('worldSettings')} className={activeTab === 'worldSettings' ? activeTabStyle : inactiveTabStyle}>Thiết Lập Thế Giới</button>
-            <button onClick={() => setActiveTab('startingElements')} className={activeTab === 'startingElements' ? activeTabStyle : inactiveTabStyle}>Yếu Tố Khởi Đầu</button>
+          <nav className="-mb-px flex space-x-2 sm:space-x-4 overflow-x-auto pb-px hide-scrollbar" aria-label="Tabs" role="tablist">
+            <button id="tab-aiAssist" role="tab" aria-controls="panel-aiAssist" aria-selected={activeTab === 'aiAssist'} onClick={() => setActiveTab('aiAssist')} className={activeTab === 'aiAssist' ? activeTabStyle : inactiveTabStyle}>AI Hỗ Trợ</button>
+            <button id="tab-characterStory" role="tab" aria-controls="panel-characterStory" aria-selected={activeTab === 'characterStory'} onClick={() => setActiveTab('characterStory')} className={activeTab === 'characterStory' ? activeTabStyle : inactiveTabStyle}>Nhân Vật & Cốt Truyện</button>
+            <button id="tab-worldSettings" role="tab" aria-controls="panel-worldSettings" aria-selected={activeTab === 'worldSettings'} onClick={() => setActiveTab('worldSettings')} className={activeTab === 'worldSettings' ? activeTabStyle : inactiveTabStyle}>Thiết Lập Thế Giới</button>
+            <button id="tab-startingElements" role="tab" aria-controls="panel-startingElements" aria-selected={activeTab === 'startingElements'} onClick={() => setActiveTab('startingElements')} className={activeTab === 'startingElements' ? activeTabStyle : inactiveTabStyle}>Yếu Tố Khởi Đầu</button>
           </nav>
         </div>
 
         <div className="max-h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar pr-2 pb-4 -mr-2">
           {activeTab === 'aiAssist' && (
-            <AIAssistTab
-              settings={settings}
-              handleChange={handleChange}
-              storyIdea={storyIdea} setStoryIdea={setStoryIdea}
-              handleGenerateFromStoryIdea={handleGenerateFromStoryIdea} isGeneratingDetails={isGeneratingDetails}
-              handleGenerateCompletion={handleGenerateCompletion} isGeneratingCompletion={isGeneratingCompletion}
-              fanficSourceType={fanficSourceType} setFanficSourceType={setFanficSourceType}
-              fanficStoryName={fanficStoryName} setFanficStoryName={setFanficStoryName}
-              fanficFile={fanficFile} handleFanficFileChange={handleFanficFileChange}
-              fanficTokenCount={fanficTokenCount} isLoadingTokens={isLoadingTokens}
-              fanficPlayerDescription={fanficPlayerDescription} setFanficPlayerDescription={setFanficPlayerDescription}
-              handleGenerateFromFanfic={handleGenerateFromFanfic} isGeneratingFanficDetails={isGeneratingFanficDetails}
-              originalStorySummary={originalStorySummary} handleOriginalStorySummaryChange={handleOriginalStorySummaryChange}
-              showOriginalStorySummaryInput={showOriginalStorySummaryInput} setShowOriginalStorySummaryInput={setShowOriginalStorySummaryInput}
-              fanficFileInputRef={fanficFileInputRef}
-              handleAnalyzeWritingStyle={handleAnalyzeWritingStyle}
-              isAnalyzingStyle={isAnalyzingStyle}
-              analysisResult={analysisResult}
-              analysisError={analysisError}
-            />
+            <div id="panel-aiAssist" role="tabpanel" tabIndex={0} aria-labelledby="tab-aiAssist">
+              <AIAssistTab
+                settings={settings}
+                handleChange={handleChange}
+                storyIdea={storyIdea} setStoryIdea={setStoryIdea}
+                handleGenerateFromStoryIdea={handleGenerateFromStoryIdea} isGeneratingDetails={isGeneratingDetails}
+                handleGenerateCompletion={handleGenerateCompletion} isGeneratingCompletion={isGeneratingCompletion}
+                fanficSourceType={fanficSourceType} setFanficSourceType={setFanficSourceType}
+                fanficStoryName={fanficStoryName} setFanficStoryName={setFanficStoryName}
+                fanficFile={fanficFile} handleFanficFileChange={handleFanficFileChange}
+                fanficTokenCount={fanficTokenCount} isLoadingTokens={isLoadingTokens}
+                fanficPlayerDescription={fanficPlayerDescription} setFanficPlayerDescription={setFanficPlayerDescription}
+                handleGenerateFromFanfic={handleGenerateFromFanfic} isGeneratingFanficDetails={isGeneratingFanficDetails}
+                originalStorySummary={originalStorySummary} handleOriginalStorySummaryChange={handleOriginalStorySummaryChange}
+                showOriginalStorySummaryInput={showOriginalStorySummaryInput} setShowOriginalStorySummaryInput={setShowOriginalStorySummaryInput}
+                fanficFileInputRef={fanficFileInputRef}
+                handleAnalyzeWritingStyle={handleAnalyzeWritingStyle}
+                isAnalyzingStyle={isAnalyzingStyle}
+                analysisResult={analysisResult}
+                analysisError={analysisError}
+              />
+            </div>
           )}
           {activeTab === 'characterStory' && (
-            <CharacterStoryTab
-              settings={settings}
-              handleChange={handleChange}
-              playerAvatarPreviewUrl={playerAvatarPreviewUrl} // Pass down for preview
-              setPlayerAvatarPreviewUrl={setPlayerAvatarPreviewUrl} // Allow CharacterStoryTab to update preview
-              onPlayerAvatarDataChange={setPlayerUploadedAvatarData} // Allow CharacterStoryTab to set the raw data
-            />
+            <div id="panel-characterStory" role="tabpanel" tabIndex={0} aria-labelledby="tab-characterStory">
+              <CharacterStoryTab
+                settings={settings}
+                handleChange={handleChange}
+                playerAvatarPreviewUrl={playerAvatarPreviewUrl} // Pass down for preview
+                setPlayerAvatarPreviewUrl={setPlayerAvatarPreviewUrl} // Allow CharacterStoryTab to update preview
+                onPlayerAvatarDataChange={setPlayerUploadedAvatarData} // Allow CharacterStoryTab to set the raw data
+              />
+            </div>
           )}
           {activeTab === 'worldSettings' && (
-            <WorldSettingsTab 
-              settings={settings} 
-              handleChange={handleChange} 
-              handleRaceSystemChange={handleRaceSystemChange}
-              addRaceSystem={addRaceSystem}
-              removeRaceSystem={removeRaceSystem}
-            />
+            <div id="panel-worldSettings" role="tabpanel" tabIndex={0} aria-labelledby="tab-worldSettings">
+              <WorldSettingsTab 
+                settings={settings} 
+                handleChange={handleChange} 
+                handleRaceSystemChange={handleRaceSystemChange}
+                addRaceSystem={addRaceSystem}
+                removeRaceSystem={removeRaceSystem}
+              />
+            </div>
           )}
           {activeTab === 'startingElements' && (
-            <StartingElementsTab
-              settings={settings}
-              isSkillsSectionOpen={isSkillsSectionOpen} setIsSkillsSectionOpen={setIsSkillsSectionOpen}
-              handleStartingSkillChange={handleStartingSkillChange} addStartingSkill={addStartingSkill} removeStartingSkill={removeStartingSkill}
-              isItemsSectionOpen={isItemsSectionOpen} setIsItemsSectionOpen={setIsItemsSectionOpen}
-              handleStartingItemChange={handleStartingItemChange} addStartingItem={addStartingItem} removeStartingItem={removeStartingItem}
-              isNpcsSectionOpen={isNpcsSectionOpen} setIsNpcsSectionOpen={setIsNpcsSectionOpen}
-              handleStartingNPCChange={handleStartingNPCChange} addStartingNPC={addStartingNPC} removeStartingNPC={removeStartingNPC}
-              isYeuThuSectionOpen={isYeuThuSectionOpen} setIsYeuThuSectionOpen={setIsYeuThuSectionOpen}
-              handleStartingYeuThuChange={handleStartingYeuThuChange} addStartingYeuThu={addStartingYeuThu} removeStartingYeuThu={removeStartingYeuThu}
-              isLoreSectionOpen={isLoreSectionOpen} setIsLoreSectionOpen={setIsLoreSectionOpen}
-              handleStartingLoreChange={handleStartingLoreChange} addStartingLore={addStartingLore} removeStartingLore={removeStartingLore}
-              isLocationsSectionOpen={isLocationsSectionOpen} setIsLocationsSectionOpen={setIsLocationsSectionOpen}
-              handleStartingLocationChange={handleStartingLocationChange} addStartingLocation={addStartingLocation} removeStartingLocation={removeStartingLocation}
-              isFactionsSectionOpen={isFactionsSectionOpen} setIsFactionsSectionOpen={setIsFactionsSectionOpen}
-              handleStartingFactionChange={handleStartingFactionChange} addStartingFaction={addStartingFaction} removeStartingFaction={removeStartingFaction}
-            />
+            <div id="panel-startingElements" role="tabpanel" tabIndex={0} aria-labelledby="tab-startingElements">
+              <StartingElementsTab
+                settings={settings}
+                isSkillsSectionOpen={isSkillsSectionOpen} setIsSkillsSectionOpen={setIsSkillsSectionOpen}
+                handleStartingSkillChange={handleStartingSkillChange} addStartingSkill={addStartingSkill} removeStartingSkill={removeStartingSkill}
+                isItemsSectionOpen={isItemsSectionOpen} setIsItemsSectionOpen={setIsItemsSectionOpen}
+                handleStartingItemChange={handleStartingItemChange} addStartingItem={addStartingItem} removeStartingItem={removeStartingItem}
+                isNpcsSectionOpen={isNpcsSectionOpen} setIsNpcsSectionOpen={setIsNpcsSectionOpen}
+                handleStartingNPCChange={handleStartingNPCChange} addStartingNPC={addStartingNPC} removeStartingNPC={removeStartingNPC}
+                isYeuThuSectionOpen={isYeuThuSectionOpen} setIsYeuThuSectionOpen={setIsYeuThuSectionOpen}
+                handleStartingYeuThuChange={handleStartingYeuThuChange} addStartingYeuThu={addStartingYeuThu} removeStartingYeuThu={removeStartingYeuThu}
+                isLoreSectionOpen={isLoreSectionOpen} setIsLoreSectionOpen={setIsLoreSectionOpen}
+                handleStartingLoreChange={handleStartingLoreChange} addStartingLore={addStartingLore} removeStartingLore={removeStartingLore}
+                isLocationsSectionOpen={isLocationsSectionOpen} setIsLocationsSectionOpen={setIsLocationsSectionOpen}
+                handleStartingLocationChange={handleStartingLocationChange} addStartingLocation={addStartingLocation} removeStartingLocation={removeStartingLocation}
+                isFactionsSectionOpen={isFactionsSectionOpen} setIsFactionsSectionOpen={setIsFactionsSectionOpen}
+                handleStartingFactionChange={handleStartingFactionChange} addStartingFaction={addStartingFaction} removeStartingFaction={removeStartingFaction}
+              />
+            </div>
           )}
         </div>
 

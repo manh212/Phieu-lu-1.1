@@ -2,33 +2,33 @@ import { WorldSettings, StartingSkill, StartingItem, StartingNPC, StartingLore, 
 import { SUB_REALM_NAMES, ALL_FACTION_ALIGNMENTS, AVAILABLE_GENRES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, VIOLENCE_LEVELS, STORY_TONES, DEFAULT_NSFW_DESCRIPTION_STYLE, NSFW_DESCRIPTION_STYLES, WEAPON_TYPES_FOR_VO_Y, STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS, TU_CHAT_TIERS } from '../constants';
 import * as GameTemplates from '../templates';
 import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../templates';
+import { getNsfwGuidance } from './promptUtils';
 
 // Helper to determine if a field is empty or at its default state.
-// We are hardcoding default values to avoid circular dependencies with constants.ts.
 const isFieldEmptyForCompletion = (fieldName: keyof WorldSettings, value: any): boolean => {
     if (value === undefined || value === null) return true;
     if (Array.isArray(value)) return value.length === 0;
+    
+    // For numbers, only null/undefined are considered empty.
+    // 0 is a valid user-input value that should not be overridden.
+    if (typeof value === 'number') return false; 
+    
     if (typeof value === 'string') return value.trim() === '';
 
-    // Specific default value checks for numbers that have non-zero defaults
-    // These values are from `constants/world.ts`
-    switch(fieldName) {
-        case 'startingCurrency':
-            return value === 10;
-        case 'playerThoNguyen':
-            return value === 100;
-        case 'playerMaxThoNguyen':
-            return value === 100;
-        default:
-            // For other numbers, consider 0 as potentially empty unless it's a valid setting.
-            // For booleans (like nsfwMode), !value works correctly (false is considered "empty"/default).
-            return !value; 
-    }
+    // For booleans (like nsfwMode), !value works correctly (false is considered "empty"/default).
+    return !value; 
 };
 
 // Helper to generate the description for each field, now taking the fieldName
 const describeField = (label: string, fieldName: keyof WorldSettings, value: any): string => {
     if (!isFieldEmptyForCompletion(fieldName, value)) {
+        // For NPC array, we need a special description for the AI.
+        if (fieldName === 'startingNPCs' && Array.isArray(value) && value.length > 0) {
+            const npcsWithMissingInfo = value.filter(npc => !npc.longTermGoal || !npc.shortTermGoal || !npc.locationName);
+            if (npcsWithMissingInfo.length > 0) {
+                return `  - ${label}: ĐÃ CÓ (Giá trị hiện tại: ${JSON.stringify(value)}) - **HÃY XEM XÉT VÀ BỔ SUNG CÁC TRƯỜNG CÒN THIẾU (Mục tiêu, Vị trí) CHO NHỮNG NPC NÀY**`;
+            }
+        }
         return `  - ${label}: ĐÃ CÓ (Giá trị hiện tại: ${JSON.stringify(value)}) - **KHÔNG ĐƯỢC THAY ĐỔI**`;
     }
     return `  - ${label}: **CẦN TẠO**`;
@@ -47,10 +47,7 @@ export const generateCompletionPrompt = (
 ): string => {
 
     const effectiveGenreDisplay = (genre === CUSTOM_GENRE_VALUE && customGenreName) ? customGenreName : genre;
-    const currentViolenceLevel = violenceLevel || DEFAULT_VIOLENCE_LEVEL;
-    const currentStoryTone = storyTone || DEFAULT_STORY_TONE;
-    const currentNsfwStyle = nsfwStyle || DEFAULT_NSFW_DESCRIPTION_STYLE;
-
+    
     const cultivationSystemInstructions = isCultivationEnabled ? `
     *   **Tạo Hệ Thống Cảnh Giới Theo Chủng Tộc (CỰC KỲ QUAN TRỌNG):**
         *   **Yêu cầu:** Dựa trên các thông tin đã có, hãy tạo ra các hệ thống cảnh giới/cấp bậc **RIÊNG BIỆT** cho các chủng tộc khác nhau. Tên gọi phải phản ánh văn hóa và bản chất của từng chủng tộc.
@@ -149,41 +146,44 @@ Tuổi thọ tối đa (\`maxThoNguyen\`) tăng mạnh theo từng đại cảnh
                 - \`potionType\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.PotionType).join(' | ')}\`.
                 - \`effectsList\`: BẮT BUỘC. Danh sách hiệu ứng, cách nhau bởi ';'. Ví dụ: "Hồi 50 HP;Tăng 10 công trong 3 lượt".
             - (Các loại khác giữ nguyên hướng dẫn cũ)
-    *   **Tạo NPC:** [GENERATED_NPC: name="Tên NPC (BẮT BUỘC)", gender="Nam/Nữ/Khác/Không rõ (BẮT BUỘC)", race="Chủng tộc (BẮT BUỘC, CHỈ ĐƯỢC TẠO RA NHỮNG CHỦNG TỘC CÓ HỆ THỐNG CẢNH GIỚI Ở TRÊN, TUYỆT ĐỐI KHÔNG CHỌN CHỦNG TỘC YÊU THÚ, ví dụ: Nhân Tộc, Yêu Tộc)", personality="Tính cách nổi bật (BẮT BUỘC)", initialAffinity=0 (SỐ NGUYÊN từ -100 đến 100), details="Vai trò, tiểu sử ngắn hoặc mối liên hệ với người chơi (BẮT BUỘC), phù hợp với thể loại '${effectiveGenreDisplay}'"${npcRealmInstruction}, relationshipToPlayer="Mối quan hệ (ví dụ: 'Mẹ Con', 'Sư phụ', 'Bằng hữu', 'Chủ nhân - nô lệ', 'Vợ chồng', 'Đạo lữ', 'Đối thủ', 'Bạn thời thơ ấu', 'Người bảo hộ', 'Chủ nợ'...)" (BẮT BUỘC nhưng khi npc và người chơi không có quan hệ gì thì để là 'Người xa lạ')].
+    *   **Tạo NPC:**
+        - **Hướng Dẫn Tạo Mục Tiêu Cho NPC (CỰC KỲ QUAN TRỌNG):** Khi tạo một NPC (hoặc bổ sung thông tin cho NPC đã có), bạn PHẢI suy nghĩ và tạo ra hai mục tiêu cho họ:
+            - **longTermGoal**: Một tham vọng, ước mơ lớn lao, định hướng cho cả cuộc đời NPC.
+            - **shortTermGoal**: Một mục tiêu nhỏ, cụ thể, có thể hoàn thành trong thời gian ngắn và thường là một bước để tiến tới mục tiêu dài hạn.
+        - **QUY TẮC MỚI VỀ VỊ TRÍ NPC (LOGIC ƯU TIÊN THÔNG MINH):**
+            
+            **1. Ưu Tiên Gán Ghép (Prioritize Matching):**
+            Đầu tiên, hãy quét qua tất cả các địa điểm lớn mà người dùng đã cung cấp hoặc bạn đang tạo bằng tag \`[GENERATED_LOCATION: ...]\`. Cố gắng tìm một địa điểm phù hợp nhất với vai trò, mô tả và mục tiêu của NPC.
+              *   *Ví dụ: Nếu người dùng đã cung cấp địa điểm "Thiên Linh Tông" và bạn đang tạo NPC "Lý Trưởng Môn", hãy gán \`locationName="Thiên Linh Tông"\` cho NPC đó.*
+
+            **2. Sáng Tạo Có Điều Kiện (Conditional Creation):**
+            **CHỈ KHI** không có địa điểm nào trong danh sách trên thực sự phù hợp, bạn MỚI được phép tự do sáng tạo ra một địa điểm mới cho NPC đó.
+              *   *Ví dụ: Nếu bạn tạo NPC "Hắc Ma Tôn" nhưng chưa có địa điểm nào thuộc Ma giáo, bạn có thể tự tạo một địa điểm mới cho ông ta.*
+            
+            **3. RÀNG BUỘC SỐNG CÒN KHI SÁNG TẠO (CRITICAL CONSTRAINT ON CREATION):**
+            Khi bạn tự tạo một địa điểm mới, giá trị của \`locationName\` **TUYỆT ĐỐI PHẢI** là tên của một **khu vực lớn** (ví dụ: một tông môn, một thành phố, một khu rừng, một sơn cốc).
+            
+            **TUYỆT ĐỐI CẤM** tạo ra các địa điểm phụ, nhỏ lẻ bên trong một khu vực khác (ví dụ: 'Phòng của Trưởng môn', 'Quán trọ Phước Lai', 'Lò rèn của Lý Thiết Tượng'). Các địa điểm nhỏ này sẽ được tạo ra sau trong quá trình chơi game.
+            
+            **VÍ DỤ VỀ LUỒNG LÀM VIỆC ĐÚNG:**
+            *   **(Gán ghép):**
+                1.  (Người dùng đã cung cấp địa điểm "Thanh Vân Môn")
+                2.  Gán cho NPC: \`[GENERATED_NPC: name="Đạo Huyền Chân Nhân", ..., locationName="Thanh Vân Môn"]\`
+            *   **(Sáng tạo mới):**
+                1.  (Không có địa điểm ma đạo nào được cung cấp trước đó)
+                2.  Tạo NPC Ma Tôn: \`[GENERATED_NPC: name="Hắc Ma Tôn", ..., locationName="Vạn Ma Quật"]\` (AI tự tạo ra "Vạn Ma Quật" vì nó là một khu vực lớn).
+
+            **VÍ DỤ VỀ LUỒNG LÀM VIỆC SAI (CẤM):**
+            *   \`[GENERATED_NPC: ..., locationName="Nghĩa Trang trong Khu Rừng Âm U"]\`
+            *   \`[GENERATED_NPC: ..., locationName="Phòng Trưởng Môn"]\`
+        - **Định dạng Tag:** [GENERATED_NPC: name="Tên NPC (BẮT BUỘC)", gender="Nam/Nữ/Khác/Không rõ (BẮT BUỘC)", race="Chủng tộc (BẮT BUỘC, CHỈ ĐƯỢC TẠO RA NHỮNG CHỦNG TỘC CÓ HỆ THỐNG CẢNH GIỚI Ở TRÊN, TUYỆT ĐỐI KHÔNG CHỌN CHỦNG TỘC YÊU THÚ, ví dụ: Nhân Tộc, Yêu Tộc)", personality="Tính cách nổi bật (BẮT BUỘC)", longTermGoal="Mục tiêu dài hạn của NPC (BẮT BUỘC)", shortTermGoal="Mục tiêu ngắn hạn của NPC (BẮT BUỘC)", initialAffinity=0 (SỐ NGUYÊN từ -100 đến 100), details="Vai trò, tiểu sử ngắn hoặc mối liên hệ với người chơi (BẮT BUỘC), phù hợp với thể loại '${effectiveGenreDisplay}'"${npcRealmInstruction}, relationshipToPlayer="Mối quan hệ (ví dụ: 'Mẹ Con', 'Sư phụ', 'Bằng hữu', 'Chủ nhân - nô lệ', 'Vợ chồng', 'Đạo lữ', 'Đối thủ', 'Bạn thời thơ ấu', 'Người bảo hộ', 'Chủ nợ'...)" (BẮT BUỘC nhưng khi npc và người chơi không có quan hệ gì thì để là 'Người xa lạ'), locationName="Tên địa điểm do AI tạo (BẮT BUỘC)"]. NPC chỉ áp dụng cho người hoặc những loài có hình dạng tương tự người như tiên tộc, yêu tộc đã hóa hình,...
     *   **Tạo Yêu Thú:** [GENERATED_YEUTHU: name="Tên", species="Loài", description="Mô tả", isHostile=true/false, realm="Cảnh giới (nếu có)"]
     *   **Tạo Tri Thức:** [GENERATED_LORE: title="Tiêu đề", content="Nội dung"]
     *   **Tạo Địa Điểm:** [GENERATED_LOCATION: name="Tên", description="Mô tả", locationType="Loại", isSafeZone=true, mapX=100, mapY=100]
     *   **Tạo Phe Phái:** [GENERATED_FACTION: name="Tên", description="Mô tả", alignment="Chính Nghĩa", initialPlayerReputation=0]
 `;
 
-    let nsfwGuidanceForWorldGen = "";
-    if (isNsfwIdea) {
-        const violenceGuidanceText = VIETNAMESE[`violenceLevelGuidance${currentViolenceLevel.replace(/\s+/g, '')}` as keyof typeof VIETNAMESE] || VIETNAMESE.violenceLevelGuidanceThucTe;
-        const storyToneGuidanceText = VIETNAMESE[`storyToneGuidance${currentStoryTone.replace(/\s+/g, '')}` as keyof typeof VIETNAMESE] || VIETNAMESE.storyToneGuidanceTrungTinh;
-        let nsfwStyleSpecificGuidance = "";
-        switch(currentNsfwStyle) {
-            case 'Hoa Mỹ': nsfwStyleSpecificGuidance = VIETNAMESE.nsfwGuidanceHoaMy; break;
-            case 'Trần Tục': nsfwStyleSpecificGuidance = VIETNAMESE.nsfwGuidanceTranTuc; break;
-            case 'Gợi Cảm': nsfwStyleSpecificGuidance = VIETNAMESE.nsfwGuidanceGoiCam; break;
-            case 'Mạnh Bạo (BDSM)': nsfwStyleSpecificGuidance = VIETNAMESE.nsfwGuidanceManhBaoBDSM; break;
-            default: nsfwStyleSpecificGuidance = VIETNAMESE.nsfwGuidanceHoaMy;
-        }
-
-
-        nsfwGuidanceForWorldGen = `
-- **Yêu cầu nội dung 18+:** BẬT. Hãy chủ động, ưu tiên và tích cực tạo ra các tên gọi, mô tả, tính cách, chi tiết NPC, kỹ năng, vật phẩm, và tri thức thế giới mang tính chất người lớn, nhạy cảm, và tình dục.
-- **Phong Cách Miêu Tả Tình Dục (Người dùng chọn):** ${currentNsfwStyle}.
-  ${nsfwStyleSpecificGuidance}
-- **Mức Độ Bạo Lực (Người dùng chọn):** ${currentViolenceLevel}.
-  ${violenceGuidanceText}
-- **Tông Màu Câu Chuyện (Người dùng chọn):** ${currentStoryTone}.
-  ${storyToneGuidanceText}
-[GENERATED_NSFW_DESCRIPTION_STYLE: text="${currentNsfwStyle}"]
-[GENERATED_VIOLENCE_LEVEL: text="${currentViolenceLevel}"]
-[GENERATED_STORY_TONE: text="${currentStoryTone}"]`;
-    } else {
-        nsfwGuidanceForWorldGen = "- **Yêu cầu nội dung 18+:** TẮT. Vui lòng tạo các yếu tố phù hợp với mọi lứa tuổi, tập trung vào phiêu lưu và phát triển nhân vật.";
-    }
+    const nsfwGuidance = getNsfwGuidance(settings);
 
 return `
 Bạn là một AI hỗ trợ viết lách và sáng tạo thế giới game nhập vai thể loại "${effectiveGenreDisplay}".
@@ -192,7 +192,12 @@ Người dùng đã điền một vài thông tin cho thế giới của họ v�
 **NHIỆM VỤ:**
 1.  **Đọc kỹ** các thông tin đã có trong phần "THÔNG TIN HIỆN TẠI". Các thông tin này là bối cảnh chính và **KHÔNG THỂ THAY ĐỔI**.
 2.  Dựa vào các thông tin đó, hãy **sáng tạo** và điền vào các mục được đánh dấu là "**CẦN TẠO**".
-3.  **QUY TẮC TỐI THƯỢNG:** Chỉ trả về các tag [GENERATED_...] cho những mục được đánh dấu là '**CẦN TẠO**'. **TUYỆT ĐỐI KHÔNG** tạo lại tag cho những mục đã được đánh dấu là "ĐÃ CÓ".
+3.  **QUY TẮC TỐI THƯỢỢNG:** Chỉ trả về các tag [GENERATED_...] cho những mục được đánh dấu là '**CẦN TẠO**'. **TUYỆT ĐỐI KHÔNG** tạo lại tag cho những mục đã được đánh dấu là "ĐÃ CÓ".
+4.  **QUY TẮC ĐẶC BIỆT VỀ NPC (CỰC KỲ QUAN TRỌNG):**
+    *   Nếu mục "NPC Khởi Đầu" được đánh dấu là "ĐÃ CÓ", bạn phải kiểm tra danh sách NPC mà người dùng cung cấp.
+    *   Với **MỖI NPC** trong danh sách đó mà **thiếu** \`longTermGoal\`, \`shortTermGoal\`, hoặc \`locationName\`, bạn **BẮT BUỘC** phải tạo một tag \`[GENERATED_NPC: ...]\` hoàn chỉnh cho NPC đó.
+    *   Trong tag này, bạn **PHẢI SAO CHÉP Y HỆT** tất cả các thông tin đã có của NPC đó (name, personality, details, v.v.) và **CHỈ THÊM VÀO** các trường còn thiếu (\`longTermGoal\`, \`shortTermGoal\`, \`locationName\`) mà bạn tạo ra.
+    *   **KHÔNG** tạo tag \`[GENERATED_NPC: ...]\` cho những NPC đã có đủ tất cả các trường trên.
 
 ---
 **THÔNG TIN HIỆN TẠI (LÀM BỐI CẢNH ĐỂ SÁNG TẠO):**
@@ -232,7 +237,7 @@ ${describeField("Phe Phái Khởi Đầu", 'startingFactions', settings.starting
 
 ---
 **CHẾ ĐỘ NỘI DUNG:**
-${nsfwGuidanceForWorldGen}
+${nsfwGuidance}
 - Thể loại game: ${effectiveGenreDisplay}
 - Hệ Thống Tu Luyện/Sức Mạnh Đặc Thù: ${isCultivationEnabled ? "BẬT" : "TẮT"}
 
@@ -241,6 +246,6 @@ ${lifespanInstruction}
 ---
 ${tagGenerationInstructions}
 ---
-**LỜI NHẮC CUỐI CÙNG:** Hãy dùng sự sáng tạo của bạn để làm cho các yếu tố mới này khớp một cách liền mạch với những gì người chơi đã cung cấp. Chỉ tạo tag cho các mục **CẦN TẠO**. Không thêm bất kỳ lời dẫn, giải thích, hay văn bản nào khác ngoài các tag được yêu cầu.
+**LỜI NHẮC CUỐI CÙNG:** Hãy dùng sự sáng tạo của bạn để làm cho các yếu tố mới này khớp một cách liền mạch với những gì người chơi đã cung cấp. Chỉ tạo tag cho các mục **CẦN TẠO** (và bổ sung mục tiêu/vị trí cho các NPC hiện có nếu cần). Không thêm bất kỳ lời dẫn, giải thích, hay văn bản nào khác ngoài các tag được yêu cầu.
 `;
 };

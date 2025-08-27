@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, ChangeEvent, useRef, useEffect } from 'react';
 import { GameScreen, WorldSettings, StartingSkill, StartingItem, StartingNPC, StartingLore, StartingLocation, StartingFaction, PlayerStats, GenreType, WorldDate, StartingYeuThu, RaceCultivationSystem, GeneratedWorldElements } from '../types'; 
 import Button from './ui/Button';
@@ -466,20 +467,33 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
 
       setSettings(prev => ({
         ...prev,
-        theme: response.worldTheme || prev.theme, settingDescription: response.worldSettingDescription || prev.settingDescription, writingStyle: response.worldWritingStyle || prev.writingStyle, currencyName: response.currencyName || prev.currencyName, playerName: response.playerName || prev.playerName, playerGender: response.playerGender || prev.playerGender, playerRace: response.playerRace || prev.playerRace, playerPersonality: response.playerPersonality || prev.playerPersonality, playerBackstory: response.playerBackstory || prev.playerBackstory, playerGoal: response.playerGoal || prev.playerGoal, playerStartingTraits: response.playerStartingTraits || prev.playerStartingTraits,
+        theme: response.worldTheme || prev.theme, 
+        settingDescription: response.worldSettingDescription || prev.settingDescription, 
+        writingStyle: response.worldWritingStyle || prev.writingStyle, 
+        currencyName: response.currencyName || prev.currencyName, 
+        playerName: response.playerName || prev.playerName, 
+        playerGender: response.playerGender || prev.playerGender, 
+        playerRace: response.playerRace || prev.playerRace, 
+        playerPersonality: response.playerPersonality || prev.playerPersonality, 
+        playerBackstory: response.playerBackstory || prev.playerBackstory, 
+        playerGoal: response.playerGoal || prev.playerGoal, 
+        playerStartingTraits: response.playerStartingTraits || prev.playerStartingTraits,
         startingSkills: response.startingSkills.length > 0 ? response.startingSkills : prev.startingSkills, 
         startingItems: validatedStartingItems.length > 0 ? validatedStartingItems : prev.startingItems, 
         startingNPCs: response.startingNPCs.length > 0 ? response.startingNPCs.map(npc => ({...npc, gender: npc.gender || 'Không rõ'})) : prev.startingNPCs, 
         startingYeuThu: response.startingYeuThu && response.startingYeuThu.length > 0 ? response.startingYeuThu : prev.startingYeuThu,
         startingLore: response.startingLore.length > 0 ? response.startingLore : prev.startingLore,
-        startingLocations: response.startingLocations && response.startingLocations.length > 0 ? response.startingLocations : prev.startingLocations, startingFactions: response.startingFactions && response.startingFactions.length > 0 ? response.startingFactions : prev.startingFactions,
+        startingLocations: response.startingLocations && response.startingLocations.length > 0 ? response.startingLocations : prev.startingLocations, 
+        startingFactions: response.startingFactions && response.startingFactions.length > 0 ? response.startingFactions : prev.startingFactions,
         raceCultivationSystems: response.raceCultivationSystems && response.raceCultivationSystems.length > 0 ? response.raceCultivationSystems : prev.raceCultivationSystems,
         yeuThuRealmSystem: response.yeuThuRealmSystem || prev.yeuThuRealmSystem,
-        canhGioiKhoiDau: settings.isCultivationEnabled && response.canhGioiKhoiDau ? response.canhGioiKhoiDau : (settings.isCultivationEnabled ? prev.canhGioiKhoiDau : VIETNAMESE.mortalRealmName),
-        genre: response.genre || prev.genre, customGenreName: response.genre === CUSTOM_GENRE_VALUE && response.customGenreName ? response.customGenreName : (response.genre === CUSTOM_GENRE_VALUE ? prev.customGenreName : ""), isCultivationEnabled: response.isCultivationEnabled !== undefined ? response.isCultivationEnabled : prev.isCultivationEnabled,
-        nsfwDescriptionStyle: settings.nsfwMode && response.nsfwDescriptionStyle ? response.nsfwDescriptionStyle : prev.nsfwDescriptionStyle,
-        violenceLevel: settings.nsfwMode && response.violenceLevel ? response.violenceLevel : prev.violenceLevel,
-        storyTone: settings.nsfwMode && response.storyTone ? response.storyTone : prev.storyTone,
+        canhGioiKhoiDau: prev.isCultivationEnabled && response.canhGioiKhoiDau ? response.canhGioiKhoiDau : (prev.isCultivationEnabled ? prev.canhGioiKhoiDau : VIETNAMESE.mortalRealmName),
+        genre: response.genre || prev.genre, 
+        customGenreName: response.genre === CUSTOM_GENRE_VALUE && response.customGenreName ? response.customGenreName : (response.genre === CUSTOM_GENRE_VALUE ? prev.customGenreName : ""), 
+        isCultivationEnabled: prev.isCultivationEnabled,
+        nsfwDescriptionStyle: prev.nsfwMode && response.nsfwDescriptionStyle ? response.nsfwDescriptionStyle : prev.nsfwDescriptionStyle,
+        violenceLevel: prev.nsfwMode && response.violenceLevel ? response.violenceLevel : prev.violenceLevel,
+        storyTone: prev.nsfwMode && response.storyTone ? response.storyTone : prev.storyTone,
         startingDate: response.startingDate || prev.startingDate,
         playerSpiritualRoot: response.playerSpiritualRoot || prev.playerSpiritualRoot,
         playerSpecialPhysique: response.playerSpecialPhysique || prev.playerSpecialPhysique,
@@ -552,21 +566,34 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
 
       setSettings(prev => ({
         ...prev,
-        theme: response.worldTheme || prev.theme, settingDescription: response.worldSettingDescription || prev.settingDescription, writingStyle: response.worldWritingStyle || prev.writingStyle, currencyName: response.currencyName || prev.currencyName, playerName: response.playerName || prev.playerName, playerGender: response.playerGender || prev.playerGender, playerRace: response.playerRace || prev.playerRace, playerPersonality: response.playerPersonality || prev.playerPersonality, playerBackstory: response.playerBackstory || prev.playerBackstory, playerGoal: response.playerGoal || prev.playerGoal, playerStartingTraits: response.playerStartingTraits || prev.playerStartingTraits,
+        theme: response.worldTheme || prev.theme, 
+        settingDescription: response.worldSettingDescription || prev.settingDescription, 
+        writingStyle: response.worldWritingStyle || prev.writingStyle, 
+        currencyName: response.currencyName || prev.currencyName, 
+        playerName: response.playerName || prev.playerName, 
+        playerGender: response.playerGender || prev.playerGender, 
+        playerRace: response.playerRace || prev.playerRace, 
+        playerPersonality: response.playerPersonality || prev.playerPersonality, 
+        playerBackstory: response.playerBackstory || prev.playerBackstory, 
+        playerGoal: response.playerGoal || prev.playerGoal, 
+        playerStartingTraits: response.playerStartingTraits || prev.playerStartingTraits,
         startingSkills: response.startingSkills.length > 0 ? response.startingSkills : prev.startingSkills, 
         startingItems: validatedStartingItems.length > 0 ? validatedStartingItems : prev.startingItems, 
         startingNPCs: response.startingNPCs.length > 0 ? response.startingNPCs.map(npc => ({...npc, gender: npc.gender || 'Không rõ'})) : prev.startingNPCs, 
         startingYeuThu: response.startingYeuThu && response.startingYeuThu.length > 0 ? response.startingYeuThu : prev.startingYeuThu,
         startingLore: response.startingLore.length > 0 ? response.startingLore : prev.startingLore,
-        startingLocations: response.startingLocations && response.startingLocations.length > 0 ? response.startingLocations : prev.startingLocations, startingFactions: response.startingFactions && response.startingFactions.length > 0 ? response.startingFactions : prev.startingFactions,
+        startingLocations: response.startingLocations && response.startingLocations.length > 0 ? response.startingLocations : prev.startingLocations, 
+        startingFactions: response.startingFactions && response.startingFactions.length > 0 ? response.startingFactions : prev.startingFactions,
         originalStorySummary: response.originalStorySummary || prev.originalStorySummary,
         raceCultivationSystems: response.raceCultivationSystems && response.raceCultivationSystems.length > 0 ? response.raceCultivationSystems : prev.raceCultivationSystems,
         yeuThuRealmSystem: response.yeuThuRealmSystem || prev.yeuThuRealmSystem,
-        canhGioiKhoiDau: settings.isCultivationEnabled && response.canhGioiKhoiDau ? response.canhGioiKhoiDau : (settings.isCultivationEnabled ? prev.canhGioiKhoiDau : VIETNAMESE.mortalRealmName),
-        genre: response.genre || prev.genre, customGenreName: response.genre === CUSTOM_GENRE_VALUE && response.customGenreName ? response.customGenreName : (response.genre === CUSTOM_GENRE_VALUE ? prev.customGenreName : ""), isCultivationEnabled: response.isCultivationEnabled !== undefined ? response.isCultivationEnabled : prev.isCultivationEnabled,
-        nsfwDescriptionStyle: settings.nsfwMode && response.nsfwDescriptionStyle ? response.nsfwDescriptionStyle : prev.nsfwDescriptionStyle,
-        violenceLevel: settings.nsfwMode && response.violenceLevel ? response.violenceLevel : prev.violenceLevel,
-        storyTone: settings.nsfwMode && response.storyTone ? response.storyTone : prev.storyTone,
+        canhGioiKhoiDau: prev.isCultivationEnabled && response.canhGioiKhoiDau ? response.canhGioiKhoiDau : (prev.isCultivationEnabled ? prev.canhGioiKhoiDau : VIETNAMESE.mortalRealmName),
+        genre: response.genre || prev.genre, 
+        customGenreName: response.genre === CUSTOM_GENRE_VALUE && response.customGenreName ? response.customGenreName : (response.genre === CUSTOM_GENRE_VALUE ? prev.customGenreName : ""), 
+        isCultivationEnabled: prev.isCultivationEnabled,
+        nsfwDescriptionStyle: prev.nsfwMode && response.nsfwDescriptionStyle ? response.nsfwDescriptionStyle : prev.nsfwDescriptionStyle,
+        violenceLevel: prev.nsfwMode && response.violenceLevel ? response.violenceLevel : prev.violenceLevel,
+        storyTone: prev.nsfwMode && response.storyTone ? response.storyTone : prev.storyTone,
         startingDate: response.startingDate || prev.startingDate,
         playerSpiritualRoot: response.playerSpiritualRoot || prev.playerSpiritualRoot,
         playerSpecialPhysique: response.playerSpecialPhysique || prev.playerSpecialPhysique,
@@ -601,11 +628,13 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
             const mergedResponse: GeneratedWorldElements = response;
 
             const isFalsyOrEmpty = (value: any) => {
+                if (typeof value === 'number' && value === 0) return false; // Treat 0 as a valid, non-empty value.
                 if (Array.isArray(value)) return value.length === 0;
                 if (typeof value === 'string') return value.trim() === '';
                 return !value;
             };
             
+            // Fill top-level fields
             if (isFalsyOrEmpty(prev.theme) && mergedResponse.worldTheme) newSettings.theme = mergedResponse.worldTheme;
             if (isFalsyOrEmpty(prev.settingDescription) && mergedResponse.worldSettingDescription) newSettings.settingDescription = mergedResponse.worldSettingDescription;
             if (isFalsyOrEmpty(prev.writingStyle) && mergedResponse.worldWritingStyle) newSettings.writingStyle = mergedResponse.worldWritingStyle;
@@ -619,20 +648,47 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
             if (isFalsyOrEmpty(prev.playerStartingTraits) && mergedResponse.playerStartingTraits) newSettings.playerStartingTraits = mergedResponse.playerStartingTraits;
             if (isFalsyOrEmpty(prev.playerSpiritualRoot) && mergedResponse.playerSpiritualRoot) newSettings.playerSpiritualRoot = mergedResponse.playerSpiritualRoot;
             if (isFalsyOrEmpty(prev.playerSpecialPhysique) && mergedResponse.playerSpecialPhysique) newSettings.playerSpecialPhysique = mergedResponse.playerSpecialPhysique;
-            if (!prev.playerThoNguyen && mergedResponse.playerThoNguyen) newSettings.playerThoNguyen = mergedResponse.playerThoNguyen;
-            if (!prev.playerMaxThoNguyen && mergedResponse.playerMaxThoNguyen) newSettings.playerMaxThoNguyen = mergedResponse.playerMaxThoNguyen;
-            if (!prev.startingCurrency && mergedResponse.startingCurrency) newSettings.startingCurrency = mergedResponse.startingCurrency;
+            if (isFalsyOrEmpty(prev.playerThoNguyen) && mergedResponse.playerThoNguyen) newSettings.playerThoNguyen = mergedResponse.playerThoNguyen;
+            if (isFalsyOrEmpty(prev.playerMaxThoNguyen) && mergedResponse.playerMaxThoNguyen) newSettings.playerMaxThoNguyen = mergedResponse.playerMaxThoNguyen;
+            if (isFalsyOrEmpty(prev.startingCurrency) && mergedResponse.startingCurrency) newSettings.startingCurrency = mergedResponse.startingCurrency;
             if (isFalsyOrEmpty(prev.raceCultivationSystems) && (mergedResponse.raceCultivationSystems || []).length > 0) newSettings.raceCultivationSystems = mergedResponse.raceCultivationSystems;
             if (isFalsyOrEmpty(prev.yeuThuRealmSystem) && mergedResponse.yeuThuRealmSystem) newSettings.yeuThuRealmSystem = mergedResponse.yeuThuRealmSystem;
             if (isFalsyOrEmpty(prev.canhGioiKhoiDau) && mergedResponse.canhGioiKhoiDau) newSettings.canhGioiKhoiDau = mergedResponse.canhGioiKhoiDau;
             
+            // Fill array fields if they are empty
             if (isFalsyOrEmpty(prev.startingSkills) && (mergedResponse.startingSkills || []).length > 0) newSettings.startingSkills = mergedResponse.startingSkills;
             if (isFalsyOrEmpty(prev.startingItems) && (mergedResponse.startingItems || []).length > 0) newSettings.startingItems = processItemDetails(mergedResponse.startingItems);
-            if (isFalsyOrEmpty(prev.startingNPCs) && (mergedResponse.startingNPCs || []).length > 0) newSettings.startingNPCs = mergedResponse.startingNPCs;
             if (isFalsyOrEmpty(prev.startingYeuThu) && (mergedResponse.startingYeuThu || []).length > 0) newSettings.startingYeuThu = mergedResponse.startingYeuThu;
             if (isFalsyOrEmpty(prev.startingLore) && (mergedResponse.startingLore || []).length > 0) newSettings.startingLore = mergedResponse.startingLore;
             if (isFalsyOrEmpty(prev.startingLocations) && (mergedResponse.startingLocations || []).length > 0) newSettings.startingLocations = mergedResponse.startingLocations;
             if (isFalsyOrEmpty(prev.startingFactions) && (mergedResponse.startingFactions || []).length > 0) newSettings.startingFactions = mergedResponse.startingFactions;
+
+            // NEW: Merge logic for NPCs
+            const aiGeneratedNpcs = mergedResponse.startingNPCs || [];
+            if (aiGeneratedNpcs.length > 0) {
+                if (isFalsyOrEmpty(prev.startingNPCs)) {
+                    // If user list is empty, just take the AI's list.
+                    newSettings.startingNPCs = aiGeneratedNpcs;
+                } else {
+                    // If user list is NOT empty, merge goals and locations into it.
+                    const updatedNpcs = prev.startingNPCs.map(userNpc => {
+                        // Find the corresponding NPC from the AI's response by name.
+                        const aiNpc = aiGeneratedNpcs.find(a => a.name === userNpc.name);
+                        if (aiNpc) {
+                            // Only update if the user's NPC is missing the field.
+                            return {
+                                ...userNpc,
+                                longTermGoal: isFalsyOrEmpty(userNpc.longTermGoal) ? aiNpc.longTermGoal : userNpc.longTermGoal,
+                                shortTermGoal: isFalsyOrEmpty(userNpc.shortTermGoal) ? aiNpc.shortTermGoal : userNpc.shortTermGoal,
+                                locationName: isFalsyOrEmpty(userNpc.locationName) ? aiNpc.locationName : userNpc.locationName,
+                            };
+                        }
+                        // If no match found from AI, return the user's NPC as is.
+                        return userNpc;
+                    });
+                    newSettings.startingNPCs = updatedNpcs;
+                }
+            }
 
             return newSettings;
         });

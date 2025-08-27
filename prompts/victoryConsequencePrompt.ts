@@ -3,6 +3,7 @@ import { KnowledgeBase, CombatEndPayload, NPC, YeuThu, ItemCategoryValues, TU_CH
 import * as GameTemplates from '../templates';
 import { STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
 import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../templates';
+import { getNsfwGuidance } from './promptUtils';
 
 // A local type to safely add entityType
 type DefeatedEntity = (NPC | YeuThu) & { entityType: 'npc' | 'yeuThu' };
@@ -14,6 +15,7 @@ export const generateVictoryConsequencePrompt = (
     previousPageSummaries: string[],
     lastNarrationFromPreviousPage?: string
 ): string => {
+    const { worldConfig } = kb;
     const { summary, dispositions, opponentIds } = combatResult;
 
     const allDefeatedEntities: DefeatedEntity[] = opponentIds
@@ -29,6 +31,8 @@ export const generateVictoryConsequencePrompt = (
     const capturedNpcs = allDefeatedEntities.filter(e => e.entityType === 'npc' && dispositions[e.id] === 'capture') as NPC[];
     const releasedNpcs = allDefeatedEntities.filter(e => e.entityType === 'npc' && dispositions[e.id] === 'release') as NPC[];
     const defeatedBeasts = allDefeatedEntities.filter(e => e.entityType === 'yeuThu') as YeuThu[]; // Beasts are always "defeated"
+
+    const nsfwGuidance = getNsfwGuidance(worldConfig);
 
     const itemTagInstructions = `
 *   **Tag Vật Phẩm Nhận Được \`[ITEM_ACQUIRED: ...]\`:**
@@ -71,6 +75,9 @@ ${contextBlock}
 - **Bắt giữ:** ${capturedNpcs.length > 0 ? capturedNpcs.map(n => `${n.name} (${n.realm})`).join(', ') : 'Không có ai.'}
 - **Thả đi:** ${releasedNpcs.length > 0 ? releasedNpcs.map(n => n.name).join(', ') : 'Không có ai.'}
 - **Yêu thú đã bị đánh bại:** ${defeatedBeasts.length > 0 ? defeatedBeasts.map(b => `${b.name} (${b.species}, ${b.realm})`).join(', ') : 'Không có.'}
+
+**CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH:**
+${nsfwGuidance}
 
 **YÊU CẦU DÀNH CHO BẠN (AI):**
 Hãy viết một đoạn văn kể lại chi tiết những gì xảy ra tiếp theo, và sử dụng các tag hệ thống sau để cập nhật trạng thái game.

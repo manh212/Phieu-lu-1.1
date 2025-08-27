@@ -1,4 +1,3 @@
-
 import { VIETNAMESE } from '../constants'; // VIETNAMESE might be needed for quest related strings in the future
 
 // Helper function to sanitize quest objective text for display
@@ -99,3 +98,19 @@ export const normalizeStringForComparison = (str: string): string => {
         .replace(/\s+/g, ' ') // Collapse multiple spaces
         .trim();
 }
+
+/**
+ * Chuẩn hóa tên địa điểm để so sánh.
+ * Chuyển thành chữ thường, bỏ dấu, bỏ khoảng trắng thừa.
+ * @param name Tên cần chuẩn hóa.
+ * @returns Tên đã được chuẩn hóa.
+ */
+export const normalizeLocationName = (name: string): string => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d");
+};

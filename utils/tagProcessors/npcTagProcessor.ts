@@ -1,11 +1,11 @@
-import { KnowledgeBase, GameMessage, NPC, PlayerStats, ApiConfig, TuChatTier, ItemCategoryValues, VectorMetadata } from '../../types';
+import { KnowledgeBase, GameMessage, NPC, PlayerStats, ApiConfig, TuChatTier, ItemCategoryValues, VectorMetadata, GameLocation, ActivityLogEntry } from '../../types';
 import { NPCTemplate } from '../../templates';
 import { ALL_FACTION_ALIGNMENTS, VIETNAMESE, DEFAULT_MORTAL_STATS, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL, TU_CHAT_TIERS } from '../../constants';
 import * as GameTemplates from '../../templates';
 import { calculateRealmBaseStats } from '../statsCalculationUtils';
 import { getApiSettings, generateImageUnified } from '../../services/geminiService';
 import { uploadImageToCloudinary } from '../../services/cloudinaryService';
-import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
+import { diceCoefficient, normalizeStringForComparison, normalizeLocationName } from '../questUtils';
 import { formatPersonForEmbedding } from '../ragUtils';
 
 const SIMILARITY_THRESHOLD = 0.8;
@@ -35,6 +35,81 @@ const findNpcByName = (npcs: NPC[], name: string): { npc: NPC, index: number } |
     return null;
 }
 
+const resolveNpcLocationId = (
+    locationNameOrIdFromTag: string | undefined,
+    currentKb: KnowledgeBase,
+    turnForSystemMessages: number
+): { resolvedLocationId: string | undefined; newKb: KnowledgeBase; systemMessages: GameMessage[] } => {
+    if (!locationNameOrIdFromTag || !locationNameOrIdFromTag.trim()) {
+        return { resolvedLocationId: undefined, newKb: currentKb, systemMessages: [] };
+    }
+
+    const newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
+    const systemMessages: GameMessage[] = [];
+
+    // 1. Direct ID Match
+    const directMatch = newKb.discoveredLocations.find(l => l.id === locationNameOrIdFromTag);
+    if (directMatch) {
+        return { resolvedLocationId: directMatch.id, newKb, systemMessages };
+    }
+
+    // 2. Exact Name Match (case-insensitive, normalized)
+    const normalizedNameFromTag = normalizeLocationName(locationNameOrIdFromTag);
+    const exactNameMatch = newKb.discoveredLocations.find(l => normalizeLocationName(l.name) === normalizedNameFromTag);
+    if (exactNameMatch) {
+        return { resolvedLocationId: exactNameMatch.id, newKb, systemMessages };
+    }
+
+    // 3. Fuzzy Name Match
+    let bestFuzzyMatch = { location: null as GameLocation | null, score: 0 };
+    newKb.discoveredLocations.forEach(location => {
+        const score = diceCoefficient(normalizedNameFromTag, normalizeStringForComparison(location.name));
+        if (score > bestFuzzyMatch.score) {
+            bestFuzzyMatch = { location, score };
+        }
+    });
+
+    if (bestFuzzyMatch.location && bestFuzzyMatch.score >= 0.9) { // High threshold to be sure
+        systemMessages.push({
+            id: `npc-location-fuzzy-match-${Date.now()}`,
+            type: 'system',
+            content: `[DEBUG] Vị trí "${locationNameOrIdFromTag}" được AI cung cấp đã được khớp với vị trí đã biết "${bestFuzzyMatch.location.name}" (độ tương đồng: ${(bestFuzzyMatch.score * 100).toFixed(0)}%).`,
+            timestamp: Date.now(),
+            turnNumber: turnForSystemMessages
+        });
+        return { resolvedLocationId: bestFuzzyMatch.location.id, newKb, systemMessages };
+    }
+
+    // 4. Create new placeholder location
+    const newLocationName = locationNameOrIdFromTag.trim();
+    
+    if (bestFuzzyMatch.location && bestFuzzyMatch.score > 0.8) {
+         console.warn(`Creating new location "${newLocationName}" despite a close fuzzy match "${bestFuzzyMatch.location.name}" with score ${bestFuzzyMatch.score}. This might create a duplicate.`);
+    }
+
+    const newLocation: GameLocation = {
+        id: `loc-${newLocationName.replace(/\s+/g, '-')}-${Date.now()}`,
+        name: newLocationName,
+        description: `Một địa điểm bạn vừa nghe nói đến, có liên quan đến một nhân vật. Chi tiết về nơi này vẫn còn là một bí ẩn.`,
+        isSafeZone: false,
+        visited: false,
+        locationType: GameTemplates.LocationType.LANDMARK,
+    };
+    
+    newKb.discoveredLocations.push(newLocation);
+    
+    systemMessages.push({
+        id: `location-discovered-via-npc-${newLocation.id}`,
+        type: 'system',
+        content: `Bạn vừa nghe nói về một địa điểm mới: ${newLocation.name}.`,
+        timestamp: Date.now(),
+        turnNumber: turnForSystemMessages
+    });
+
+    return { resolvedLocationId: newLocation.id, newKb, systemMessages };
+};
+
+
 export const processNpc = async (
     currentKb: KnowledgeBase,
     tagParams: Record<string, string>,
@@ -42,7 +117,7 @@ export const processNpc = async (
     setKnowledgeBaseDirectly: React.Dispatch<React.SetStateAction<KnowledgeBase>>,
     logNpcAvatarPromptCallback?: (prompt: string) => void
 ): Promise<{ updatedKb: KnowledgeBase; systemMessages: GameMessage[]; newVectorMetadata?: VectorMetadata; }> => {
-    const newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
+    let newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
     const systemMessages: GameMessage[] = [];
     let newVectorMetadata: VectorMetadata | undefined = undefined;
 
@@ -55,8 +130,6 @@ export const processNpc = async (
     const factionId = tagParams.factionId;
     let npcRealm = tagParams.realm;
 
-    // More robust realm normalization. This logic attempts to find a major realm name within the provided string
-    // to handle cases where AI prepends race info inconsistently (e.g., "Yêu Tộc Yêu Tướng" or "Tộc Yêu Tướng").
     if (npcRealm && race && newKb.worldConfig?.isCultivationEnabled) {
         const raceSystem = newKb.worldConfig.raceCultivationSystems.find(rs => rs.raceName === race);
         const progressionSystem = raceSystem?.realmSystem;
@@ -71,7 +144,7 @@ export const processNpc = async (
                     const index = lowerNpcRealm.indexOf(majorRealm.toLowerCase());
                     if (index !== -1) {
                         const cleanedRealm = npcRealm.substring(index);
-                        if (cleanedRealm) { // Final check to ensure not empty
+                        if (cleanedRealm) {
                             console.log(`[NPC REALM NORMALIZE] Cleaned realm from "${npcRealm}" to "${cleanedRealm}" based on major realm "${majorRealm}".`);
                             npcRealm = cleanedRealm;
                         }
@@ -87,15 +160,11 @@ export const processNpc = async (
     const statsJSON = tagParams.statsJSON;
     const baseStatOverridesJSON = tagParams.baseStatOverridesJSON;
     let aiSuggestedAvatarUrl = tagParams.avatarUrl; 
-    const locationIdFromTag = tagParams.locationId;
     const spiritualRoot = tagParams.spiritualRoot;
     const specialPhysique = tagParams.specialPhysique;
-
-    // Vendor properties
     const vendorType = tagParams.vendorType as NPCTemplate['vendorType'];
     const vendorSlogan = tagParams.vendorSlogan;
     const vendorBuysCategoriesStr = tagParams.vendorBuysCategories;
-
     const legacyHp = parseInt(tagParams.hp || "0", 10);
     const legacyAtk = parseInt(tagParams.atk || "0", 10);
 
@@ -103,13 +172,29 @@ export const processNpc = async (
         console.warn("NPC: Missing NPC name.", tagParams);
         return { updatedKb: newKb, systemMessages };
     }
-    
-    let finalLocationId = locationIdFromTag;
-    if (locationIdFromTag && !newKb.discoveredLocations.find(l => l.id === locationIdFromTag)) {
-        const locationByName = newKb.discoveredLocations.find(l => l.name === locationIdFromTag);
-        if (locationByName) {
-            finalLocationId = locationByName.id;
+
+    let finalLocationId: string | undefined;
+
+    if (tagParams.locationId) {
+        const directMatch = newKb.discoveredLocations.find(l => l.id === tagParams.locationId);
+        if (directMatch) {
+            finalLocationId = directMatch.id;
+        } else {
+            console.warn(`NPC tag specified locationId "${tagParams.locationId}" but it was not found.`);
         }
+    } else if (tagParams.locationName) {
+        const { resolvedLocationId, newKb: kbAfterLocationResolve, systemMessages: locationSystemMessages } = resolveNpcLocationId(
+            tagParams.locationName,
+            newKb,
+            turnForSystemMessages
+        );
+        newKb = kbAfterLocationResolve;
+        systemMessages.push(...locationSystemMessages);
+        finalLocationId = resolvedLocationId;
+    }
+
+    if (!finalLocationId) {
+        finalLocationId = newKb.currentLocationId;
     }
 
 
@@ -176,11 +261,10 @@ export const processNpc = async (
             vendorType: vendorType || undefined,
             vendorSlogan: vendorSlogan || undefined,
             vendorBuysCategories: vendorBuysCategories,
-            // Living World Defaults
             mood: 'Bình Thường',
             needs: {},
-            longTermGoal: 'Chưa có',
-            shortTermGoal: 'Sống sót qua ngày',
+            longTermGoal: tagParams.longTermGoal || "Sống một cuộc đời bình an.",
+            shortTermGoal: tagParams.shortTermGoal || "Hoàn thành công việc trong ngày.",
             currentPlan: [],
             relationships: {},
             lastTickTurn: 0,
@@ -188,13 +272,12 @@ export const processNpc = async (
             activityLog: [],
         };
         
-        // If it's a new vendor, set their restock year to prevent immediate re-stocking.
         if (npcToProcess.vendorType) {
             npcToProcess.lastRestockYear = newKb.worldDate.year;
         }
 
         newKb.discoveredNPCs.push(npcToProcess);
-        newVectorMetadata = { entityId: npcToProcess.id, entityType: 'npc', text: formatPersonForEmbedding(npcToProcess) };
+        newVectorMetadata = { entityId: npcToProcess.id, entityType: 'npc', text: formatPersonForEmbedding(npcToProcess, newKb), turnNumber: turnForSystemMessages };
 
         systemMessages.push({
             id: 'npc-discovered-' + Date.now(), type: 'system',
@@ -208,7 +291,7 @@ export const processNpc = async (
 
     if (apiSettings.autoGenerateNpcAvatars && (isNewNpc || !npcToProcess.avatarUrl || npcToProcess.avatarUrl.startsWith('https://via.placeholder.com') || npcToProcess.avatarUrl.includes('FEMALE_AVATAR_BASE_URL_placeholder'))) {
         
-        if (!npcToProcess.avatarUrl || npcToProcess.avatarUrl.startsWith('https://via.placeholder.com') || npcToProcess.avatarUrl.includes('FEMALE_AVATAR_BASE_URL_placeholder')) {
+        if (!npcToProcess.avatarUrl || npcToProcess.avatarUrl.startsWith('https://via.placeholder.com') || npcToProcess.avatarUrl.includes('FEMALE_AVATAR_BASE_URL_placeholder'))) {
             npcToProcess.avatarUrl = npcToProcess.gender === 'Nữ'
                 ? `${FEMALE_AVATAR_BASE_URL}${Math.floor(Math.random() * MAX_FEMALE_AVATAR_INDEX) + 1}.png` 
                 : MALE_AVATAR_PLACEHOLDER_URL;
@@ -356,14 +439,14 @@ export const processNpcUpdate = async (
     setKnowledgeBaseDirectly: React.Dispatch<React.SetStateAction<KnowledgeBase>>,
     logNpcAvatarPromptCallback?: (prompt: string) => void 
 ): Promise<{ updatedKb: KnowledgeBase; systemMessages: GameMessage[]; updatedVectorMetadata?: VectorMetadata }> => {
-    const newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
+    let newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
     const systemMessages: GameMessage[] = [];
     const npcName = tagParams.name;
     let updatedVectorMetadata: VectorMetadata | undefined = undefined;
 
     if (!npcName) {
         console.warn("NPC_UPDATE: Missing NPC name.", tagParams);
-        return { updatedKb: newKb, systemMessages };
+        return { updatedKb: newKb, systemMessages, updatedVectorMetadata: undefined };
     }
 
     const foundMatch = findNpcByName(newKb.discoveredNPCs, npcName);
@@ -376,7 +459,7 @@ export const processNpcUpdate = async (
         let realmUpdated = false;
         let detailsChangedForAvatar = false;
         
-        const effectiveRace = tagParams.race || npcToUpdate.race; // Use new race if provided, otherwise old one.
+        const effectiveRace = tagParams.race || npcToUpdate.race;
         if (tagParams.race && npcToUpdate.race !== tagParams.race) {
             npcToUpdate.race = tagParams.race;
             updatedFieldsCount++;
@@ -385,8 +468,7 @@ export const processNpcUpdate = async (
 
         if (tagParams.realm !== undefined) {
             let newRealm = tagParams.realm.trim();
-            if (newRealm) { // Explicitly check for non-empty string
-                // More robust realm normalization.
+            if (newRealm) {
                 if (effectiveRace && newKb.worldConfig?.isCultivationEnabled) {
                     const raceSystem = newKb.worldConfig.raceCultivationSystems.find(rs => rs.raceName === effectiveRace);
                     const progressionSystem = raceSystem?.realmSystem;
@@ -411,7 +493,7 @@ export const processNpcUpdate = async (
                     }
                 }
         
-                if (newRealm && npcToUpdate.realm !== newRealm) { // Final check after potential normalization
+                if (newRealm && npcToUpdate.realm !== newRealm) {
                     npcToUpdate.realm = newRealm;
                     realmUpdated = true;
                     updatedFieldsCount++;
@@ -459,10 +541,18 @@ export const processNpcUpdate = async (
                 if (!isNaN(change)) newAffinity = currentAffinity + change;
             }
         
-            if (newAffinity !== null) {
+            if (newAffinity !== null && newAffinity !== currentAffinity) {
                 npcToUpdate.affinity = Math.max(-100, Math.min(100, newAffinity));
                 updatedFieldsCount++;
-            } else {
+                if (!npcToUpdate.activityLog) npcToUpdate.activityLog = [];
+                const logEntry: ActivityLogEntry = {
+                    turnNumber: turnForSystemMessages,
+                    description: `Đã có tương tác với ${newKb.worldConfig?.playerName || 'người chơi'} khiến thiện cảm thay đổi.`,
+                    locationId: npcToUpdate.locationId || newKb.currentLocationId || 'unknown'
+                };
+                npcToUpdate.activityLog.push(logEntry);
+                if (npcToUpdate.activityLog.length > 30) npcToUpdate.activityLog.shift();
+            } else if (newAffinity === null) {
                  console.warn(`NPC_UPDATE: Invalid affinity value "${affinityStr}" for NPC "${npcName}".`);
             }
         }
@@ -471,12 +561,14 @@ export const processNpcUpdate = async (
             updatedFieldsCount++;
         }
         if (tagParams.locationId) {
-            let finalLocationId = tagParams.locationId;
-            if (finalLocationId && !newKb.discoveredLocations.find(l => l.id === finalLocationId)) {
-                const locationByName = newKb.discoveredLocations.find(l => l.name === finalLocationId);
-                if (locationByName) finalLocationId = locationByName.id;
-            }
-            npcToUpdate.locationId = finalLocationId;
+            const { resolvedLocationId, newKb: kbAfterLocationResolve, systemMessages: locationSystemMessages } = resolveNpcLocationId(
+                tagParams.locationId,
+                newKb,
+                turnForSystemMessages
+            );
+            newKb = kbAfterLocationResolve;
+            systemMessages.push(...locationSystemMessages);
+            npcToUpdate.locationId = resolvedLocationId;
             updatedFieldsCount++;
         }
         if (tagParams.relationshipToPlayer) {
@@ -535,7 +627,6 @@ export const processNpcUpdate = async (
             npcToUpdate.vendorBuysCategories = categoriesArray.filter(c => Object.values(GameTemplates.ItemCategory).includes(c as any)) as ItemCategoryValues[];
             updatedFieldsCount++;
         }
-        // NEW: Living World updates
         if (tagParams.mood) { npcToUpdate.mood = tagParams.mood as NPC['mood']; updatedFieldsCount++; }
         if (tagParams.shortTermGoal) { npcToUpdate.shortTermGoal = tagParams.shortTermGoal; updatedFieldsCount++; }
         if (tagParams.longTermGoal) { npcToUpdate.longTermGoal = tagParams.longTermGoal; updatedFieldsCount++; }
@@ -622,7 +713,8 @@ export const processNpcUpdate = async (
              updatedVectorMetadata = {
                 entityId: npcToUpdate.id,
                 entityType: 'npc',
-                text: formatPersonForEmbedding(npcToUpdate)
+                text: formatPersonForEmbedding(npcToUpdate, newKb),
+                turnNumber: turnForSystemMessages
             };
         }
     } else {

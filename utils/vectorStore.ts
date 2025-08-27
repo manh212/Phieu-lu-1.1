@@ -45,28 +45,50 @@ export function cosineSimilarity(vecA: number[], vecB: number[]): number {
 }
 
 /**
- * Searches the vector store for the top K most similar vectors to a query vector.
+ * Searches the vector store for the top K most similar vectors to a query vector,
+ * factoring in the recency of the information.
  * @param queryVector The vector representation of the search query.
  * @param vectorStore The store containing all the document vectors and their metadata.
  * @param topK The number of top results to return.
+ * @param currentTurn The current turn number of the game.
  * @returns An array of the top K most similar text chunks.
  */
 export function searchVectors(
     queryVector: number[],
     vectorStore: VectorStore,
-    topK: number = 3
+    topK: number = 3,
+    currentTurn: number
 ): string[] {
     if (!vectorStore || vectorStore.vectors.length === 0) {
         return [];
     }
 
-    // Calculate similarity scores for all vectors in the store
-    const scores = vectorStore.vectors.map((vec, index) => ({
-        score: cosineSimilarity(queryVector, vec),
-        text: vectorStore.metadata[index]?.text || '' // Get text from metadata
-    }));
+    const W_SEMANTIC = 0.7; // Weight for content relevance
+    const W_RECENCY = 0.3;  // Weight for time relevance
 
-    // Sort by score in descending order
+    // Calculate similarity scores for all vectors in the store
+    const scores = vectorStore.vectors.map((vec, index) => {
+        const metadata = vectorStore.metadata[index];
+        if (!metadata) {
+            return { score: -1, text: '' }; // Should not happen if data is consistent
+        }
+        
+        const semanticScore = cosineSimilarity(queryVector, vec);
+        
+        // Use currentTurn as fallback if turnNumber is missing (for older data)
+        const eventTurn = metadata.turnNumber || currentTurn; 
+        // Recency score is higher for more recent events. +1 to avoid division by zero.
+        const recencyScore = 1 / (currentTurn - eventTurn + 1);
+
+        const finalScore = (W_SEMANTIC * semanticScore) + (W_RECENCY * recencyScore);
+
+        return {
+            score: finalScore,
+            text: metadata.text || ''
+        };
+    });
+
+    // Sort by the combined final score in descending order
     scores.sort((a, b) => b.score - a.score);
 
     // Return the text of the top K results

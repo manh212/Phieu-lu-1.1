@@ -1,8 +1,9 @@
-import React from 'react';
-import { WorldSettings, StartingNPC, TuChatTier, TU_CHAT_TIERS } from '../../../../types';
+import React, { useMemo } from 'react';
+import { WorldSettings, StartingNPC, TuChatTier, TU_CHAT_TIERS, StartingLocation } from '../../../../types';
 import { VIETNAMESE } from '../../../../constants';
 import InputField from '../../../ui/InputField';
 import Button from '../../../ui/Button';
+import { normalizeLocationName } from '../../../../utils/questUtils';
 
 interface NpcsSectionProps {
   settings: WorldSettings;
@@ -10,6 +11,34 @@ interface NpcsSectionProps {
   addStartingNPC: () => void;
   removeStartingNPC: (index: number) => void;
 }
+
+// LocationStatus sub-component for memoized check
+interface LocationStatusProps {
+  locationName: string | undefined;
+  startingLocations: StartingLocation[];
+}
+
+const LocationStatus: React.FC<LocationStatusProps> = React.memo(({ locationName, startingLocations }) => {
+  const locationExists = useMemo(() => {
+    if (!locationName || !locationName.trim()) {
+      return true; // Don't show "new" for empty or whitespace-only input
+    }
+    const normalizedInput = normalizeLocationName(locationName);
+    // Memoize the set of existing locations to avoid re-calculating it on every locationName change
+    const existingNormalizedNames = new Set((startingLocations || []).map(loc => normalizeLocationName(loc.name)));
+    return existingNormalizedNames.has(normalizedInput);
+  }, [locationName, startingLocations]);
+
+  if (locationName && locationName.trim() && !locationExists) {
+    return (
+      <p className="text-xs text-green-400 -mt-3 italic mb-2">
+        (Địa điểm mới, sẽ được tự động tạo)
+      </p>
+    );
+  }
+  return null;
+});
+
 
 const NpcsSection: React.FC<NpcsSectionProps> = ({ settings, handleStartingNPCChange, addStartingNPC, removeStartingNPC }) => {
   return (
@@ -92,6 +121,37 @@ const NpcsSection: React.FC<NpcsSectionProps> = ({ settings, handleStartingNPCCh
             onChange={(e) => handleStartingNPCChange(index, 'relationshipToPlayer', e.target.value)}
             placeholder={VIETNAMESE.npcRelationshipPlaceholder}
           />
+          <InputField
+            label="Mục Tiêu Dài Hạn"
+            id={`npcLongTermGoal-${index}`}
+            value={npc.longTermGoal || ''}
+            onChange={(e) => handleStartingNPCChange(index, 'longTermGoal', e.target.value)}
+            textarea
+            rows={2}
+            placeholder="Ví dụ: Trở thành đệ nhất cao thủ..."
+          />
+          <InputField
+            label="Mục Tiêu Ngắn Hạn"
+            id={`npcShortTermGoal-${index}`}
+            value={npc.shortTermGoal || ''}
+            onChange={(e) => handleStartingNPCChange(index, 'shortTermGoal', e.target.value)}
+            textarea
+            rows={2}
+            placeholder="Ví dụ: Tìm kiếm một thanh kiếm tốt..."
+          />
+          
+          {/* --- NEWLY ADDED FIELDS --- */}
+          <InputField
+            label="Địa Điểm Bắt Đầu (do AI gợi ý)"
+            id={`npcLocationName-${index}`}
+            name="locationName"
+            value={npc.locationName || ''}
+            onChange={(e) => handleStartingNPCChange(index, 'locationName', e.target.value)}
+            placeholder="Vd: Lò Rèn Hắc Hỏa, Am Mây Trắng..."
+          />
+          <LocationStatus locationName={npc.locationName} startingLocations={settings.startingLocations} />
+          {/* --- END OF NEWLY ADDED FIELDS --- */}
+
           <div className="text-right mt-2">
             <Button variant="danger" size="sm" onClick={() => removeStartingNPC(index)}>{VIETNAMESE.removeNPC}</Button>
           </div>

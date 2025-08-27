@@ -117,15 +117,23 @@ export interface NPCTemplate {
     lastRestockYear?: number;
     isEssential?: boolean; locationId?: string; level?: number;
     
-    // NEW: Living World properties
+    // --- Thuộc tính cho "Thế Giới Sống" ---
     mood: 'Vui Vẻ' | 'Hài Lòng' | 'Bình Thường' | 'Bực Bội' | 'Giận Dữ' | 'Nghi Ngờ';
-    needs: Record<string, number>; // e.g. {"Quyền Lực": 85, "Sinh Tồn": 30}
+    /** Nhu cầu nội tại của NPC, thang điểm 0-100. Ví dụ: {"Báo Thù": 95, "Sinh Tồn": 40} */
+    needs: Record<string, number>;
+    /** Mục tiêu lớn, dài hạn của cuộc đời NPC. */
     longTermGoal: string;
+    /** Mục tiêu trước mắt cần hoàn thành. */
     shortTermGoal: string;
+    /** Các bước cụ thể để hoàn thành shortTermGoal. */
     currentPlan: string[];
-    relationships: Record<string, { type: string; affinity: number; }>; // Key is other NPC's ID
+    /** Mối quan hệ với các NPC khác. Key là ID của NPC khác. */
+    relationships: Record<string, { type: string; affinity: number; }>;
+    /** Lượt cuối cùng NPC này được "tick" (xử lý bởi AI Director). */
     lastTickTurn: number;
+    /** Điểm ưu tiên tạm thời để AI chọn xử lý, không lưu trữ lâu dài. */
     tickPriorityScore: number;
+    /** "Trí nhớ" ngắn hạn của NPC, lưu trữ các hoạt động gần đây. */
     activityLog: ActivityLogEntry[];
 }
 

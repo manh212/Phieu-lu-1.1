@@ -42,7 +42,7 @@ export * from './turnHistoryUtils'; // Will export addTurnHistoryEntryRaw
 export * from './paginationUtils';
 export * from './parseTagValue'; 
 export * from './vectorStore';
-export * from './ragUtils'; // NEW: Export RAG utilities
+export * from './ragUtils';
 export * from './dateUtils'; // NEW: Export date utilities
 export * from './eventUtils'; // NEW: Export event utilities
 export * from './apiUsageTracker'; // NEW: Export API usage tracker
@@ -56,6 +56,7 @@ export * from './tagProcessors/factionTagProcessor';
 export * from './tagProcessors/worldLoreTagProcessor';
 export * from './tagProcessors/eventTagProcessor'; // NEW
 export * from './tagProcessors/worldConfigTagProcessor'; // NEW
+export * from './tagProcessors/relationshipEventTagProcessor'; // NEW
 
 // Other Tag Processors
 export * from './tagProcessors/statusEffectTagProcessor'; 

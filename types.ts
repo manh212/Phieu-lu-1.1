@@ -1,5 +1,6 @@
 
 
+
 import { HarmCategory, HarmBlockThreshold } from "@google/genai";
 import * as GameTemplates from './templates'; // Import all templates
 import { Operation as JsonPatchOperation } from 'fast-json-patch'; // Import Operation from fast-json-patch
@@ -176,6 +177,8 @@ export interface PersonBase {
     spiritualRoot?: string;
     specialPhysique?: string;
     stats?: Partial<PlayerStats>;
+    // FIX: Add optional locationId to PersonBase to align with implementing types and resolve type errors.
+    locationId?: string;
 }
 
 // Prisoner Entity
@@ -293,6 +296,9 @@ export interface StartingNPC {
   specialPhysique?: string; // New
   thoNguyen?: number;
   maxThoNguyen?: number;
+  longTermGoal?: string;
+  shortTermGoal?: string;
+  locationName?: string;
 }
 
 export interface StartingYeuThu {
@@ -307,7 +313,7 @@ export interface StartingLore { title: string; content: string; }
 export interface StartingLocation { name: string; description: string; isSafeZone?: boolean; regionId?: string; mapX?: number; mapY?: number; locationType?: GameTemplates.LocationTypeValues; }
 export interface StartingFaction { name: string; description: string; alignment: GameTemplates.FactionAlignmentValues; initialPlayerReputation: number; }
 
-export type NsfwDescriptionStyle = 'Hoa Mỹ' | 'Trần Tục' | 'Gợi Cảm' | 'Mạnh Bạo (BDSM)';
+export type NsfwDescriptionStyle = 'Hoa Mỹ' | 'Trần Tục' | 'Gợi Cảm' | 'Mạnh Bạo (BDSM)' | 'Tùy Chỉnh (Phòng Tối AI)';
 export type ViolenceLevel = 'Nhẹ Nhàng' | 'Thực Tế' | 'Cực Đoan';
 export type StoryTone = 'Tích Cực' | 'Trung Tính' | 'Đen Tối' | 'Dâm Dục' | 'Hoang Dâm' | 'Dâm Loạn';
 
@@ -337,7 +343,10 @@ export interface WorldSettings {
   startingCurrency: number;
   startingSkills: StartingSkill[]; startingItems: StartingItem[]; startingNPCs: StartingNPC[]; startingLore: StartingLore[];
   startingYeuThu: StartingYeuThu[]; // New
-  startingLocations: StartingLocation[]; startingFactions: StartingFaction[]; nsfwMode?: boolean; nsfwDescriptionStyle?: NsfwDescriptionStyle;
+  startingLocations: StartingLocation[]; startingFactions: StartingFaction[]; 
+  nsfwMode?: boolean; 
+  nsfwDescriptionStyle?: NsfwDescriptionStyle;
+  customNsfwPrompt?: string;
   violenceLevel?: ViolenceLevel; storyTone?: StoryTone; originalStorySummary?: string; genre: GenreType; customGenreName?: string;
   isCultivationEnabled: boolean;
   raceCultivationSystems: RaceCultivationSystem[]; // REPLACES heThongCanhGioi
@@ -415,9 +424,14 @@ export interface Master extends PersonBase {
     // Dynamic stats
     mood: 'Vui Vẻ' | 'Hài Lòng' | 'Bình Thường' | 'Bực Bội' | 'Giận Dữ' | 'Nghi Ngờ';
     needs: Partial<Record<'Tham Vọng' | 'Dục Vọng' | 'An Toàn' | 'Giải Trí', number>>; // 0-100 scale for each need
-    currentGoal: string;
+    longTermGoal?: string;
+    shortTermGoal?: string;
     // For 18+ mode
     favor?: number; // 0-100, Sủng Ái
+    // For consistency with other character types
+    locationId?: string;
+    relationships?: Record<string, { type: string; affinity: number; }>;
+    activityLog?: ActivityLogEntry[];
 }
 
 // NEW: Event System Types - Updated based on our discussion
@@ -447,12 +461,16 @@ export interface GameEvent {
 
 
 // NEW: RAG System Types
-export type VectorEntityType = 'item' | 'skill' | 'quest' | 'npc' | 'yeuThu' | 'faction' | 'lore' | 'wife' | 'slave' | 'prisoner' | 'location' | 'master';
+export type VectorEntityType = 'item' | 'skill' | 'quest' | 'npc' | 'yeuThu' | 'faction' | 'lore' | 'wife' | 'slave' | 'prisoner' | 'location' | 'master' | 'relationship_memory';
 
 export interface VectorMetadata {
   entityId: string;
   entityType: VectorEntityType;
   text: string; // The original text that was vectorized
+  turnNumber: number; // For dynamic memory weighting
+  // NEW: For relationship memories
+  sourceId?: string; // ID of the character the memory belongs to
+  targetId?: string; // ID of the character the memory is about
 }
 
 export interface VectorStore {

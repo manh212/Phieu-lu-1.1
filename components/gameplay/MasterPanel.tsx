@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Master } from '../../types';
 
@@ -96,7 +95,7 @@ const MasterPanel: React.FC<MasterPanelProps> = React.memo(({ master }) => {
         
         {/* Goals & Needs */}
         <div className="space-y-3">
-             <p><strong className="text-gray-400">Mục Tiêu Hiện Tại:</strong> <span className="text-gray-200 italic ml-2">{master.currentGoal}</span></p>
+             <p><strong className="text-gray-400">Mục Tiêu Hiện Tại:</strong> <span className="text-gray-200 italic ml-2">{master.shortTermGoal}</span></p>
 
             {/* Favor Bar */}
             {master.favor !== undefined && (

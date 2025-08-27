@@ -1,6 +1,4 @@
 
-
-
 import { KnowledgeBase, GameMessage, YeuThu, PlayerStats, VectorMetadata } from '../../types';
 import { YeuThuTemplate } from '../../templates';
 import { DEFAULT_MORTAL_STATS, MALE_AVATAR_PLACEHOLDER_URL } from '../../constants';
@@ -8,7 +6,7 @@ import { calculateRealmBaseStats } from '../statsCalculationUtils';
 import { getApiSettings, generateImageUnified } from '../../services/geminiService';
 import { uploadImageToCloudinary } from '../../services/cloudinaryService';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
-import { formatYeuThuForEmbedding } from '../ragUtils'; // NEW: Import formatter
+import { formatYeuThuForEmbedding } from '../ragUtils';
 
 const SIMILARITY_THRESHOLD = 0.8;
 
@@ -76,7 +74,7 @@ export const processYeuThu = async (
     };
     
     newKb.discoveredYeuThu.push(newYeuThu);
-    newVectorMetadata = { entityId: newYeuThu.id, entityType: 'yeuThu', text: formatYeuThuForEmbedding(newYeuThu) };
+    newVectorMetadata = { entityId: newYeuThu.id, entityType: 'yeuThu', text: formatYeuThuForEmbedding(newYeuThu, newKb), turnNumber: turnForSystemMessages };
 
     systemMessages.push({
         id: `yeuthu-discovered-${newYeuThu.id}`,

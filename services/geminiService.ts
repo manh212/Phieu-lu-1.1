@@ -2,6 +2,8 @@
 
 
 
+
+
 import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, CountTokensResponse, Type } from "@google/genai";
 import { KnowledgeBase, ParsedAiResponse, AiChoice, WorldSettings, ApiConfig, SafetySetting, PlayerActionInputType, ResponseLength, StartingSkill, StartingItem, StartingNPC, StartingLore, GameMessage, GeneratedWorldElements, StartingLocation, StartingFaction, PlayerStats, Item as ItemType, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, TU_CHAT_TIERS, AuctionItem, GameLocation, AuctionState, WorldDate, CongPhapGrade, CongPhapType, LinhKiActivationType, LinhKiCategory, ProfessionGrade, ProfessionType, FindLocationParams, NPC, Skill, Prisoner, Wife, Slave, CombatEndPayload, RaceCultivationSystem, StartingYeuThu, AuctionSlave, WorldTickUpdate } from '../types'; 
 import { PROMPT_FUNCTIONS } from '../prompts';
@@ -462,7 +464,22 @@ export const parseGeneratedWorldDetails = (responseText: string | undefined): Ge
         const content = line.substring(line.indexOf(GWD_NPC) + GWD_NPC.length, line.lastIndexOf(']')).trim();
         const params = parseTagParams(content);
         if (!params.name) return;
-        const statsJSON = params.statsJSON ? JSON.parse(params.statsJSON) : {};
+        
+        let statsJSON: any = {};
+        if (params.statsJSON) {
+            try {
+                // More robust parsing for potentially non-standard JSON from AI
+                const jsonLikeString = params.statsJSON.replace(/(\w+)\s*:/g, '"$1":');
+                statsJSON = JSON.parse(jsonLikeString);
+            } catch (e) {
+                console.error(`Could not parse statsJSON for NPC "${params.name}":`, params.statsJSON, e);
+                statsJSON = {};
+            }
+        }
+        
+        const thoNguyenFromParams = params.thoNguyen ? parseInt(params.thoNguyen, 10) : undefined;
+        const maxThoNguyenFromParams = params.maxThoNguyen ? parseInt(params.maxThoNguyen, 10) : undefined;
+        
         generated.startingNPCs.push({
             name: params.name,
             personality: params.personality || '',
@@ -470,14 +487,18 @@ export const parseGeneratedWorldDetails = (responseText: string | undefined): Ge
             details: params.description || params.details || '',
             gender: params.gender as 'Nam' | 'Nữ' | 'Khác' | 'Không rõ' | undefined,
             race: params.race,
-            realm: params.realm,
+            // Fallback logic: check top-level param first, then check inside the parsed JSON
+            realm: params.realm || statsJSON.realm,
             avatarUrl: params.avatarUrl,
-            tuChat: params.tuChat as TuChatTier | undefined,
+            tuChat: (params.tuChat as TuChatTier | undefined) || statsJSON.tuChat,
             relationshipToPlayer: params.relationshipToPlayer,
-            spiritualRoot: params.spiritualRoot,
-            specialPhysique: params.specialPhysique,
-            thoNguyen: statsJSON.thoNguyen,
-            maxThoNguyen: statsJSON.maxThoNguyen,
+            spiritualRoot: params.spiritualRoot || statsJSON.spiritualRoot,
+            specialPhysique: params.specialPhysique || statsJSON.specialPhysique,
+            thoNguyen: !isNaN(thoNguyenFromParams as number) ? thoNguyenFromParams : statsJSON.thoNguyen,
+            maxThoNguyen: !isNaN(maxThoNguyenFromParams as number) ? maxThoNguyenFromParams : statsJSON.maxThoNguyen,
+            longTermGoal: params.longTermGoal,
+            shortTermGoal: params.shortTermGoal,
+            locationName: params.locationName,
         });
     } else if (line.startsWith(`[${GWD_YEUTHU}`)) {
         const content = line.substring(line.indexOf(GWD_YEUTHU) + GWD_YEUTHU.length, line.lastIndexOf(']')).trim();

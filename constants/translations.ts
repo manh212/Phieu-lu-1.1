@@ -88,6 +88,8 @@ export const VIETNAMESE_TRANSLATIONS = {
   companionDetails: "Chi Tiết Đồng Hành",
   nsfwModeLabel: "Chế Độ Người Lớn (18+) Tổng Thể Game",
   nsfwIdeaCheckboxLabel: "Ưu tiên nội dung 18+ (dâm dục, bạo lực) cho các yếu tố AI tạo ra ở mục này",
+  customNsfwPromptLabel: "Lời Nhắc Tùy Chỉnh Cho AI (Phòng Tối AI)",
+  customNsfwPromptNote: "Lưu ý: Các quy tắc bạn nhập tại đây sẽ thay thế hoàn toàn mọi hướng dẫn 18+ mặc định của game.",
   inputTypeActionLabel: "Hành động",
   inputTypeStoryLabel: "Câu chuyện",
   inputTypeToggleTooltipAction: "Chế độ hiện tại: Hành động. Nhấn để chuyển sang chế độ Câu chuyện.",

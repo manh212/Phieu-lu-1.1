@@ -135,7 +135,20 @@ ${timeOfDayContext}
 
     if (config.sendCreationRules) {
         rules.push(`**9.  Tags Thêm Mới Thông Tin Thế Giới (\`NPC\`, \`YEUTHU\`, \`MAINLOCATION\`, \`FACTION_DISCOVERED\`, \`WORLD_LORE_ADD\`):**
-    *   \`[NPC: name="Tên NPC", gender="Nam/Nữ/Khác/Không rõ", race="Chủng tộc (ví dụ: Nhân Tộc, Yêu Tộc)", description="Mô tả chi tiết", personality="Tính cách", affinity=Số, factionId="ID Phe (nếu có)", realm="Cảnh giới NPC (nếu có)", tuChat="CHỌN MỘT TRONG: ${TU_CHAT_TIERS.join(' | ')}" (TÙY CHỌN, nếu NPC có tu luyện), relationshipToPlayer="Mối quan hệ", spiritualRoot="Linh căn của NPC (nếu có)", specialPhysique="Thể chất của NPC (nếu có)", statsJSON='{"thoNguyen": X, "maxThoNguyen": Y}']\`.
+    *   \`[NPC: name="Tên NPC", gender="Nam/Nữ/Khác/Không rõ", race="Chủng tộc", description="Mô tả chi tiết", personality="Tính cách", affinity=Số, realm="Cảnh giới", tuChat="Tư chất", relationshipToPlayer="Mối quan hệ", longTermGoal="Mục tiêu dài hạn", shortTermGoal="Mục tiêu ngắn hạn", ...]\`.
+        **Hướng Dẫn Tạo Mục Tiêu Cho NPC (CỰC KỲ QUAN TRỌNG):**
+        Khi tạo một NPC, bạn PHẢI suy nghĩ và tạo ra hai mục tiêu cho họ:
+        - **longTermGoal**: Một tham vọng, ước mơ lớn lao, định hướng cho cả cuộc đời NPC.
+        - **shortTermGoal**: Một mục tiêu nhỏ, cụ thể, có thể hoàn thành trong thời gian ngắn và thường là một bước để tiến tới mục tiêu dài hạn.
+        **Logic tạo mục tiêu:** Mục tiêu phải phù hợp với các yếu tố sau của NPC:
+        - **Tính cách (personality):** Một NPC "Tham lam" sẽ có mục tiêu về tiền bạc. Một NPC "Nhân hậu" sẽ có mục tiêu giúp đỡ người khác.
+        - **Bối cảnh/Vai trò (description):** Một "Luyện Khí Sư" sẽ có mục tiêu rèn đúc pháp bảo. Một "Vệ binh thành" sẽ có mục tiêu giữ gìn trật tự.
+        - **Chủng tộc (race):** Mục tiêu của một "Ma tu" sẽ khác một "Yêu tu".
+        - **Cảnh giới (realm):** Một tu sĩ Luyện Khí Kỳ chỉ muốn đột phá Trúc Cơ. Một Đại Năng Hóa Thần có thể có mục tiêu tìm hiểu bí mật phi thăng.
+        **Ví dụ cụ thể để AI học theo:**
+        - Một trưởng lão tông môn (description="Trưởng lão Hộ pháp của Thanh Vân Tông") có thể có: longTermGoal="Đột phá cảnh giới Hóa Thần", shortTermGoal="Tìm kiếm một đệ tử có tư chất tốt để truyền lại y bát".
+        - Một tiểu thương (description="Chủ một sạp hàng nhỏ ở chợ Nam") có thể có: longTermGoal="Trở thành phú hộ giàu nhất thành", shortTermGoal="Bán hết lô hàng vừa nhập về".
+        - Một Luyện Khí Sư (description="Thợ rèn vũ khí trong thành") có thể có: longTermGoal="Rèn ra một thanh pháp bảo Địa phẩm", shortTermGoal="Tìm kiếm khoáng thạch Hắc Thiết".
     *   \`[YEUTHU: name="Tên Yêu Thú", species="Loài", description="Mô tả", isHostile=true/false, realm="Cảnh giới (nếu có)"]\`: Dùng để tạo Yêu Thú mới.
     *   \`[MAINLOCATION: name="Tên", description="Mô tả", locationType="CHỌN MỘT TRONG: ${Object.values(GameTemplates.LocationType).join(' | ')}", isSafeZone=true/false, regionId="ID Vùng", mapX=X, mapY=Y]\` (BẮT BUỘC có \`locationType\`, tọa độ \`mapX\`/\`mapY\` nếu biết) **Không dùng tag này để tạo các địa điểm kinh tế như Cửa Hàng, Chợ, Thương Thành, Hội Đấu Giá vì chúng thường nằm trong những địa điểm chính. Không bao giờ tạo ra những main location dạng nhỏ ví dụ như quảng trường trong một thành phố lớn hay là một cửa hàng trong một thị trấn, những địa điểm phụ này sẽ có được tạo bởi hệ thống sau.**
     **QUAN TRỌNG**: Chỉ được tạo ra những địa điểm có trong ${Object.values(GameTemplates.LocationType).join(' | ')} mà thôi, không được tạo ra bất cứ loại địa điểm nào khác.
@@ -147,15 +160,31 @@ ${timeOfDayContext}
         rules.push(`**10. Tags Cập Nhật Thông Tin Thế Giới Hiện Có (\`NPC_UPDATE\`, \`WIFE_UPDATE\`, \`SLAVE_UPDATE\`, \`PRISONER_UPDATE\`, \`LOCATION_*\`, \`FACTION_UPDATE\`, \`WORLD_LORE_UPDATE\`):** Tên/Tiêu đề phải khớp chính xác với thực thể cần cập nhật.
     *   **QUAN TRỌNG VỀ CẬP NHẬT NHÂN VẬT:** Bạn PHẢI sử dụng tag chính xác dựa trên loại nhân vật. Kiểm tra các danh sách \`Đạo Lữ (JSON)\`, \`Nô Lệ (JSON)\`, \`Tù Nhân (JSON)\`, và \`Các NPC đã gặp (JSON)\` để xác định loại nhân vật trước khi tạo tag.
         *   **Với NPC thông thường:** Dùng \`[NPC_UPDATE: name="Tên NPC Hiện Tại", newName="Tên Mới (Tùy chọn)", affinity="=+X hoặc -=Y", description="Mô tả mới", realm="Cảnh giới mới", tuChat="Tư chất mới (TÙY CHỌN)", relationshipToPlayer="Mối quan hệ mới", statsJSON='{...}', ...]\`. Nên thường xuyên thay đổi \`relationshipToPlayer\` theo đúng với diễn biến và độ thiện cảm.
+        *   **QUAN TRỌNG - CẬP NHẬT MỤC TIÊU "SỐNG" CỦA NPC (TÍNH NĂNG MỚI):** Bạn có thể thay đổi mục tiêu của NPC để phản ứng với các sự kiện trong game, làm cho họ trở nên sống động hơn.
+            - **Khi nào nên cập nhật:**
+                - Khi NPC hoàn thành mục tiêu ngắn hạn (\`shortTermGoal\`).
+                - Khi một sự kiện lớn xảy ra làm thay đổi cuộc đời hoặc suy nghĩ của NPC (ví dụ: được người chơi cứu mạng, mất đi người thân, tìm thấy một cơ duyên lớn).
+            - **Cách cập nhật:**
+                - Sử dụng tham số \`shortTermGoal="Mục tiêu ngắn hạn mới"\` để đặt một mục tiêu mới.
+                - Sử dụng tham số \`longTermGoal="Mục tiêu dài hạn mới"\` để thay đổi cả tham vọng lớn của họ (chỉ làm điều này khi có sự kiện thực sự trọng đại).
+            - **Ví dụ:**
+                - Sau khi được người chơi cứu mạng khỏi yêu thú, NPC A (vốn có \`longTermGoal="Sống một cuộc đời bình an"\`) có thể thay đổi mục tiêu:
+                  \\\`[NPC_UPDATE: name="NPC A", longTermGoal="Báo đáp ân nhân, đi theo phò tá người chơi", shortTermGoal="Tìm một món quà để tặng cho người chơi"]\`\\\`
+                - Sau khi hoàn thành mục tiêu ngắn hạn "Bán hết lô hàng", một tiểu thương có thể có mục tiêu mới:
+                  \\\`[NPC_UPDATE: name="Tiểu Thương B", shortTermGoal="Nhập một lô hàng mới từ thành bên cạnh"]\`\\\`
         *   **Với Đạo Lữ (Vợ):** Dùng \`[WIFE_UPDATE: name="Tên Đạo Lữ", affinity=+=X, willpower=+=X, obedience=+=X]\`.
         *   **Với Nô Lệ:** Dùng \`[SLAVE_UPDATE: name="Tên Nô Lệ", affinity=+=X, willpower=+=X, obedience=+=X]\`.
         *   **Với Tù Nhân:** Dùng \`[PRISONER_UPDATE: name="Tên Tù Nhân", affinity=+=X, willpower=-=X, resistance=-=X, obedience=+=X]\`.
     *   \`[LOCATION_UPDATE: name="Tên Địa Điểm Hiện Tại", newName="Tên Mới (Tùy chọn)", description="Mô tả mới", isSafeZone=true/false, mapX=X, mapY=Y, locationType="CHỌN MỘT TRONG: ${Object.values(GameTemplates.LocationType).join(' | ')}", ...]\`
-    *   \`[LOCATION_CHANGE: name="Tên Địa Điểm Mới"]\`: BẮT BUỘC SỬ DỤNG: Dùng để di chuyển người chơi đến một địa điểm đã biết. Hệ thống sẽ tự động cập nhật vị trí hiện tại của người chơi. Kể cả khi không đi đâu thì cũng phải để tên địa điểm mới là tên địa điểm hiện tại.
+    *   \`[LOCATION_CHANGE: name="Tên Địa Điểm Mới"]\`: Dùng để di chuyển người chơi đến một địa điểm đã biết. Hệ thống sẽ tự động cập nhật vị trí hiện tại của người chơi.
+    *   **[QUY TẮC MỚI VỀ DI CHUYỂN NPC (CỰC KỲ QUAN TRỌNG)]**
+        - **Bất cứ khi nào bạn kể rằng một NPC di chuyển đến một địa điểm mới, bạn BẮT BUỘC PHẢI tạo ra tag \`[LOCATION_CHANGE: characterName="Tên Chính Xác Của NPC", destination="Tên Chính Xác Của Địa Điểm Đích"]\` để cập nhật vị trí của họ trong hệ thống game.**
+        - **Ví dụ:** Nếu bạn viết "Lý Mộc quay người rời đi, tiến về phía Khu Ngoại Môn.", bạn PHẢI thêm tag: \`[LOCATION_CHANGE: characterName="Lý Mộc", destination="Khu Ngoại Môn"]\`
+        - Việc này đảm bảo thông tin vị trí của NPC trong hồ sơ của họ luôn khớp với lời kể của bạn.
     *   \`[FACTION_UPDATE: name="Tên Phe Phái Hiện Tại", newName="Tên Mới (Tùy chọn)", description="Mô tả mới", alignment="Chính/Tà...", playerReputation="=X hoặc +=X hoặc -=X"]\`
     *   \`[WORLD_LORE_UPDATE: title="Tiêu Đề Lore Hiện Tại", newTitle="Tiêu Đề Mới (Tùy chọn)", content="Nội dung lore mới."]\``);
     }
-
+    
     if (config.sendDeletionRules) {
         rules.push(`**11. Tags Xóa Thông Tin Thế Giới (\`NPC_REMOVE\`, \`WIFE_REMOVE\`, \`SLAVE_REMOVE\`, \`PRISONER_REMOVE\`, \`FACTION_REMOVE\`, \`YEUTHU_REMOVE\`):**
     *   \`[NPC_REMOVE: name="Tên NPC Cần Xóa"]\`
@@ -288,13 +317,23 @@ const proactiveNpcRule = (config: AIContextConfig): string => {
     return `
 *   **A.3. GIAO THỨC "NPC CHỦ ĐỘNG"**
     *   Trong mỗi cảnh, **BẮT BUỘC có ít nhất MỘT NPC thực hiện một hành động chủ động** (tiếp cận người chơi, nói chuyện với NPC khác, đưa ra đề nghị, thể hiện cảm xúc...).
-    *   **TUYỆT ĐỐI KHÔNG** để tất cả NPC chỉ đứng yên.`;
+    *   **TUYỆT ĐỐI KHÔNG** để tất cả NPC chỉ đứng yên.
+*   **A.4. QUY TẮC MỚI VỀ TƯƠNG TÁC GIỮA CÁC NHÂN VẬT:**
+    *   Khi bạn mô tả một tương tác xã hội quan trọng giữa hai nhân vật (NPC, đạo lữ, nô lệ, v.v., **KHÔNG BAO GỒM NGƯỜI CHƠI**), bạn **BẮT BUỘC** phải sử dụng tag mới sau: \`[RELATIONSHIP_EVENT: source="Tên/ID Nhân Vật A", target="Tên/ID Nhân Vật B", reason="Mô tả sự kiện", affinity_change=X]\`.
+    *   **source:** Tên của người chủ động.
+    *   **target:** Tên của người bị động.
+    *   **reason:** Một mô tả ngắn gọn về hành động (ví dụ: "cãi nhau về tiền bạc", "tỏ tình nhưng bị từ chối", "cùng nhau uống rượu và kết giao", "dạy dỗ một bài học").
+    *   **affinity_change:** Sự thay đổi thiện cảm giữa hai người (số âm nếu tiêu cực, dương nếu tích cực).
+    *   **VÍ DỤ:** Nếu bạn kể "Lý Mộc và Lý Tứ tranh cãi nảy lửa về việc phân chia chiến lợi phẩm.", bạn phải thêm tag:
+        \`[RELATIONSHIP_EVENT: source="Lý Mộc", target="Lý Tứ", reason="tranh cãi nảy lửa về việc phân chia chiến lợi phẩm", affinity_change=-15]\`
+    *   Việc này giúp các nhân vật 'ghi nhớ' các tương tác xã hội với nhau, tạo ra một thế giới sâu sắc hơn.`;
 };
+
 
 const rumorMillRule = (config: AIContextConfig): string => {
     if (!config.sendRumorMillRule) return '';
     return `
-*   **A.4. CHỈ THỊ "CỐI XAY TIN ĐỒN"**
+*   **A.5. CHỈ THỊ "CỐI XAY TIN ĐỒN"**
     *   Nội dung hội thoại của NPC phải đa dạng (chính trị, kinh tế, sự kiện, nhân vật nổi tiếng, chuyện lạ).
     *   **ĐỘ TIN CẬY:** Tin đồn có thể là **chính xác**, **bị phóng đại**, hoặc **hoàn toàn sai lệch**.`;
 };

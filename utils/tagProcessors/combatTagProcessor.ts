@@ -1,8 +1,4 @@
-
-
-
-
-import { KnowledgeBase, GameMessage, NPC, YeuThu } from '../../types';
+import { KnowledgeBase, GameMessage, NPC, YeuThu, ActivityLogEntry } from '../../types';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
 
 const SIMILARITY_THRESHOLD = 0.8; // Match if 80% similar
@@ -70,6 +66,20 @@ export const processBeginCombat = (
             resolvedOpponentIds.push(opponent.id);
         } else {
             console.warn(`BEGIN_COMBAT: Could not find NPC or YeuThu with ID or name "${nameOrId}". No fuzzy match found above threshold.`);
+        }
+    });
+
+    resolvedOpponentIds.forEach(id => {
+        const opponent = allCombatants.find(c => c.id === id);
+        if (opponent && 'activityLog' in opponent) { // Check if it's an NPC-like entity with an activity log
+            if (!opponent.activityLog) opponent.activityLog = [];
+            const logEntry: ActivityLogEntry = {
+                turnNumber: newKb.playerStats.turn, // Combat starts at the current turn
+                description: `Đã giao chiến với ${newKb.worldConfig?.playerName || 'người chơi'}.`,
+                locationId: opponent.locationId || newKb.currentLocationId || 'unknown'
+            };
+            opponent.activityLog.push(logEntry);
+            if (opponent.activityLog.length > 30) opponent.activityLog.shift();
         }
     });
     

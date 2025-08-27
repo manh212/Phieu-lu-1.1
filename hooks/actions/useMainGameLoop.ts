@@ -19,7 +19,7 @@ interface UseMainGameLoopProps {
   currentPageDisplay: number;
   setCurrentPageDisplay: React.Dispatch<React.SetStateAction<number>>;
   executeSaveGame: (kbToSave: KnowledgeBase, messagesToSave: GameMessage[], saveName: string, existingId: string | null, isAuto: boolean) => Promise<string | null>;
-  logNpcAvatarPromptCallback: (prompt: string) => void;
+  logNpcAvatarPromptCallback?: (prompt: string) => void;
   setIsLoadingApi: React.Dispatch<React.SetStateAction<boolean>>;
   setApiErrorWithTimeout: (message: string | null) => void;
   resetApiError: () => void;
@@ -84,7 +84,7 @@ export const useMainGameLoop = (props: UseMainGameLoopProps) => {
                 const contextChunks = new Set<string>(extractEntityContextsFromString(action, knowledgeBase));
                 const queryEmbedding = await generateEmbeddings([action]);
                 if (queryEmbedding && queryEmbedding.length > 0) {
-                    const searchResults = searchVectors(queryEmbedding[0], knowledgeBase.ragVectorStore, ragTopK);
+                    const searchResults = searchVectors(queryEmbedding[0], knowledgeBase.ragVectorStore, ragTopK, knowledgeBase.playerStats.turn);
                     searchResults.forEach(ctx => contextChunks.add(ctx));
                 }
                 if (contextChunks.size > 0) {

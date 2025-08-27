@@ -1,7 +1,8 @@
 import { SUB_REALM_NAMES, ALL_FACTION_ALIGNMENTS, AVAILABLE_GENRES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, VIOLENCE_LEVELS, STORY_TONES, DEFAULT_NSFW_DESCRIPTION_STYLE, NSFW_DESCRIPTION_STYLES, WEAPON_TYPES_FOR_VO_Y, STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS } from '../constants';
 import * as GameTemplates from '../templates';
-import { GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, TU_CHAT_TIERS } from '../types';
+import { GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, TU_CHAT_TIERS, WorldSettings } from '../types';
 import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../templates';
+import { getNsfwGuidance } from './promptUtils';
 
 export const generateWorldDetailsPrompt = (
     storyIdea: string,
@@ -69,36 +70,21 @@ Tuổi thọ tối đa (\`maxThoNguyen\`) tăng mạnh theo từng đại cảnh
     ? `, realm="Cảnh giới NPC (BẮT BUỘC nếu có tu luyện). Hãy tạo ra sự đa dạng về cảnh giới (PHẢI ĐÚNG VỚI CHỦNG TỘC) cho các NPC để thế giới trở nên sống động. Ví dụ: một số NPC có thể là người thường không tu luyện (dùng cảnh giới '${VIETNAMESE.mortalRealmName}'), một số là tu sĩ cấp thấp ('Phàm Nhân Cửu Trọng', 'Luyện Khí Tam Trọng'), và một số khác là các cao thủ, trưởng lão, hoặc quái vật có cảnh giới cao hơn đáng kể ('Kim Đan Kỳ', 'Nguyên Anh Viên Mãn', v.v.). Cảnh giới PHẢI là một cấp độ hợp lệ từ Hệ Thống Cảnh Giới đã tạo ở trên (Không được phép ghi là không rõ)." tuChat="CHỌN MỘT TRONG: ${TU_CHAT_TIERS.join(' | ')}" (BẮT BUỘC nếu có tu luyện. Tư chất quyết định tốc độ tu luyện của NPC)" spiritualRoot="Linh căn của NPC (BẮT BUỘC, nếu không có thì ghi là 'Không có')", specialPhysique="Thể chất của NPC (BẮT BUỘC, nếu không có thì ghi là 'Không có')", thoNguyen=X, maxThoNguyen=Y (BẮT BUỘC. Áp dụng **HƯỚN DẪN VỀ THỌ NGUYÊN** đã cung cấp để tính toán.)`
     : `, thoNguyen=X, maxThoNguyen=Y (TÙY CHỌN. Logic: maxThoNguyen dựa trên loài người (~80). thoNguyen = maxThoNguyen - tuổi ước tính)`;
 
-  let nsfwGuidanceForWorldGen = "";
-  if (isNsfwIdea) {
-    const violenceGuidanceText = VIETNAMESE[`violenceLevelGuidance${currentViolenceLevel.replace(/\s+/g, '')}` as keyof typeof VIETNAMESE] || VIETNAMESE.violenceLevelGuidanceThucTe;
-    const storyToneGuidanceText = VIETNAMESE[`storyToneGuidance${currentStoryTone.replace(/\s+/g, '')}` as keyof typeof VIETNAMESE] || VIETNAMESE.storyToneGuidanceTrungTinh;
-    let nsfwStyleSpecificGuidance = "";
-    switch(currentNsfwStyle) {
-        case 'Hoa Mỹ': nsfwStyleSpecificGuidance = VIETNAMESE.nsfwGuidanceHoaMy; break;
-        case 'Trần Tục': nsfwStyleSpecificGuidance = VIETNAMESE.nsfwGuidanceTranTuc; break;
-        case 'Gợi Cảm': nsfwStyleSpecificGuidance = VIETNAMESE.nsfwGuidanceGoiCam; break;
-        case 'Mạnh Bạo (BDSM)': nsfwStyleSpecificGuidance = VIETNAMESE.nsfwGuidanceManhBaoBDSM; break;
-        default: nsfwStyleSpecificGuidance = VIETNAMESE.nsfwGuidanceHoaMy;
-    }
+    const tempWorldConfigForNsfw: Partial<WorldSettings> = {
+        nsfwMode: isNsfwIdea,
+        nsfwDescriptionStyle: nsfwStyle || DEFAULT_NSFW_DESCRIPTION_STYLE,
+        violenceLevel: violenceLevel || DEFAULT_VIOLENCE_LEVEL,
+        storyTone: storyTone || DEFAULT_STORY_TONE,
+    };
+    const nsfwGuidanceText = getNsfwGuidance(tempWorldConfigForNsfw as WorldSettings);
 
-
-    nsfwGuidanceForWorldGen = `
-- **Yêu cầu nội dung 18+:** BẬT. Hãy chủ động, ưu tiên và tích cực tạo ra các tên gọi, mô tả, tính cách, chi tiết NPC, kỹ năng, vật phẩm, và tri thức thế giới mang tính chất người lớn, nhạy cảm, và tình dục.
-- **Phong Cách Miêu Tả Tình Dục (Người dùng chọn):** ${currentNsfwStyle}.
-  ${nsfwStyleSpecificGuidance}
-- **Mức Độ Bạo Lực (Người dùng chọn):** ${currentViolenceLevel}.
-  ${violenceGuidanceText}
-- **Tông Màu Câu Chuyện (Người dùng chọn):** ${currentStoryTone}.
-  ${storyToneGuidanceText}
-Khi tạo các yếu tố thế giới (NPC, kỹ năng, vật phẩm, địa điểm, tri thức), hãy đảm bảo chúng phản ánh sự kết hợp của các lựa chọn 18+, phong cách miêu tả, mức độ bạo lực, và tông màu câu chuyện này.
-Ví dụ, nếu chọn phong cách "Mạnh Bạo (BDSM)", bạo lực "Cực Đoan" và tông "Đen Tối", các NPC có thể tàn bạo hơn, kỹ năng có thể ghê rợn hơn, vật phẩm có thể mang tính hủy diệt, và tri thức thế giới có thể u ám hơn. Ngược lại, nếu chọn phong cách "Hoa Mỹ", bạo lực "Nhẹ Nhàng" và "Tích Cực", các yếu tố nên tươi sáng hơn, dù vẫn có thể mang yếu tố 18+ tinh tế nếu được yêu cầu.
+    let nsfwGuidanceForWorldGen = nsfwGuidanceText;
+    if (isNsfwIdea) {
+        nsfwGuidanceForWorldGen += `
 [GENERATED_NSFW_DESCRIPTION_STYLE: text="${currentNsfwStyle}"]
 [GENERATED_VIOLENCE_LEVEL: text="${currentViolenceLevel}"]
 [GENERATED_STORY_TONE: text="${currentStoryTone}"]`;
-  } else {
-    nsfwGuidanceForWorldGen = "- **Yêu cầu nội dung 18+:** TẮT. Vui lòng tạo các yếu tố phù hợp với mọi lứa tuổi. Tránh các chủ đề nhạy cảm, bạo lực quá mức hoặc tình dục khi tạo các yếu tố này.";
-  }
+    }
 
   return `Bạn là một chuyên gia sáng tạo thế giới game nhập vai thể loại "${effectiveGenreDisplay}" bằng tiếng Việt.
 Nhiệm vụ của bạn là tạo ra các yếu tố khởi đầu cho một thế giới game dựa trên ý tưởng của người chơi.
@@ -192,7 +178,48 @@ ${lifespanInstruction}
             - **VÍ DỤ (Trang bị):** \`[GENERATED_ITEM: name="Hỏa Vân Kiếm", description="Thanh kiếm được rèn trong địa hỏa, ẩn chứa sức mạnh của lửa.", quantity=1, category="${GameTemplates.ItemCategory.EQUIPMENT}", rarity="${GameTemplates.ItemRarity.QUY_BAU}", itemRealm="Đấu Sư", equipmentType="${GameTemplates.EquipmentType.VU_KHI}", statBonusesJSON='{"sucTanCong": 50}', uniqueEffectsList="Sát thương gây hiệu ứng bỏng 10 dmg/s trong 3 giây"]\`
             - **VÍ DỤ (Đan dược):** \`[GENERATED_ITEM: name="Hồi Khí Tán", description="Đan dược giúp phục hồi đấu khí nhanh chóng.", quantity=5, category="${GameTemplates.ItemCategory.POTION}", rarity="${GameTemplates.ItemRarity.HIEM}", itemRealm="Đấu Giả", potionType="${GameTemplates.PotionType.HOI_PHUC}", effectsList="Hồi phục 200 đấu khí"]\`
         *   **NPC Khởi Đầu (9-10 NPC):** Phù hợp với thế giới và thể loại "${effectiveGenreDisplay}". Cung cấp thông tin chi tiết.
-            [GENERATED_NPC: name="Tên NPC (BẮT BUỘC)", gender="Nam/Nữ/Khác/Không rõ (BẮT BUỘC)", race="Chủng tộc (BẮT BUỘC, CHỈ ĐƯỢC TẠO RA NHỮNG CHỦNG TỘC CÓ HỆ THỐNG CẢNH GIỚI Ở TRÊN, TUYỆT ĐỐI KHÔNG CHỌN CHỦNG TỘC YÊU THÚ, ví dụ: Nhân Tộc, Yêu Tộc)", personality="Tính cách nổi bật (BẮT BUỘC)", initialAffinity=0 (SỐ NGUYÊN từ -100 đến 100), details="Vai trò, tiểu sử ngắn hoặc mối liên hệ với người chơi (BẮT BUỘC), phù hợp với thể loại '${effectiveGenreDisplay}'"${npcRealmInstruction}, relationshipToPlayer="Mối quan hệ (ví dụ: 'Mẹ Con', 'Sư phụ', 'Bằng hữu', 'Chủ nhân - nô lệ', 'Vợ chồng', 'Đạo lữ', 'Đối thủ', 'Bạn thời thơ ấu', 'Người bảo hộ', 'Chủ nợ'...)" (BẮT BUỘC nhưng khi npc và người chơi không có quan hệ gì thì để là 'Người xa lạ')]. NPC chỉ áp dụng cho người hoặc những loài có hình dạng tương tự người như tiên tộc, yêu tộc đã hóa hình,...
+            **Hướng Dẫn Tạo Mục Tiêu Cho NPC (CỰC KỲ QUAN TRỌNG):**
+            Khi tạo một NPC, bạn PHẢI suy nghĩ và tạo ra hai mục tiêu cho họ:
+            - **longTermGoal**: Một tham vọng, ước mơ lớn lao, định hướng cho cả cuộc đời NPC.
+            - **shortTermGoal**: Một mục tiêu nhỏ, cụ thể, có thể hoàn thành trong thời gian ngắn và thường là một bước để tiến tới mục tiêu dài hạn.
+            **Logic tạo mục tiêu:** Mục tiêu phải phù hợp với các yếu tố sau của NPC:
+            - **Tính cách (personality):** Một NPC "Tham lam" sẽ có mục tiêu về tiền bạc. Một NPC "Nhân hậu" sẽ có mục tiêu giúp đỡ người khác.
+            - **Bối cảnh/Vai trò (details):** Một "Luyện Khí Sư" sẽ có mục tiêu rèn đúc pháp bảo. Một "Vệ binh thành" sẽ có mục tiêu giữ gìn trật tự.
+            - **Chủng tộc (race):** Mục tiêu của một "Ma tu" sẽ khác một "Yêu tu".
+            - **Cảnh giới (realm):** Một tu sĩ Luyện Khí Kỳ chỉ muốn đột phá Trúc Cơ. Một Đại Năng Hóa Thần có thể có mục tiêu tìm hiểu bí mật phi thăng.
+            **Ví dụ cụ thể để AI học theo:**
+            - Một trưởng lão tông môn (details="Trưởng lão Hộ pháp của Thanh Vân Tông") có thể có: longTermGoal="Đột phá cảnh giới Hóa Thần", shortTermGoal="Tìm kiếm một đệ tử có tư chất tốt để truyền lại y bát".
+            - Một tiểu thương (details="Chủ một sạp hàng nhỏ ở chợ Nam") có thể có: longTermGoal="Trở thành phú hộ giàu nhất thành", shortTermGoal="Bán hết lô hàng vừa nhập về".
+            - Một Luyện Khí Sư (details="Thợ rèn vũ khí trong thành") có thể có: longTermGoal="Rèn ra một thanh pháp bảo Địa phẩm", shortTermGoal="Tìm kiếm khoáng thạch Hắc Thiết".
+            **QUY TẮC MỚI VỀ VỊ TRÍ NPC (LOGIC ƯU TIÊN THÔNG MINH):**
+            
+            **1. Ưu Tiên Gán Ghép (Prioritize Matching):**
+            Đầu tiên, hãy quét qua tất cả các địa điểm lớn mà bạn đang tạo bằng tag \`[GENERATED_LOCATION: ...]\`. Cố gắng tìm một địa điểm phù hợp nhất với vai trò, mô tả và mục tiêu của NPC.
+              *   *Ví dụ: Nếu bạn tạo NPC "Lý Trưởng Môn" và cũng đã tạo địa điểm \`[GENERATED_LOCATION: name="Thiên Linh Tông"]\`, hãy gán \`locationName="Thiên Linh Tông"\` cho NPC đó.*
+
+            **2. Sáng Tạo Có Điều Kiện (Conditional Creation):**
+            **CHỈ KHI** không có địa điểm nào trong danh sách trên thực sự phù hợp, bạn MỚI được phép tự do sáng tạo ra một địa điểm mới cho NPC đó.
+              *   *Ví dụ: Nếu bạn tạo NPC "Hắc Ma Tôn" nhưng chưa tạo ra địa điểm nào thuộc Ma giáo, bạn có thể tự tạo một địa điểm mới cho ông ta.*
+            
+            **3. RÀNG BUỘC SỐNG CÒN KHI SÁNG TẠO (CRITICAL CONSTRAINT ON CREATION):**
+            Khi bạn tự tạo một địa điểm mới, giá trị của \`locationName\` **TUYỆT ĐỐI PHẢI** là tên của một **khu vực lớn** (ví dụ: một tông môn, một thành phố, một khu rừng, một sơn cốc).
+            
+            **TUYỆT ĐỐI CẤM** tạo ra các địa điểm phụ, nhỏ lẻ bên trong một khu vực khác (ví dụ: 'Phòng của Trưởng môn', 'Quán trọ Phước Lai', 'Lò rèn của Lý Thiết Tượng'). Các địa điểm nhỏ này sẽ được tạo ra sau trong quá trình chơi game.
+            
+            **VÍ DỤ VỀ LUỒNG LÀM VIỆC ĐÚNG:**
+            *   **(Gán ghép):**
+                1.  Tạo địa điểm: \`[GENERATED_LOCATION: name="Thanh Vân Môn", ...]\`
+                2.  Gán cho NPC: \`[GENERATED_NPC: name="Đạo Huyền Chân Nhân", ..., locationName="Thanh Vân Môn"]\`
+            *   **(Sáng tạo mới):**
+                1.  (Không có địa điểm ma đạo nào được tạo trước đó)
+                2.  Tạo NPC Ma Tôn: \`[GENERATED_NPC: name="Hắc Ma Tôn", ..., locationName="Vạn Ma Quật"]\` (AI tự tạo ra "Vạn Ma Quật" vì nó là một khu vực lớn).
+
+            **VÍ DỤ VỀ LUỒNG LÀM VIỆC SAI (CẤM):**
+            *   \`[GENERATED_NPC: ..., locationName="Nghĩa Trang trong Khu Rừng Âm U"]\`
+            *   \`[GENERATED_NPC: ..., locationName="Phòng Trưởng Môn"]\`
+
+            **VÍ DỤ ĐỊNH DẠNG TAG MỚI CHO NPC:**
+            [GENERATED_NPC: name="Tên NPC (BẮT BUỘC)", gender="Nam/Nữ/Khác/Không rõ (BẮT BUỘC)", race="Chủng tộc (BẮT BUỘC, CHỈ ĐƯỢC TẠO RA NHỮNG CHỦNG TỘC CÓ HỆ THỐNG CẢNH GIỚI Ở TRÊN, TUYỆT ĐỐI KHÔNG CHỌN CHỦNG TỘC YÊU THÚ, ví dụ: Nhân Tộc, Yêu Tộc)", personality="Tính cách nổi bật (BẮT BUỘC)", longTermGoal="Mục tiêu dài hạn của NPC (BẮT BUỘC)", shortTermGoal="Mục tiêu ngắn hạn của NPC (BẮT BUỘC)", initialAffinity=0 (SỐ NGUYÊN từ -100 đến 100), details="Vai trò, tiểu sử ngắn hoặc mối liên hệ với người chơi (BẮT BUỘC), phù hợp với thể loại '${effectiveGenreDisplay}'"${npcRealmInstruction}, relationshipToPlayer="Mối quan hệ (ví dụ: 'Mẹ Con', 'Sư phụ', 'Bằng hữu', 'Chủ nhân - nô lệ', 'Vợ chồng', 'Đạo lữ', 'Đối thủ', 'Bạn thời thơ ấu', 'Người bảo hộ', 'Chủ nợ'...)" (BẮT BUỘC nhưng khi npc và người chơi không có quan hệ gì thì để là 'Người xa lạ'), locationName="Tên địa điểm do AI tạo (BẮT BUỘC)"]. NPC chỉ áp dụng cho người hoặc những loài có hình dạng tương tự người như tiên tộc, yêu tộc đã hóa hình,...
         *   **Yêu Thú Khởi Đầu (5-6 Yêu thú):**
             [GENERATED_YEUTHU: name="Tên Yêu Thú (BẮT BUỘC)", species="Loài (BẮT BUỘC)", description="Mô tả (BẮT BUỘC, CHỈ ĐƯỢC TẠO RA NHỮNG CHỦNG TỘC CÓ HỆ THỐNG CẢNH GIỚI Ở TRÊN)", realm="Cảnh giới Yêu Thú (BẮT BUỘC nếu có tu luyện)", isHostile=true (true/false)]
         *   **Tri Thức Thế Giới Khởi Đầu (7-8 tri thức):** Phù hợp với thế giới và thể loại "${effectiveGenreDisplay}".

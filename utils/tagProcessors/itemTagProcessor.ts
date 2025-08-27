@@ -259,7 +259,7 @@ export const processItemAcquired = (
         } else {
             newKb.inventory.push(newItem);
             // This is a new, unique item added to the inventory, so we vectorize it.
-            newVectorMetadata = { entityId: newItem.id, entityType: 'item', text: formatItemForEmbedding(newItem) };
+            newVectorMetadata = { entityId: newItem.id, entityType: 'item', text: formatItemForEmbedding(newItem, newKb), turnNumber: turnForSystemMessages };
         }
         systemMessages.push({
             id: 'item-acquired-' + newItem.id, type: 'system',
@@ -351,7 +351,7 @@ export const processItemUpdate = (
 
     if (!itemName || !field) { 
         console.warn("ITEM_UPDATE: Missing item name or field.", tagParams); 
-        return { updatedKb: newKb, systemMessages }; 
+        return { updatedKb: newKb, systemMessages, updatedVectorMetadata: undefined }; 
     }
     
     const foundMatch = findItemByName(newKb.inventory, itemName);
@@ -396,7 +396,8 @@ export const processItemUpdate = (
             updatedVectorMetadata = {
                 entityId: itemToUpdate.id,
                 entityType: 'item',
-                text: formatItemForEmbedding(itemToUpdate)
+                text: formatItemForEmbedding(itemToUpdate, newKb),
+                turnNumber: turnForSystemMessages
             };
         }
     } else {
