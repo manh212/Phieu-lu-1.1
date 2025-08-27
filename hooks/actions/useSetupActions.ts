@@ -230,13 +230,10 @@ export const useSetupActions = ({
           finalKbForDisplay.playerStats.maxThoNguyen = Number(settings.playerMaxThoNguyen);
       }
 
-      let turnForInitialMessages = 1;
-
-      // Ensure turn is at least 1 after initial tags.
-      if (finalKbForDisplay.playerStats.turn < 1) {
-          finalKbForDisplay.playerStats.turn = 1;
-      }
-      turnForInitialMessages = finalKbForDisplay.playerStats.turn;
+      // FIX: Force turn to 1 after initial setup, regardless of AI response.
+      // This ensures the game always starts on turn 1 for the player.
+      finalKbForDisplay.playerStats.turn = 1;
+      const turnForInitialMessages = 1;
       
       if (realmChangedByInitTag) {
           const reCalculatedStats = calculateRealmBaseStats(finalKbForDisplay.playerStats.realm, finalKbForDisplay.realmProgressionList, finalKbForDisplay.currentRealmBaseStats);
