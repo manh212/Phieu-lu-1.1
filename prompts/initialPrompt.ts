@@ -231,8 +231,9 @@ ${isCultivationEnabled ? `2.  **Xác nhận Hệ thống Cảnh giới:** Hệ t
         ${worldConfig.startingLore && worldConfig.startingLore.map(lore => `[WORLD_LORE_ADD: title="${lore.title.replace(/"/g, '\\"')}",content="${lore.content.replace(/"/g, '\\"')}"]`).join('\n')}
     LƯU Ý: Với kỹ năng, \\\`effect\\\` phải mô tả rõ hiệu ứng để game xử lý. Với NPC, \\\`description\\\` nên bao gồm thông tin về tính cách, vai trò. \\\`affinity\\\` là một số từ -100 đến 100.
     **QUAN TRỌNG:** Bất cứ khi nào nhân vật học được một kỹ năng mới, BẮT BUỘC phải sử dụng tag \\\`[SKILL_LEARNED]\`\\\` với đầy đủ thông tin nhất có thể.
+4.  **QUY TẮC VỀ THỜI GIAN (CHO LƯỢT ĐẦU TIÊN NÀY):** Bạn **TUYỆT ĐỐI KHÔNG** được sử dụng tag \\\`[CHANGE_TIME]\` trong phản hồi đầu tiên này. Thời gian đã được hệ thống game thiết lập chính xác tại thời điểm bắt đầu. Bạn chỉ cần tập trung vào việc tạo các tag khởi tạo khác và viết lời kể.
 
-**QUY TẮC SỬ DỤNG TAGS (CHUNG CHO MỌI LƯỢT KỂ TIẾP THEO, BAO GỒM CẢ LƯỢT ĐẦU TIÊN NÀY SAU KHI KHỞI TẠO):**
+**QUY TẮC SỬ DỤNG TAGS (DÀNH CHO CÁC LƯỢT KỂ TIẾP THEO):**
 ${continuePromptSystemRules(worldConfig, mainRealms, aiContextConfig, worldConfig.startingDate)}
 
 ${startTimeCommand}
