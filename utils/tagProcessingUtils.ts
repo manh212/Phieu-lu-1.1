@@ -1,3 +1,5 @@
+
+
 import { KnowledgeBase, GameMessage, VectorMetadata } from './../types';
 import { parseTagValue } from './parseTagValue'; 
 import { processPlayerStatsInit, processStatsUpdate, processRemoveBinhCanhEffect, processBecomeSpecialStatus, processPlayerSpecialStatusUpdate, processBecomeFree } from './tagProcessors/statsTagProcessor';
@@ -50,8 +52,10 @@ import { processMasterUpdate } from './tagProcessors/masterTagProcessor';
 import { processSlaveForSale, processAuctionSlave } from './tagProcessors/slaveTagProcessor';
 import { processEventTriggered, processEventUpdate, processEventDetailRevealed } from './tagProcessors/eventTagProcessor';
 import { processWorldConfigUpdate } from './tagProcessors/worldConfigTagProcessor';
-import { processRelationshipEvent } from './tagProcessors/relationshipEventTagProcessor'; // NEW
+import { processRelationshipEvent } from './tagProcessors/relationshipEventTagProcessor';
+import { processNpcActionLog } from './tagProcessors/npcActionLogTagProcessor';
 import { generateEmbeddings } from './../services/embeddingService';
+import { processNpcProduceItem, processNpcInventoryTransfer } from './tagProcessors/npcItemProcessor'; // NEW
 
 
 export { parseTagValue }; 
@@ -60,7 +64,6 @@ const addOrUpdateVectorMetadata = (
     metadataQueue: VectorMetadata[],
     newMetadata: VectorMetadata
 ) => {
-    // If an update for the same entity is already in the queue, replace it to avoid redundant processing
     const existingIndex = metadataQueue.findIndex(m => m.entityId === newMetadata.entityId);
     if (existingIndex > -1) {
         metadataQueue[existingIndex] = newMetadata;
@@ -94,11 +97,6 @@ export const performTagProcessing = async (
         const mainMatch = originalTag.match(/\[(.*?)(?::\s*(.*))?\]$/s);
         if (!mainMatch || !mainMatch[1]) {
              console.warn(`Malformed tag structure: ${originalTag}`);
-             allSystemMessages.push({
-                 id: 'malformed-tag-structure-' + Date.now(), type: 'system',
-                 content: `[DEBUG] Tag có cấu trúc không hợp lệ: ${originalTag}`,
-                 timestamp: Date.now(), turnNumber: turnForSystemMessages
-             });
              continue; 
         }
         const tagName = mainMatch[1].trim().toUpperCase();
@@ -119,6 +117,24 @@ export const performTagProcessing = async (
 
         try {
             switch (tagName) {
+                case 'NPC_PRODUCE_ITEM': {
+                    const { updatedKb, systemMessages } = processNpcProduceItem(workingKb, tagParams, turnForSystemMessages);
+                    workingKb = updatedKb;
+                    allSystemMessages.push(...systemMessages);
+                    break;
+                }
+                case 'NPC_INVENTORY_TRANSFER': {
+                    const { updatedKb, systemMessages } = processNpcInventoryTransfer(workingKb, tagParams, turnForSystemMessages);
+                    workingKb = updatedKb;
+                    allSystemMessages.push(...systemMessages);
+                    break;
+                }
+                case 'NPC_ACTION_LOG': {
+                    const { updatedKb, systemMessages } = processNpcActionLog(workingKb, tagParams, turnForSystemMessages);
+                    workingKb = updatedKb;
+                    allSystemMessages.push(...systemMessages);
+                    break;
+                }
                 case 'RELATIONSHIP_EVENT': {
                     const { updatedKb, systemMessages, newVectorMetadata } = processRelationshipEvent(workingKb, tagParams, turnForSystemMessages);
                     workingKb = updatedKb;
@@ -409,7 +425,7 @@ export const performTagProcessing = async (
                     workingKb = updatedKb;
                     break;
                 }
-                case 'BEGIN_COMBAT': { // Added
+                case 'BEGIN_COMBAT': { 
                     const { updatedKb, systemMessages } = processBeginCombat(workingKb, tagParams);
                     workingKb = updatedKb;
                     allSystemMessages.push(...systemMessages);
@@ -523,11 +539,6 @@ export const performTagProcessing = async (
                 default:
                     if (!tagName.startsWith("GENERATED_") && tagName !== "CHOICE") {
                         console.warn(`Unknown tag: "${tagName}". Full tag: "${originalTag}"`);
-                        allSystemMessages.push({
-                             id: 'unknown-tag-' + Date.now(), type: 'system',
-                             content: `[DEBUG] Tag không xác định: "${tagName}". Full tag: "${originalTag}" (Cleaned params: "${cleanedTagParameterString}")`,
-                             timestamp: Date.now(), turnNumber: turnForSystemMessages
-                         });
                     }
             }
         } catch (error) {
@@ -542,7 +553,6 @@ export const performTagProcessing = async (
 
     if (metadataToVectorize.length > 0) {
         try {
-            console.log(`[RAG Update] Bắt đầu vector hóa ${metadataToVectorize.length} thực thể...`);
             const textChunks = metadataToVectorize.map(m => m.text);
             const newVectors = await generateEmbeddings(textChunks);
             
@@ -556,17 +566,14 @@ export const performTagProcessing = async (
 
                 const existingIndex = workingKb.ragVectorStore!.metadata.findIndex(m => m.entityId === metadata.entityId);
                 if (existingIndex > -1) {
-                    // Update existing vector and metadata
                     workingKb.ragVectorStore!.vectors[existingIndex] = newVector;
                     workingKb.ragVectorStore!.metadata[existingIndex] = metadata;
                 } else {
-                    // Add new vector and metadata
                     workingKb.ragVectorStore!.vectors.push(newVector);
                     workingKb.ragVectorStore!.metadata.push(metadata);
                 }
             });
             
-            console.log(`[RAG Update] Vector hóa hoàn tất. VectorStore hiện có ${workingKb.ragVectorStore.vectors.length} vector.`);
         } catch (embeddingError) {
             console.error("Failed to update RAG VectorStore during tag processing:", embeddingError);
             allSystemMessages.push({
@@ -584,7 +591,7 @@ export const performTagProcessing = async (
         turnIncrementedByTag: turnIncrementedByAnyTag, 
         systemMessagesFromTags: allSystemMessages, 
         realmChangedByTag: realmChangedByAnyTag, 
-        appliedBinhCanhViaTag: false, // This was deprecated, keeping structure
+        appliedBinhCanhViaTag: false,
         removedBinhCanhViaTag: removedBinhCanhByAnyTag 
     };
 };

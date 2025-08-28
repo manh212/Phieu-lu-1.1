@@ -1,4 +1,5 @@
 
+
 import { KnowledgeBase, GameMessage, NPC, PlayerStats, ApiConfig, TuChatTier, ItemCategoryValues, VectorMetadata, GameLocation, ActivityLogEntry } from '../../types';
 import { NPCTemplate } from '../../templates';
 import { ALL_FACTION_ALIGNMENTS, VIETNAMESE, DEFAULT_MORTAL_STATS, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL, TU_CHAT_TIERS } from '../../constants';
@@ -552,6 +553,23 @@ export const processNpcUpdate = async (
                 if (npcToUpdate.activityLog.length > 30) npcToUpdate.activityLog.shift();
             } else if (newAffinity === null) {
                  console.warn(`NPC_UPDATE: Invalid affinity value "${affinityStr}" for NPC "${npcName}".`);
+            }
+        }
+        if (tagParams.currency) { // NEW: Handle currency update
+            const currencyStr = tagParams.currency.trim();
+            const currentCurrency = npcToUpdate.stats?.currency || 0;
+            let newCurrency: number | null = null;
+            if (currencyStr.startsWith('+=')) {
+                const change = parseInt(currencyStr.substring(2), 10);
+                if (!isNaN(change)) newCurrency = currentCurrency + change;
+            } else if (currencyStr.startsWith('-=')) {
+                const change = parseInt(currencyStr.substring(2), 10);
+                if (!isNaN(change)) newCurrency = currentCurrency - change;
+            }
+             if (newCurrency !== null && newCurrency !== currentCurrency) {
+                if (!npcToUpdate.stats) npcToUpdate.stats = {};
+                npcToUpdate.stats.currency = Math.max(0, newCurrency);
+                updatedFieldsCount++;
             }
         }
         if (tagParams.factionId) {

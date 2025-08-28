@@ -1,7 +1,5 @@
 
 
-
-
 import { HarmCategory, HarmBlockThreshold } from "@google/genai";
 import * as GameTemplates from './templates'; // Import all templates
 import { Operation as JsonPatchOperation } from 'fast-json-patch'; // Import Operation from fast-json-patch
@@ -530,13 +528,24 @@ export type NpcActionType =
     | 'UPDATE_GOAL'
     | 'UPDATE_PLAN'
     | 'IDLE'
+    // Base Actions
     | 'ACQUIRE_ITEM'
     | 'PRACTICE_SKILL'
     | 'USE_SKILL'
     | 'INTERACT_OBJECT'
-    | 'CONVERSE';
+    | 'CONVERSE'
+    // Multi-genre Actions
+    | 'BUILD_RELATIONSHIP'
+    | 'FORM_GROUP'
+    | 'INFLUENCE_FACTION'
+    | 'PRODUCE_ITEM'
+    | 'OFFER_SERVICE'
+    | 'RESEARCH_TOPIC'
+    | 'PATROL_AREA'
+    | 'COMMIT_CRIME';
 
 export type ActionParameters =
+    // Base Actions
     | { type: 'MOVE'; destinationLocationId: string; }
     | { type: 'INTERACT_NPC'; targetNpcId: string; intent: 'friendly' | 'hostile' | 'neutral' | 'transaction'; }
     | { type: 'UPDATE_GOAL'; newShortTermGoal: string; newLongTermGoal?: string; }
@@ -546,11 +555,21 @@ export type ActionParameters =
     | { type: 'PRACTICE_SKILL'; skillName: string; }
     | { type: 'USE_SKILL'; skillName: string; targetId?: string; }
     | { type: 'INTERACT_OBJECT'; objectName: string; locationId: string; }
-    | { type: 'CONVERSE'; targetNpcId: string; topic: string; };
+    | { type: 'CONVERSE'; targetNpcId: string; topic: string; }
+    // Multi-genre Actions
+    | { type: 'BUILD_RELATIONSHIP'; targetNpcId: string; relationshipType: 'friendship' | 'rivalry' | 'romance' | 'mentorship'; }
+    | { type: 'FORM_GROUP'; memberIds: string[]; groupGoal: string; durationTurns: number; }
+    | { type: 'INFLUENCE_FACTION'; factionId: string; influenceType: 'positive' | 'negative'; magnitude: number; }
+    | { type: 'PRODUCE_ITEM'; itemName: string; quantity: number; materialsUsed: string[]; }
+    | { type: 'OFFER_SERVICE'; serviceName: string; targetNpcId: string; price: number; }
+    | { type: 'RESEARCH_TOPIC'; topic: string; locationId: string; }
+    | { type: 'PATROL_AREA'; locationId: string; durationTurns: number; }
+    | { type: 'COMMIT_CRIME'; crimeType: 'theft'; targetNpcId: string; itemName: string; quantity: number; }
+    | { type: 'COMMIT_CRIME'; crimeType: 'smuggling' | 'assault'; target: string; };
 
 export interface NpcAction {
     type: NpcActionType;
-    parameters: any; // Using 'any' for simplicity, could be a discriminated union based on `type`
+    parameters: ActionParameters; 
     reason: string;
 }
 

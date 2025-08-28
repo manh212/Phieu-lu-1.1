@@ -1,3 +1,5 @@
+
+
 import { AIContextConfig } from '../types';
 
 // NEW: AI Context Settings Logic
@@ -56,6 +58,8 @@ export * from './tagProcessors/worldLoreTagProcessor';
 export * from './tagProcessors/eventTagProcessor'; // NEW
 export * from './tagProcessors/worldConfigTagProcessor'; // NEW
 export * from './tagProcessors/relationshipEventTagProcessor'; // NEW
+export * from './tagProcessors/npcActionLogTagProcessor'; // NEW
+export * from './tagProcessors/npcItemProcessor'; // NEW
 
 // Other Tag Processors
 export * from './tagProcessors/statusEffectTagProcessor'; 

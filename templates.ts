@@ -1,4 +1,4 @@
-import type { PlayerStats, TuChatTier, ProficiencyTier, Slave, ActivityLogEntry } from './types'; // PlayerStats will be defined in types.ts
+import type { PlayerStats, TuChatTier, ProficiencyTier, Slave, ActivityLogEntry, Item } from './types'; // PlayerStats will be defined in types.ts
 
 export const ItemRarity = {
     PHO_THONG: "Phổ Thông", HIEM: "Hiếm", QUY_BAU: "Quý Báu", CUC_PHAM: "Cực Phẩm", THAN_THOAI: "Thần Thoại", CHI_TON: "Chí Tôn"
@@ -110,7 +110,8 @@ export interface NPCTemplate {
     id: string; name: string; title?: string; gender?: 'Nam' | 'Nữ' | 'Khác' | 'Không rõ'; race?: string; description: string; personalityTraits: string[]; affinity: number; factionId?: string; avatarUrl?: string; relationshipToPlayer?: string; realm?: string; tuChat?: TuChatTier;
     spiritualRoot?: string; // New
     specialPhysique?: string; // New
-    isBinhCanh?: boolean; binhCanhCounter?: number; baseStatOverrides?: Partial<Pick<PlayerStats, 'baseMaxSinhLuc' | 'baseMaxLinhLuc' | 'baseSucTanCong' | 'baseMaxKinhNghiem'>>; stats?: Partial<PlayerStats>; skills?: string[]; inventoryIds?: string[];
+    isBinhCanh?: boolean; binhCanhCounter?: number; baseStatOverrides?: Partial<Pick<PlayerStats, 'baseMaxSinhLuc' | 'baseMaxLinhLuc' | 'baseSucTanCong' | 'baseMaxKinhNghiem'>>; stats?: Partial<PlayerStats>; skills?: string[]; 
+    personalInventory?: InventoryItem[]; // NEW: For personal belongings
     vendorType?: 'MarketStall' | 'SpecializedShop' | 'Auctioneer' | 'SlaveTrader'; vendorSlogan?: string; vendorBuysCategories?: ItemCategoryValues[]; 
     shopInventory?: InventoryItem[];
     slavesForSale?: Slave[]; // New
@@ -185,4 +186,19 @@ export interface SkillTemplate {
 }
 
 export interface LocationTemplate { id: string; name: string; description: string; mapIcon?: string; regionId?: string; parentLocationId?: string; travelConnections?: Record<string, { locationId: string; travelTimeTurns?: number; requirements?: string }>; discoverableNPCIds?: string[]; discoverableItemIds?: string[]; resourceNodes?: Array<{ materialId: string; quantityRange: [number, number]; respawnTimeTurns?: number; toolRequired?: string }>; isSafeZone?: boolean; environmentalEffects?: string[]; ambientSound?: string; requiredLevel?: number; requiredQuestIdForEntry?: string; visited?: boolean; locationType?: AnyLocationType; }
-export interface FactionTemplate { id: string; name: string; description: string; bannerIcon?: string; leaderNPCId?: string; keyNPCIds?: string[]; baseLocationId?: string; alliedFactionIds?: string[]; enemyFactionIds?: string[]; alignment: FactionAlignmentValues; playerReputation: number; reputationTiers?: Record<string, { threshold: number; title: string; benefits?: string[] }>; ranks?: Array<{ rankName: string; reputationRequired: number; benefits?: string[] }>; }
+export interface FactionTemplate { 
+    id: string; 
+    name: string; 
+    description: string; 
+    bannerIcon?: string; 
+    leaderNPCId?: string; 
+    keyNPCIds?: string[]; 
+    baseLocationId?: string; 
+    alliedFactionIds?: string[]; 
+    enemyFactionIds?: string[]; 
+    alignment: FactionAlignmentValues; 
+    playerReputation: number; 
+    npcReputations?: Record<string, number>; // NEW: Key is NPC ID, value is reputation
+    reputationTiers?: Record<string, { threshold: number; title: string; benefits?: string[] }>; 
+    ranks?: Array<{ rankName: string; reputationRequired: number; benefits?: string[] }>; 
+}

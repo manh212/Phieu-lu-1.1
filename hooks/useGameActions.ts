@@ -1,5 +1,6 @@
 
 
+
 import { useCallback, useState } from 'react';
 import { KnowledgeBase, GameMessage, WorldSettings, PlayerActionInputType, ResponseLength, GameScreen, RealmBaseStatDefinition, TurnHistoryEntry, AuctionState, Item, AuctionCommentaryEntry, FindLocationParams, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, NPC, CombatDispositionMap, AiChoice, ActivityLogEntry } from './../types';
 import { countTokens, getApiSettings as getGeminiApiSettings, handleCompanionInteraction, handlePrisonerInteraction, summarizeCompanionInteraction, summarizePrisonerInteraction, generateNonCombatDefeatConsequence, generateSlaveAuctionData, runSlaveAuctionTurn, runSlaveAuctioneerCall, generateVictoryConsequence, summarizeCombat, generateDefeatConsequence, generateCraftedItemViaAI, findLocationWithAI, generateNextTurn, generateRefreshedChoices, generateCopilotResponse, generateWorldTickUpdate } from './../services/geminiService';
@@ -124,7 +125,14 @@ export const useGameActions = (props: UseGameActionsProps) => {
 
               for (const action of plan.actions) {
                   const tag = convertNpcActionToTag(action, npc);
-                  if (tag) tagsToProcess.push(tag);
+                  // FIX: Handle the case where convertNpcActionToTag can return a string array.
+                  if (tag) {
+                      if (Array.isArray(tag)) {
+                          tagsToProcess.push(...tag);
+                      } else {
+                          tagsToProcess.push(tag);
+                      }
+                  }
                   
                   const logEntry: ActivityLogEntry = {
                       turnNumber: turnForMessages,

@@ -24,171 +24,50 @@ export const buildWorldTickPrompt = (
 - **Thời gian:** ${formatWorldDateToString(worldDate)}
 - **Vị trí người chơi:** ${playerLocation?.name || 'Không rõ'}
 - **Sự kiện toàn cục đang diễn ra:**
-${gameEvents.filter(e => e.status === 'Đang diễn ra').map(e => `  - ${e.title} tại ${discoveredLocations.find(l => l.id === e.locationId)?.name || 'Không rõ'}`).join('\n') || '  Không có sự kiện nào nổi bật.'}
-`;
+${gameEvents.filter(e => e.status === 'Đang diễn ra').map(e => `  - ${e.title} tại ${discoveredLocations.find(l => l.id === e.locationId)?.name || 'Không rõ'}`).join('\n') || '  Không có sự kiện lớn nào.'}
+- **Bối cảnh chung:** ${worldConfig?.settingDescription || ''}`;
 
-    // 3. Action Catalog & Output Schema
-    const actionCatalog = `
-**DANH MỤC HÀNH ĐỘNG & SCHEMA ĐẦU RA (BẮT BUỘC TUÂN THỦ):**
-Bạn phải trả về một đối tượng JSON có cấu trúc như sau: \`{ "npcUpdates": [ ... ] }\`.
-Trong đó, mỗi phần tử của mảng \`npcUpdates\` là một đối tượng \`NpcActionPlan\` cho một NPC:
-\`\`\`json
-{
-  "npcId": "string",
-  "actions": [
-    {
-      "type": "NpcActionType",
-      "parameters": { ... },
-      "reason": "string"
-    }
-  ]
-}
-\`\`\`
-- **reason (Lý do):** BẮT BUỘC phải có cho MỌI hành động. Giải thích ngắn gọn TẠI SAO NPC thực hiện hành động này.
-
-- **Các loại hành động (NpcActionType) và tham số (parameters) tương ứng:**
-  - **MOVE:** Di chuyển đến một địa điểm khác.
-    - \`parameters: { "destinationLocationId": "string" }\`
-  - **INTERACT_NPC:** Tương tác với một NPC khác.
-    - \`parameters: { "targetNpcId": "string", "intent": "friendly" | "hostile" | "neutral" | "transaction" }\`
-  - **UPDATE_GOAL:** Cập nhật mục tiêu của NPC.
-    - \`parameters: { "newShortTermGoal": "string", "newLongTermGoal"?: "string" }\`
-  - **UPDATE_PLAN:** Cập nhật kế hoạch của NPC để đạt mục tiêu ngắn hạn.
-    - \`parameters: { "newPlanSteps": ["string", ...] }\`
-  - **IDLE:** Không làm gì cả, nghỉ ngơi, hoặc quan sát.
-    - \`parameters: {}\`
-  - **ACQUIRE_ITEM:** Cố gắng có được một vật phẩm (mua, chế tạo, tìm kiếm).
-    - \`parameters: { "itemName": "string", "quantity": number }\`
-  - **PRACTICE_SKILL:** Luyện tập một kỹ năng.
-    - \`parameters: { "skillName": "string" }\`
-  - **USE_SKILL:** Sử dụng một kỹ năng (ví dụ: tự tu luyện, chế tạo).
-    - \`parameters: { "skillName": "string", "targetId"?: "string" }\`
-  - **INTERACT_OBJECT:** Tương tác với một đối tượng trong môi trường.
-    - \`parameters: { "objectName": "string", "locationId": "string" }\`
-  - **CONVERSE:** Trò chuyện phiếm với NPC khác về một chủ đề cụ thể.
-    - \`parameters: { "targetNpcId": "string", "topic": "string" }\`
-`;
-
-    // 4. Few-Shot Examples
-    const fewShotExamples = `
-**VÍ DỤ MẪU (FEW-SHOT EXAMPLES):**
-*   **Ví dụ 1:** Một NPC đang rất đói và có mục tiêu là sinh tồn.
-    *   **Hồ sơ NPC (Input):**
-        \`\`\`json
-        {
-          "id": "npc-A",
-          "name": "Lão Trương",
-          "locationId": "loc-quang-truong",
-          "personalityTraits": ["Thực dụng", "Cẩn thận"],
-          "needs": { "Sinh Tồn": 95, "An Toàn": 50 },
-          "longTermGoal": "Tích lũy đủ tiền để nghỉ hưu.",
-          "shortTermGoal": "Tìm thức ăn cho bữa tối.",
-          "currentPlan": ["Đi đến quán trọ."],
-          "mood": "Bực Bội",
-          "relationships": {},
-          "recentActivities": ["Đi dạo quanh quảng trường.", "Nói chuyện phiếm với một tiểu thương."]
-        }
-        \`\`\`
-    *   **Kế hoạch hành động (Output):**
-        \`\`\`json
-        {
-          "npcId": "npc-A",
-          "actions": [
-            {
-              "type": "MOVE",
-              "parameters": { "destinationLocationId": "loc-quan-tro" },
-              "reason": "Nhu cầu Sinh Tồn (đói) đang ở mức rất cao, cần di chuyển đến nơi có thức ăn."
-            },
-            {
-              "type": "ACQUIRE_ITEM",
-              "parameters": { "itemName": "Bánh bao", "quantity": 2 },
-              "reason": "Mua bánh bao để thỏa mãn cơn đói và đạt được mục tiêu ngắn hạn."
-            }
-          ]
-        }
-        \`\`\`
-
-*   **Ví dụ 2:** Một tu sĩ trẻ muốn nâng cao thực lực.
-    *   **Hồ sơ NPC (Input):**
-        \`\`\`json
-        {
-          "id": "npc-B",
-          "name": "Lâm Phong",
-          "locationId": "loc-khu-de-tu",
-          "personalityTraits": ["Chăm chỉ", "Tham vọng"],
-          "needs": { "Thực Lực": 80 },
-          "longTermGoal": "Trở thành Trưởng lão Nội môn.",
-          "shortTermGoal": "Đột phá Luyện Khí tầng 5.",
-          "currentPlan": ["Bế quan tu luyện Hỏa Vân Quyết."],
-          "mood": "Bình Thường",
-          "relationships": {},
-          "recentActivities": ["Nhận tài nguyên tu luyện hàng tháng.", "Hoàn thành một nhiệm vụ tông môn đơn giản."]
-        }
-        \`\`\`
-    *   **Kế hoạch hành động (Output):**
-        \`\`\`json
-        {
-          "npcId": "npc-B",
-          "actions": [
-            {
-              "type": "USE_SKILL",
-              "parameters": { "skillName": "Hỏa Vân Quyết" },
-              "reason": "Tu luyện công pháp để tăng kinh nghiệm, hướng tới mục tiêu đột phá Luyện Khí tầng 5."
-            },
-            {
-              "type": "IDLE",
-              "parameters": {},
-              "reason": "Sau khi tu luyện, cần thời gian để củng cố cảnh giới."
-            }
-          ]
-        }
-        \`\`\`
-`;
-
-    // 5. Negative Constraints
-    const negativeConstraints = `
-**NHỮNG ĐIỀU TUYỆT ĐỐI KHÔNG ĐƯỢC LÀM:**
-- **TUYỆT ĐỐI KHÔNG** điều khiển, di chuyển, hay quyết định hành động cho nhân vật của người chơi.
-- **TUYỆT ĐỐI KHÔNG** tạo ra NPC, vật phẩm, kỹ năng, hay địa điểm mới. Chỉ sử dụng những gì đã có trong bối cảnh.
-- **TUYỆT ĐỐI KHÔNG** thay đổi các thuộc tính không được phép (ví dụ: thay đổi chỉ số \`sinhLuc\` của NPC).
-`;
-
-    // 6. NPC Profiles
+    // 3. NPC Profiles to Tick
     const npcProfiles: NpcProfile[] = npcsToTick.map(npc => ({
         id: npc.id,
         name: npc.name,
         locationId: npc.locationId,
-        personalityTraits: npc.personalityTraits,
-        needs: npc.needs,
-        longTermGoal: npc.longTermGoal,
-        shortTermGoal: npc.shortTermGoal,
-        currentPlan: npc.currentPlan,
-        mood: npc.mood,
-        relationships: npc.relationships,
-        recentActivities: (npc.activityLog || [])
-            .slice(-5) // Get the last 5 entries
-            .map(log => log.description) // Extract only the description string
+        personalityTraits: npc.personalityTraits || [],
+        needs: npc.needs || {},
+        longTermGoal: npc.longTermGoal || 'Sống sót.',
+        shortTermGoal: npc.shortTermGoal || 'Tìm kiếm cơ hội.',
+        currentPlan: npc.currentPlan || [],
+        mood: npc.mood || 'Bình Thường',
+        relationships: npc.relationships || {},
+        recentActivities: (npc.activityLog || []).slice(-5).map(log => log.description)
     }));
-    
-    const npcProfilesSection = `
-**HỒ SƠ CÁC NPC CẦN XỬ LÝ TRONG LƯỢT NÀY:**
-(Lưu ý: "recentActivities" là "trí nhớ" của NPC về 5 hành động gần đây nhất. Hãy dùng nó để đảm bảo hành động tiếp theo có tính logic và kế thừa.)
+    const npcProfilesJson = JSON.stringify(npcProfiles, null, 2);
+
+    // 4. Action Catalog (from types.ts)
+    const actionCatalog = `
+**DANH SÁCH HÀNH ĐỘNG KHẢ DỤNG (ACTION CATALOG):**
+NPC có thể thực hiện các loại hành động sau. Hãy chọn hành động phù hợp nhất với tình huống.
+- **Di chuyển:** MOVE
+- **Tương tác:** INTERACT_NPC, CONVERSE, BUILD_RELATIONSHIP, FORM_GROUP, OFFER_SERVICE
+- **Mục tiêu & Kế hoạch:** UPDATE_GOAL, UPDATE_PLAN
+- **Vật phẩm & Kỹ năng:** ACQUIRE_ITEM, PRODUCE_ITEM, PRACTICE_SKILL, USE_SKILL, INTERACT_OBJECT
+- **Hành động khác:** IDLE, RESEARCH_TOPIC, PATROL_AREA, COMMIT_CRIME, INFLUENCE_FACTION`;
+
+    // 5. Final Task Instruction
+    const taskInstruction = `
+**NHIỆM VỤ CỦA BẠN:**
+Với mỗi NPC trong danh sách "NPC PROFILES TO TICK" dưới đây, hãy:
+1.  **Phân tích** trạng thái hiện tại của họ (tính cách, nhu cầu, mục tiêu, mối quan hệ, hoạt động gần đây).
+2.  **Xem xét** bối cảnh thế giới hiện tại.
+3.  **Quyết định** một chuỗi từ 1 đến 3 hành động logic mà họ sẽ thực hiện trong lượt này.
+4.  Với mỗi hành động, hãy cung cấp một **lý do (reason)** ngắn gọn giải thích tại sao họ lại làm vậy. Lý do này sẽ được dùng làm lời kể trong game.
+5.  **Trả về** kết quả dưới dạng một đối tượng JSON duy nhất có cấu trúc \`{"npcUpdates": [...]}\` theo đúng schema đã được cung cấp.
+
+**NPC PROFILES TO TICK:**
 \`\`\`json
-${JSON.stringify(npcProfiles, null, 2)}
+${npcProfilesJson}
 \`\`\`
 `;
 
-    // 7. Final Task
-    const finalTask = `**NHIỆM VỤ CUỐI CÙNG:**
-Dựa trên tất cả thông tin trên, hãy tạo ra một chuỗi hành động hợp lý, có mục đích cho **từng NPC** trong danh sách. Trả về kết quả dưới dạng một đối tượng JSON duy nhất theo đúng cấu trúc \`WorldTickUpdate\` đã mô tả.`;
-
-    return [
-        systemInstruction,
-        worldContext,
-        actionCatalog,
-        fewShotExamples,
-        negativeConstraints,
-        npcProfilesSection,
-        finalTask
-    ].join('\n\n---\n\n');
+    return `${systemInstruction}\n\n${worldContext}\n\n${actionCatalog}\n\n${taskInstruction}`;
 };

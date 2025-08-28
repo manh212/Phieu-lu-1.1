@@ -1,5 +1,5 @@
 // src/utils/livingWorldUtils.ts
-import { KnowledgeBase, NPC, WorldTickUpdate, NpcAction, NpcActionType } from '../types';
+import { KnowledgeBase, NPC, WorldTickUpdate, NpcAction, NpcActionPlan, ActivityLogEntry } from '../types';
 
 const TICK_CANDIDATE_COUNT = 25;
 
@@ -77,71 +77,7 @@ export const scheduleWorldTick = (kb: KnowledgeBase): NPC[] => {
 };
 
 /**
- * Validates the logical consistency of a parsed WorldTickUpdate object against the knowledge base.
- * @param update The parsed WorldTickUpdate object from the AI.
- * @param kb The current knowledge base.
- * @returns A validated (and potentially cleaned) WorldTickUpdate object. Invalid actions or plans are removed.
- */
-const validateWorldTickUpdate = (update: WorldTickUpdate, kb: KnowledgeBase): WorldTickUpdate => {
-    const validatedUpdates: WorldTickUpdate = { npcUpdates: [] };
-
-    for (const plan of update.npcUpdates) {
-        // 1. Check if NPC exists
-        const npc = kb.discoveredNPCs.find(n => n.id === plan.npcId);
-        if (!npc) {
-            console.warn(`[Living World Validation] AI returned a plan for a non-existent NPC ID: ${plan.npcId}. Skipping.`);
-            continue;
-        }
-
-        const validActions: NpcAction[] = [];
-        for (const action of plan.actions) {
-            let isValid = true;
-            const params = action.parameters;
-
-            // 2. Check for required parameters based on action type
-            switch (action.type) {
-                case 'MOVE':
-                    if (!params.destinationLocationId || !kb.discoveredLocations.find(l => l.id === params.destinationLocationId)) {
-                        console.warn(`[Living World Validation] Invalid MOVE action for ${npc.name}: destinationLocationId "${params.destinationLocationId}" does not exist.`);
-                        isValid = false;
-                    }
-                    break;
-                case 'INTERACT_NPC':
-                case 'CONVERSE':
-                    if (!params.targetNpcId || (!kb.discoveredNPCs.find(n => n.id === params.targetNpcId) && params.targetNpcId !== 'player')) {
-                        console.warn(`[Living World Validation] Invalid ${action.type} action for ${npc.name}: targetNpcId "${params.targetNpcId}" does not exist.`);
-                        isValid = false;
-                    }
-                    break;
-                case 'INTERACT_OBJECT':
-                     if (!params.locationId || !kb.discoveredLocations.find(l => l.id === params.locationId)) {
-                        console.warn(`[Living World Validation] Invalid INTERACT_OBJECT action for ${npc.name}: locationId "${params.locationId}" does not exist.`);
-                        isValid = false;
-                    }
-                     if (!params.objectName) {
-                        console.warn(`[Living World Validation] Invalid INTERACT_OBJECT action for ${npc.name}: missing objectName.`);
-                        isValid = false;
-                    }
-                    break;
-                // Add more checks for other action types as needed (e.g., skillName exists)
-            }
-            
-            if (isValid) {
-                validActions.push(action);
-            }
-        }
-
-        if (validActions.length > 0) {
-            validatedUpdates.npcUpdates.push({ ...plan, actions: validActions });
-        }
-    }
-
-    return validatedUpdates;
-}
-
-
-/**
- * Parses the JSON string from the Gemini API and validates its content.
+ * Parses the JSON string from the Gemini API, injects the necessary 'type' property for discriminated unions, and validates its content.
  * @param jsonString The raw JSON string from the API.
  * @param kb The current knowledge base for validation.
  * @returns A validated WorldTickUpdate object, or null if parsing/validation fails.
@@ -150,20 +86,25 @@ export const parseAndValidateResponse = (jsonString: string, kb: KnowledgeBase):
     try {
         const parsedObject = JSON.parse(jsonString);
 
-        // Basic structural check before deep validation
         if (!parsedObject || !Array.isArray(parsedObject.npcUpdates)) {
             console.error("[Living World] Parsed JSON is missing the required 'npcUpdates' array.", parsedObject);
             return null;
         }
-
-        const validatedObject = validateWorldTickUpdate(parsedObject as WorldTickUpdate, kb);
         
-        if (validatedObject.npcUpdates.length === 0 && parsedObject.npcUpdates.length > 0) {
-            console.warn("[Living World] All NPC action plans were invalid after validation. Returning null.");
-            return null;
+        // Shim to make ActionParameters a valid discriminated union
+        if (parsedObject.npcUpdates) {
+            parsedObject.npcUpdates.forEach((plan: NpcActionPlan) => {
+                if (plan.actions) {
+                    plan.actions.forEach((action: NpcAction) => {
+                        if (action.type && action.parameters && !(action.parameters as any).type) {
+                            (action.parameters as any).type = action.type;
+                        }
+                    });
+                }
+            });
         }
-
-        return validatedObject;
+        
+        return parsedObject as WorldTickUpdate;
 
     } catch (error) {
         console.error("Error parsing or validating World Tick JSON response:", error, "Raw JSON:", jsonString);
@@ -172,32 +113,82 @@ export const parseAndValidateResponse = (jsonString: string, kb: KnowledgeBase):
 };
 
 /**
- * Converts an NpcAction into a corresponding system tag string that the game engine can process.
+ * Converts an NpcAction into a corresponding system tag string (or strings) that the game engine can process.
+ * This is the core logic that translates AI decisions into game state changes.
  * @param action The NpcAction object from the AI.
  * @param npc The NPC performing the action.
- * @returns A system tag string (e.g., "[TAG: ...]") or null if the action has no direct tag equivalent.
+ * @returns A system tag string (e.g., "[TAG: ...]") or an array of strings, or null if no tag equivalent.
  */
-export const convertNpcActionToTag = (action: NpcAction, npc: NPC): string | null => {
+export const convertNpcActionToTag = (action: NpcAction, npc: NPC): string | string[] | null => {
     const params = action.parameters;
-    switch (action.type) {
+    
+    const createLogReason = (actionDescription: string): string => {
+        return `Hành động: ${actionDescription}. Lý do: ${action.reason.replace(/"/g, '\\"')}`;
+    };
+    
+    switch (params.type) {
         case 'MOVE':
-            // FIX: Generate the correct tag format that the updated processor expects.
             return `[LOCATION_CHANGE: characterName="${npc.name.replace(/"/g, '\\"')}", destination="${params.destinationLocationId}"]`;
-        case 'UPDATE_GOAL':
+        
+        case 'UPDATE_GOAL': {
             let goalTag = `[NPC_UPDATE: name="${npc.name.replace(/"/g, '\\"')}", shortTermGoal="${params.newShortTermGoal.replace(/"/g, '\\"')}"`;
             if (params.newLongTermGoal) {
                 goalTag += `, longTermGoal="${params.newLongTermGoal.replace(/"/g, '\\"')}"`;
             }
             goalTag += ']';
             return goalTag;
-        case 'UPDATE_PLAN':
+        }
+
+        case 'UPDATE_PLAN': {
             const planString = params.newPlanSteps.join('; ');
             return `[NPC_UPDATE: name="${npc.name.replace(/"/g, '\\"')}", currentPlan="${planString.replace(/"/g, '\\"')}" ]`;
-        // Other actions like IDLE, INTERACT_NPC, ACQUIRE_ITEM, etc.,
-        // are handled through narration via the world_event message system
-        // and do not produce a direct system tag for game state change.
-        // The special case for INTERACT_NPC with player is handled in `executeWorldTick`.
+        }
+
+        case 'BUILD_RELATIONSHIP': {
+            const affinityChange = params.relationshipType === 'rivalry' ? -10 : 10;
+            const reasonText = `chủ động xây dựng mối quan hệ ${params.relationshipType}`.replace(/"/g, '\\"');
+            return `[RELATIONSHIP_EVENT: source="${npc.name.replace(/"/g, '\\"')}", target="${params.targetNpcId}", reason="${reasonText}", affinity_change=${affinityChange}]`;
+        }
+        
+        case 'INFLUENCE_FACTION': {
+            const repChange = params.influenceType === 'positive' ? params.magnitude : -params.magnitude;
+            return `[FACTION_UPDATE: name="${params.factionId.replace(/"/g, '\\"')}", npcIdForReputationUpdate="${npc.id}", reputationChange=${repChange}]`;
+        }
+
+        case 'PRODUCE_ITEM': {
+            // This now becomes an executable action instead of just a log.
+            return `[NPC_PRODUCE_ITEM: npcId="${npc.id}", itemName="${params.itemName.replace(/"/g, '\\"')}", quantity=${params.quantity}]`;
+        }
+
+        case 'OFFER_SERVICE': {
+             // This becomes two executable actions, one for each NPC's currency.
+            const serviceReceiverTag = `[NPC_UPDATE: name="${params.targetNpcId.replace(/"/g, '\\"')}", currency=-=${params.price}]`;
+            const serviceProviderTag = `[NPC_UPDATE: name="${npc.name.replace(/"/g, '\\"')}", currency=+=${params.price}]`;
+            return [serviceReceiverTag, serviceProviderTag];
+        }
+        
+        case 'COMMIT_CRIME': {
+            if (params.crimeType === 'theft') {
+                 // This becomes an inventory transfer action.
+                return `[NPC_INVENTORY_TRANSFER: fromNpcId="${params.targetNpcId}", toNpcId="${npc.id}", itemName="${params.itemName.replace(/"/g, '\\"')}", quantity=${params.quantity}]`;
+            } else {
+                 const logReason = createLogReason(`Phạm tội ${params.crimeType} nhắm vào ${params.target}`);
+                 return `[NPC_ACTION_LOG: npcName="${npc.name.replace(/"/g, '\\"')}", reason="${logReason}"]`;
+            }
+        }
+
+        // Actions that are purely narrative and don't change state are logged.
+        case 'RESEARCH_TOPIC':
+        case 'PATROL_AREA':
+        case 'INTERACT_NPC':
+        case 'IDLE':
+        case 'ACQUIRE_ITEM':
+        case 'PRACTICE_SKILL':
+        case 'USE_SKILL':
+        case 'INTERACT_OBJECT':
+        case 'CONVERSE':
         default:
-            return null;
+             const simpleLogReason = createLogReason(`Thực hiện hành động '${action.type}'`);
+             return `[NPC_ACTION_LOG: npcName="${npc.name.replace(/"/g, '\\"')}", reason="${simpleLogReason}"]`;
     }
 };

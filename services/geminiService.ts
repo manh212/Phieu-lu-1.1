@@ -1,9 +1,5 @@
 
 
-
-
-
-
 import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, CountTokensResponse, Type } from "@google/genai";
 import { KnowledgeBase, ParsedAiResponse, AiChoice, WorldSettings, ApiConfig, SafetySetting, PlayerActionInputType, ResponseLength, StartingSkill, StartingItem, StartingNPC, StartingLore, GameMessage, GeneratedWorldElements, StartingLocation, StartingFaction, PlayerStats, Item as ItemType, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, TU_CHAT_TIERS, AuctionItem, GameLocation, AuctionState, WorldDate, CongPhapGrade, CongPhapType, LinhKiActivationType, LinhKiCategory, ProfessionGrade, ProfessionType, FindLocationParams, NPC, Skill, Prisoner, Wife, Slave, CombatEndPayload, RaceCultivationSystem, StartingYeuThu, AuctionSlave, WorldTickUpdate } from '../types'; 
 import { PROMPT_FUNCTIONS } from '../prompts';
@@ -1109,21 +1105,20 @@ const worldTickUpdateSchema = {
               properties: {
                 type: { 
                   type: Type.STRING,
-                  description: "Loại hành động (ví dụ: MOVE, INTERACT_NPC)."
+                  description: "Loại hành động (ví dụ: MOVE, INTERACT_NPC, ACQUIRE_ITEM)."
                 },
                 parameters: { 
                   type: Type.OBJECT,
                   description: "Các tham số cần thiết cho hành động, cấu trúc phụ thuộc vào 'type'.",
+                  // A comprehensive list of all possible parameters for all actions
                   properties: {
+                    // Base Actions
                     destinationLocationId: { type: Type.STRING },
                     targetNpcId: { type: Type.STRING },
                     intent: { type: Type.STRING },
                     newShortTermGoal: { type: Type.STRING },
                     newLongTermGoal: { type: Type.STRING },
-                    newPlanSteps: {
-                      type: Type.ARRAY,
-                      items: { type: Type.STRING }
-                    },
+                    newPlanSteps: { type: Type.ARRAY, items: { type: Type.STRING } },
                     itemName: { type: Type.STRING },
                     quantity: { type: Type.NUMBER },
                     skillName: { type: Type.STRING },
@@ -1131,6 +1126,19 @@ const worldTickUpdateSchema = {
                     objectName: { type: Type.STRING },
                     locationId: { type: Type.STRING },
                     topic: { type: Type.STRING },
+                    // Multi-genre Actions
+                    relationshipType: { type: Type.STRING },
+                    memberIds: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    groupGoal: { type: Type.STRING },
+                    durationTurns: { type: Type.NUMBER },
+                    factionId: { type: Type.STRING },
+                    influenceType: { type: Type.STRING },
+                    magnitude: { type: Type.NUMBER },
+                    materialsUsed: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    serviceName: { type: Type.STRING },
+                    price: { type: Type.NUMBER },
+                    crimeType: { type: Type.STRING },
+                    target: { type: Type.STRING },
                   }
                 },
                 reason: { 
