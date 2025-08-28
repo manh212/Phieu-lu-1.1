@@ -1,6 +1,6 @@
 // src/prompts/architectPrompt.ts
-import * as GameTemplates from '../../templates';
-import { STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS } from '../../constants';
+import * as GameTemplates from '../templates';
+import { STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS } from '../constants';
 
 
 export const generateArchitectPrompt = (
