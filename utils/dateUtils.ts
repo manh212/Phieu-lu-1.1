@@ -59,6 +59,23 @@ export const worldDateToTotalDays = (date: WorldDate): number => {
 };
 
 /**
+ * Converts a WorldDate to a total number of minutes since year 1, month 1, day 1.
+ * This is used for precise time difference calculations.
+ * @param date The WorldDate to convert.
+ * @returns The total number of minutes.
+ */
+export const worldDateToTotalMinutes = (date: WorldDate): number => {
+    let totalMinutes = 0;
+    totalMinutes += date.year * 360 * 24 * 60;
+    totalMinutes += (date.month - 1) * 30 * 24 * 60;
+    totalMinutes += (date.day - 1) * 24 * 60;
+    totalMinutes += date.hour * 60;
+    totalMinutes += date.minute;
+    return totalMinutes;
+};
+
+
+/**
  * Calculates the difference in days between two WorldDate objects.
  * This function is now exported for wider use.
  * @param date1 The first date.

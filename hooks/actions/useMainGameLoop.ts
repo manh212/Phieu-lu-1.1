@@ -1,10 +1,11 @@
 
+
 import { useCallback, useState } from 'react';
 import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, FindLocationParams } from '../../types';
-import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS, LIVING_WORLD_TICK_INTERVAL } from '../../constants';
+import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS, LIVING_WORLD_TICK_INTERVAL_HOURS } from '../../constants';
 import { generateNextTurn, summarizeTurnHistory, generateCityEconomy, generateGeneralSubLocations, findLocationWithAI, getApiSettings } from '../../services/geminiService';
 import { generateEmbeddings } from '../../services/embeddingService';
-import { performTagProcessing, addTurnHistoryEntryRaw, getMessagesForPage, calculateEffectiveStats, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, handleLocationEntryEvents, searchVectors, extractEntityContextsFromString } from '../../utils/gameLogicUtils';
+import { performTagProcessing, addTurnHistoryEntryRaw, getMessagesForPage, calculateEffectiveStats, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, handleLocationEntryEvents, searchVectors, extractEntityContextsFromString, worldDateToTotalMinutes } from '../../utils/gameLogicUtils';
 import * as GameTemplates from '../../templates';
 
 interface UseMainGameLoopProps {
@@ -122,7 +123,12 @@ export const useMainGameLoop = (props: UseMainGameLoopProps) => {
             finalKbForThisTurn = npcProgressionResult.updatedKb;
             combinedSystemMessages.push(...npcProgressionResult.systemMessages);
             
-            const shouldTickWorld = (finalKbForThisTurn.playerStats.turn % LIVING_WORLD_TICK_INTERVAL === 0) && finalKbForThisTurn.playerStats.turn > finalKbForThisTurn.lastWorldTickTurn;
+            const lastTickDate = finalKbForThisTurn.lastWorldTickDate;
+            const currentDate = finalKbForThisTurn.worldDate;
+            const minutesSinceLastTick = worldDateToTotalMinutes(currentDate) - worldDateToTotalMinutes(lastTickDate);
+            const hoursSinceLastTick = minutesSinceLastTick / 60;
+            const shouldTickWorld = hoursSinceLastTick >= LIVING_WORLD_TICK_INTERVAL_HOURS;
+
             if (shouldTickWorld) {
                 const { updatedKb, worldEventMessages } = await executeWorldTick(finalKbForThisTurn);
                 finalKbForThisTurn = updatedKb;

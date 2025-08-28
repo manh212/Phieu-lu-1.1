@@ -59,5 +59,5 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   
   // NEW: Living World State
   isWorldTicking: false,
-  lastWorldTickTurn: 0,
+  lastWorldTickDate: { day: 1, month: 1, year: 1, hour: 0, minute: 0 },
 };

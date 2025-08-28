@@ -1,11 +1,11 @@
 export const GAME_TITLE = "Phiêu lưu cùng AI";
-export const APP_VERSION = "1.5.1";
+export const APP_VERSION = "1.6";
 export const TURNS_PER_PAGE = 20;
 export const MAX_TURN_HISTORY_LENGTH = 5;
 export const KEYFRAME_INTERVAL = 20;
 export const MAX_TOKENS_FANFIC = 800000;
 export const SPECIAL_EVENT_INTERVAL_TURNS = 15; // <<-- NEW: Defines how often a special story event should occur.
-export const LIVING_WORLD_TICK_INTERVAL = 5; // NPCs and world state progress every 5 turns
+export const LIVING_WORLD_TICK_INTERVAL_HOURS = 8; // NPCs and world state progress every 8 hours (minimum)
 
 // Save System Constants
 export const AUTO_SAVE_INTERVAL_TURNS = 5;

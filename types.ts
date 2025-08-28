@@ -504,7 +504,7 @@ export interface KnowledgeBase {
   
   // NEW: Living World State
   isWorldTicking: boolean;
-  lastWorldTickTurn: number;
+  lastWorldTickDate: WorldDate;
 }
 
 // --- NEW: Living World JSON Schema Definitions ---

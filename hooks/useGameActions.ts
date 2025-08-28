@@ -1,6 +1,5 @@
 
 
-
 import { useCallback, useState } from 'react';
 import { KnowledgeBase, GameMessage, WorldSettings, PlayerActionInputType, ResponseLength, GameScreen, RealmBaseStatDefinition, TurnHistoryEntry, AuctionState, Item, AuctionCommentaryEntry, FindLocationParams, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, NPC, CombatDispositionMap, AiChoice, ActivityLogEntry } from './../types';
 import { countTokens, getApiSettings as getGeminiApiSettings, handleCompanionInteraction, handlePrisonerInteraction, summarizeCompanionInteraction, summarizePrisonerInteraction, generateNonCombatDefeatConsequence, generateSlaveAuctionData, runSlaveAuctionTurn, runSlaveAuctioneerCall, generateVictoryConsequence, summarizeCombat, generateDefeatConsequence, generateCraftedItemViaAI, findLocationWithAI, generateNextTurn, generateRefreshedChoices, generateCopilotResponse, generateWorldTickUpdate } from './../services/geminiService';
@@ -9,7 +8,7 @@ import { useAuctionActions } from './actions/useAuctionActions';
 import { useMainGameLoop } from './actions/useMainGameLoop';
 import { useCultivationActions } from './actions/useCultivationActions';
 import { performTagProcessing } from '../utils/tagProcessingUtils';
-import { VIETNAMESE, LIVING_WORLD_TICK_INTERVAL } from '../constants';
+import { VIETNAMESE, LIVING_WORLD_TICK_INTERVAL_HOURS } from '../constants';
 import { calculateSlaveValue, scheduleWorldTick, PROMPT_FUNCTIONS, parseAndValidateResponse, convertNpcActionToTag, searchVectors } from '../utils/gameLogicUtils';
 
 interface UseGameActionsProps {
@@ -91,7 +90,10 @@ export const useGameActions = (props: UseGameActionsProps) => {
           setLastScoredNpcsForTick(npcsToTick.map(npc => ({ npc, score: npc.tickPriorityScore })));
 
           if (npcsToTick.length === 0) {
-              return { updatedKb: kbForTick, worldEventMessages: [] };
+              // Even if no NPCs act, we update the tick date to prevent immediate re-triggering.
+              const updatedKb = JSON.parse(JSON.stringify(kbForTick));
+              updatedKb.lastWorldTickDate = updatedKb.worldDate;
+              return { updatedKb, worldEventMessages: [] };
           }
 
           const prompt = PROMPT_FUNCTIONS.livingWorldTick(kbForTick, npcsToTick);
@@ -104,7 +106,9 @@ export const useGameActions = (props: UseGameActionsProps) => {
           if (!worldUpdate) {
               console.warn("World tick update was null after parsing/validation. Skipping this tick.");
               showNotification("AI phản hồi không hợp lệ cho thế giới sống.", "warning");
-              return { updatedKb: kbForTick, worldEventMessages: [] };
+               const updatedKb = JSON.parse(JSON.stringify(kbForTick));
+               updatedKb.lastWorldTickDate = updatedKb.worldDate;
+              return { updatedKb, worldEventMessages: [] };
           }
 
           let workingKb = JSON.parse(JSON.stringify(kbForTick));
@@ -158,7 +162,7 @@ export const useGameActions = (props: UseGameActionsProps) => {
               }
           }
           
-          workingKb.lastWorldTickTurn = turnForMessages;
+          workingKb.lastWorldTickDate = workingKb.worldDate;
           
           return { updatedKb: workingKb, worldEventMessages };
 
@@ -166,7 +170,9 @@ export const useGameActions = (props: UseGameActionsProps) => {
           console.error("An error occurred during executeWorldTick:", error);
           const errorMsg = error instanceof Error ? error.message : "Lỗi không xác định trong quá trình thế giới vận động.";
           showNotification(`Lỗi World Tick: ${errorMsg}`, "error");
-          return { updatedKb: kbForTick, worldEventMessages: [] };
+          const updatedKb = JSON.parse(JSON.stringify(kbForTick));
+          updatedKb.lastWorldTickDate = updatedKb.worldDate;
+          return { updatedKb, worldEventMessages: [] };
       } finally {
         setKnowledgeBase(prev => ({...prev, isWorldTicking: false}));
       }
