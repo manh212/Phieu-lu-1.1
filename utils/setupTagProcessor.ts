@@ -20,6 +20,7 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
         'playerName', 'playerGender', 'playerRace', 'playerPersonality', 'playerBackstory',
         'playerGoal', 'playerStartingTraits', 'playerSpiritualRoot', 'playerSpecialPhysique',
         'playerThoNguyen', 'playerMaxThoNguyen', 'startingCurrency', 'nsfwMode',
+        // FIX: Corrected typo from customNswPrompt to customNsfwPrompt.
         'nsfwDescriptionStyle', 'customNsfwPrompt', 'violenceLevel', 'storyTone',
         'genre', 'customGenreName', 'isCultivationEnabled', 'yeuThuRealmSystem',
         'canhGioiKhoiDau', 'playerAvatarUrl', 'writingStyleGuide'
@@ -37,9 +38,9 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
             // 3. Process based on the tag name.
             switch (tagName) {
                 // --- NPC HANDLING ---
-                case 'SETUP_ADD_NPC':
+                case 'SETUP_ADD_NPC': {
                     const newNpc: StartingNPC = {
-                        id: `npc-${Date.now()}-${Math.random()}`,
+                        id: `npc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         name: params.name || 'NPC Mới',
                         personality: params.personality || '',
                         initialAffinity: parseInt(params.initialAffinity, 10) || 0,
@@ -60,7 +61,8 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                     if (!newSettings.startingNPCs) newSettings.startingNPCs = [];
                     newSettings.startingNPCs.push(newNpc);
                     break;
-                case 'SETUP_EDIT_NPC':
+                }
+                case 'SETUP_EDIT_NPC': {
                     if (!params.id) break;
                     const npcIndex = newSettings.startingNPCs.findIndex((npc: StartingNPC) => npc.id === params.id);
                     if (npcIndex > -1) {
@@ -82,71 +84,131 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                         });
                     }
                     break;
+                }
                 case 'SETUP_DELETE_NPC':
                     if (!params.id) break;
                     newSettings.startingNPCs = newSettings.startingNPCs.filter((npc: StartingNPC) => npc.id !== params.id);
                     break;
 
                 // --- ITEM HANDLING ---
-                case 'SETUP_ADD_ITEM':
+                case 'SETUP_ADD_ITEM': {
                     const newItem: StartingItem = {
-                        id: `item-${Date.now()}-${Math.random()}`,
+                        id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         name: params.name || 'Vật phẩm mới',
                         description: params.description || '',
                         quantity: parseInt(params.quantity, 10) || 1,
                         category: params.category as any,
+                        rarity: params.rarity as any,
+                        itemRealm: params.itemRealm,
                         value: params.value ? parseInt(params.value, 10) : undefined,
                     };
+                     if (newItem.category === GameTemplates.ItemCategory.EQUIPMENT) {
+                        try {
+                            newItem.equipmentDetails = {
+                                type: params.equipmentType as any,
+                                slot: params.slot,
+                                statBonuses: params.statBonusesJSON ? JSON.parse(params.statBonusesJSON) : {},
+                                uniqueEffects: params.uniqueEffectsList ? params.uniqueEffectsList.split(';').filter(Boolean) : [],
+                            };
+                        } catch (e) { console.error("Error parsing equipmentDetails for new item:", e, params); }
+                    }
+                    if (newItem.category === GameTemplates.ItemCategory.POTION) {
+                         newItem.potionDetails = {
+                            type: params.potionType as any,
+                            effects: params.effectsList ? params.effectsList.split(';').filter(Boolean) : [],
+                            durationTurns: params.durationTurns ? parseInt(params.durationTurns, 10) : undefined,
+                            cooldownTurns: params.cooldownTurns ? parseInt(params.cooldownTurns, 10) : undefined,
+                        };
+                    }
+                    // Add other categories here...
                     if (!newSettings.startingItems) newSettings.startingItems = [];
                     newSettings.startingItems.push(newItem);
                     break;
-                case 'SETUP_EDIT_ITEM':
+                }
+                case 'SETUP_EDIT_ITEM': {
                     if (!params.id) break;
                     const itemIndex = newSettings.startingItems.findIndex((item: StartingItem) => item.id === params.id);
                     if (itemIndex > -1) {
                         const itemToUpdate = newSettings.startingItems[itemIndex];
                         Object.keys(params).forEach(key => {
                             if (key === 'id') return;
-
                             const valueStr = params[key];
                             const typedKey = key as keyof StartingItem;
 
                             if (typedKey === 'quantity' || typedKey === 'value') {
                                 const numValue = parseInt(valueStr, 10);
-                                if (!isNaN(numValue)) {
-                                    (itemToUpdate as any)[typedKey] = numValue;
-                                }
+                                if (!isNaN(numValue)) (itemToUpdate as any)[typedKey] = numValue;
+                            } else if (key === 'statBonusesJSON') {
+                                try {
+                                    if (!itemToUpdate.equipmentDetails) itemToUpdate.equipmentDetails = {};
+                                    itemToUpdate.equipmentDetails.statBonuses = JSON.parse(valueStr);
+                                } catch (e) { console.error(`Error parsing statBonusesJSON for item edit:`, e, valueStr); }
+                            } else if (key === 'uniqueEffectsList') {
+                                if (!itemToUpdate.equipmentDetails) itemToUpdate.equipmentDetails = {};
+                                itemToUpdate.equipmentDetails.uniqueEffects = valueStr.split(';').filter(Boolean);
+                            } else if (key === 'effectsList') {
+                                if (!itemToUpdate.potionDetails) itemToUpdate.potionDetails = {};
+                                itemToUpdate.potionDetails.effects = valueStr.split(';').filter(Boolean);
                             } else {
                                  (itemToUpdate as any)[typedKey] = valueStr;
                             }
                         });
                     }
                     break;
+                }
                 case 'SETUP_DELETE_ITEM':
                     if (!params.id) break;
                     newSettings.startingItems = newSettings.startingItems.filter((item: StartingItem) => item.id !== params.id);
                     break;
                 
                 // --- SKILL HANDLING ---
-                case 'SETUP_ADD_SKILL':
+                case 'SETUP_ADD_SKILL': {
+                    const skillType = params.skillType as GameTemplates.SkillTypeValues | undefined;
                     const newSkill: StartingSkill = {
-                        id: `skill-${Date.now()}-${Math.random()}`,
+                        id: `skill-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         name: params.name || 'Kỹ năng mới',
                         description: params.description || '',
-                        skillType: Object.values(GameTemplates.SkillType).includes(params.skillType as any) 
-                            ? params.skillType as GameTemplates.SkillTypeValues 
-                            : GameTemplates.SkillType.LINH_KI, // Default for combat-like skills
+                        skillType: skillType,
                         baseDamage: params.baseDamage ? parseInt(params.baseDamage, 10) : undefined,
-                        baseHealing: params.healingAmount ? parseInt(params.healingAmount, 10) : undefined,
+                        baseHealing: params.baseHealing || params.healingAmount ? parseInt(params.baseHealing || params.healingAmount, 10) : undefined,
                         damageMultiplier: params.damageMultiplier ? parseFloat(params.damageMultiplier) : undefined,
+                        healingMultiplier: params.healingMultiplier ? parseFloat(params.healingMultiplier) : undefined,
                         manaCost: params.manaCost ? parseInt(params.manaCost, 10) : undefined,
                         cooldown: params.cooldown ? parseInt(params.cooldown, 10) : undefined,
-                        specialEffects: params.uniqueEffectsList || params.specialEffects,
+                        specialEffects: params.specialEffects || params.effectsList || params.otherEffects,
                     };
+
+                    if (skillType === GameTemplates.SkillType.CONG_PHAP_TU_LUYEN) {
+                        newSkill.congPhapDetails = {
+                            type: params.congPhapType as GameTemplates.CongPhapType,
+                            grade: params.congPhapGrade as GameTemplates.CongPhapGrade,
+                            weaponFocus: params.weaponFocus,
+                        };
+                    }
+                    if (skillType === GameTemplates.SkillType.LINH_KI) {
+                        newSkill.linhKiDetails = {
+                            category: params.linhKiCategory as GameTemplates.LinhKiCategory,
+                            activation: params.linhKiActivation as GameTemplates.LinhKiActivationType,
+                        };
+                    }
+                    if (skillType === GameTemplates.SkillType.NGHE_NGHIEP) {
+                        newSkill.professionDetails = {
+                            type: params.professionType as GameTemplates.ProfessionType,
+                            grade: params.professionGrade as GameTemplates.ProfessionGrade,
+                            skillDescription: params.skillDescription,
+                        };
+                    }
+                    if (skillType === GameTemplates.SkillType.CAM_THUAT) {
+                        newSkill.camThuatDetails = {
+                            sideEffects: params.sideEffects,
+                        };
+                    }
+
                     if (!newSettings.startingSkills) newSettings.startingSkills = [];
                     newSettings.startingSkills.push(newSkill);
                     break;
-                case 'SETUP_EDIT_SKILL':
+                }
+                case 'SETUP_EDIT_SKILL': {
                     if (!params.id) break;
                     const skillIndex = newSettings.startingSkills.findIndex((skill: StartingSkill) => skill.id === params.id);
                     if (skillIndex > -1) {
@@ -157,12 +219,29 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                             const valueStr = params[key];
                             const typedKey = key as keyof StartingSkill;
                             
-                            if (['baseDamage', 'baseHealing', 'damageMultiplier', 'healingMultiplier', 'manaCost', 'cooldown'].includes(key)) {
-                                const numValue = parseFloat(valueStr);
-                                if (!isNaN(numValue)) {
-                                    (skillToUpdate as any)[typedKey] = numValue;
-                                }
-                            } else if (key === 'uniqueEffectsList') { // Map AI's potential name to the correct field
+                            if (['baseDamage', 'baseHealing', 'manaCost', 'cooldown'].includes(key)) {
+                                const numValue = parseInt(valueStr, 10);
+                                if (!isNaN(numValue)) (skillToUpdate as any)[typedKey] = numValue;
+                            } else if (['damageMultiplier', 'healingMultiplier'].includes(key)) {
+                                const floatValue = parseFloat(valueStr);
+                                if (!isNaN(floatValue)) (skillToUpdate as any)[typedKey] = floatValue;
+                            } else if (key.startsWith('congPhapDetails.')) {
+                                const subKey = key.split('.')[1];
+                                if (!skillToUpdate.congPhapDetails) skillToUpdate.congPhapDetails = {};
+                                (skillToUpdate.congPhapDetails as any)[subKey] = valueStr;
+                            } else if (key.startsWith('linhKiDetails.')) {
+                                const subKey = key.split('.')[1];
+                                if (!skillToUpdate.linhKiDetails) skillToUpdate.linhKiDetails = {};
+                                (skillToUpdate.linhKiDetails as any)[subKey] = valueStr;
+                            } else if (key.startsWith('professionDetails.')) {
+                                const subKey = key.split('.')[1];
+                                if (!skillToUpdate.professionDetails) skillToUpdate.professionDetails = {};
+                                (skillToUpdate.professionDetails as any)[subKey] = valueStr;
+                            } else if (key.startsWith('camThuatDetails.')) {
+                                const subKey = key.split('.')[1];
+                                if (!skillToUpdate.camThuatDetails) skillToUpdate.camThuatDetails = {};
+                                (skillToUpdate.camThuatDetails as any)[subKey] = valueStr;
+                            } else if (key === 'effectsList' || key === 'otherEffects') { // handle alternate names
                                 skillToUpdate.specialEffects = valueStr;
                             }
                             else {
@@ -171,15 +250,16 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                         });
                     }
                     break;
+                }
                 case 'SETUP_DELETE_SKILL':
                     if (!params.id) break;
                     newSettings.startingSkills = newSettings.startingSkills.filter((skill: StartingSkill) => skill.id !== params.id);
                     break;
 
                 // --- YEU THU HANDLING ---
-                case 'SETUP_ADD_YEUTHU':
+                case 'SETUP_ADD_YEUTHU': {
                     const newYeuThu: StartingYeuThu = {
-                        id: `yeuthu-${Date.now()}-${Math.random()}`,
+                        id: `yeuthu-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         name: params.name || 'Yêu Thú Mới',
                         species: params.species || 'Chưa rõ loài',
                         description: params.description || '',
@@ -189,7 +269,8 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                     if (!newSettings.startingYeuThu) newSettings.startingYeuThu = [];
                     newSettings.startingYeuThu.push(newYeuThu);
                     break;
-                case 'SETUP_EDIT_YEUTHU':
+                }
+                case 'SETUP_EDIT_YEUTHU': {
                     if (!params.id) break;
                     const yeuThuIndex = newSettings.startingYeuThu.findIndex((yt: StartingYeuThu) => yt.id === params.id);
                     if (yeuThuIndex > -1) {
@@ -205,21 +286,23 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                         });
                     }
                     break;
+                }
                 case 'SETUP_DELETE_YEUTHU':
                     if (!params.id) break;
                     newSettings.startingYeuThu = newSettings.startingYeuThu.filter((yt: StartingYeuThu) => yt.id !== params.id);
                     break;
 
                 // --- LORE HANDLING ---
-                case 'SETUP_ADD_LORE':
+                case 'SETUP_ADD_LORE': {
                     const newLore: StartingLore = {
-                        id: `lore-${Date.now()}-${Math.random()}`,
+                        id: `lore-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         title: params.title || 'Tri Thức Mới',
                         content: params.content || '',
                     };
                     if (!newSettings.startingLore) newSettings.startingLore = [];
                     newSettings.startingLore.push(newLore);
                     break;
+                }
                 case 'SETUP_EDIT_LORE':
                     if (!params.id) break;
                     const loreIndex = newSettings.startingLore.findIndex((l: StartingLore) => l.id === params.id);
@@ -235,9 +318,9 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                     break;
                 
                 // --- LOCATION HANDLING ---
-                case 'SETUP_ADD_LOCATION':
+                case 'SETUP_ADD_LOCATION': {
                     const newLocation: StartingLocation = {
-                        id: `location-${Date.now()}-${Math.random()}`,
+                        id: `location-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         name: params.name || 'Địa Điểm Mới',
                         description: params.description || '',
                         isSafeZone: params.isSafeZone ? params.isSafeZone.toLowerCase() === 'true' : false,
@@ -249,7 +332,8 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                     if (!newSettings.startingLocations) newSettings.startingLocations = [];
                     newSettings.startingLocations.push(newLocation);
                     break;
-                case 'SETUP_EDIT_LOCATION':
+                }
+                case 'SETUP_EDIT_LOCATION': {
                     if (!params.id) break;
                     const locIndex = newSettings.startingLocations.findIndex((l: StartingLocation) => l.id === params.id);
                     if (locIndex > -1) {
@@ -268,15 +352,16 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                         });
                     }
                     break;
+                }
                 case 'SETUP_DELETE_LOCATION':
                     if (!params.id) break;
                     newSettings.startingLocations = newSettings.startingLocations.filter((l: StartingLocation) => l.id !== params.id);
                     break;
                 
                 // --- FACTION HANDLING ---
-                case 'SETUP_ADD_FACTION':
+                case 'SETUP_ADD_FACTION': {
                     const newFaction: StartingFaction = {
-                        id: `faction-${Date.now()}-${Math.random()}`,
+                        id: `faction-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         name: params.name || 'Phe Phái Mới',
                         description: params.description || '',
                         alignment: params.alignment as any || 'Trung Lập',
@@ -285,7 +370,8 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                     if (!newSettings.startingFactions) newSettings.startingFactions = [];
                     newSettings.startingFactions.push(newFaction);
                     break;
-                case 'SETUP_EDIT_FACTION':
+                }
+                case 'SETUP_EDIT_FACTION': {
                      if (!params.id) break;
                     const factionIndex = newSettings.startingFactions.findIndex((f: StartingFaction) => f.id === params.id);
                     if (factionIndex > -1) {
@@ -302,23 +388,24 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                         });
                     }
                     break;
+                }
                 case 'SETUP_DELETE_FACTION':
                     if (!params.id) break;
                     newSettings.startingFactions = newSettings.startingFactions.filter((f: StartingFaction) => f.id !== params.id);
                     break;
 
                 // --- SINGLE SETTING HANDLING ---
-                case 'SETUP_UPDATE_SETTING':
+                case 'SETUP_UPDATE_SETTING': {
                     const field = params.field as keyof WorldSettings;
                     let value: any = params.value;
                     
                     if (field && value !== undefined && allowedFieldsToUpdate.includes(field)) {
                         // Coerce boolean values from strings
-                        if (typeof (newSettings as any)[field] === 'boolean') {
+                        if (typeof (newSettings as any)[field] === 'boolean' || ['isCultivationEnabled', 'nsfwMode'].includes(field)) {
                             value = (value.toLowerCase() === 'true');
                         }
                         // Coerce numeric values from strings
-                        else if (typeof (newSettings as any)[field] === 'number') {
+                        else if (typeof (newSettings as any)[field] === 'number' || ['startingCurrency', 'playerThoNguyen', 'playerMaxThoNguyen'].includes(field)) {
                             const num = Number(value);
                             if (!isNaN(num)) {
                                 value = num;
@@ -333,8 +420,7 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                         console.warn(`SETUP_UPDATE_SETTING: Attempted to update a non-whitelisted or invalid field: "${field}" value="${value}". Skipping.`);
                     }
                     break;
-                
-                // Add other ADD/EDIT/DELETE cases for lore, etc. as needed.
+                }
             }
         } catch (error) {
             console.error(`Error processing tag: ${tag}. Error:`, error);

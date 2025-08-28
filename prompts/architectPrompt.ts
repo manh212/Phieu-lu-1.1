@@ -27,12 +27,31 @@ export const generateArchitectPrompt = (
 
     const npcCreationInstructions = `
     *   **Tạo NPC:** \`[SETUP_ADD_NPC: ...]\`
-        - **Hướng Dẫn Tạo Mục Tiêu & Vị Trí (CỰC KỲ QUAN TRỌNG):** Khi tạo một NPC, bạn PHẢI suy nghĩ và tạo ra:
+        - **Hướng Dẫn Tạo Mục Tiêu & Vị Trí (CỰC KỲ QUAN TRỌNG):** Khi tạo một NPC (hoặc bổ sung thông tin cho NPC đã có), bạn PHẢI suy nghĩ và tạo ra:
             - **longTermGoal**: Tham vọng lớn lao.
             - **shortTermGoal**: Mục tiêu nhỏ, cụ thể.
             - **locationName**: Tên một khu vực lớn (thành phố, tông môn, khu rừng). TUYỆT ĐỐI KHÔNG tạo địa điểm nhỏ (quán trọ, phòng riêng).
         - **Định dạng Tag:** \`[SETUP_ADD_NPC: name="Tên", gender="Nam/Nữ", race="Chủng tộc", personality="Tính cách", longTermGoal="...", shortTermGoal="...", details="Vai trò", locationName="Tên địa điểm", realm="Cảnh giới", tuChat="Tư chất", ...]\`
     `;
+
+    const skillCreationInstructions = `
+    *   **Tạo Kỹ Năng:** \`[SETUP_ADD_SKILL: ...]\`
+        - **HƯỚN DẪN CHI TIẾT (QUAN TRỌNG):** Tương tự như vật phẩm, khi người dùng yêu cầu tạo kỹ năng, bạn **BẮT BUỘC** phải suy luận và điền đầy đủ các thuộc tính quan trọng để kỹ năng đó hoàn chỉnh.
+        - **CÁC TRƯỜNG BẮT BUỘC CHO MỌI KỸ NĂNG:**
+            - \`name\`, \`description\`, \`skillType\`.
+        - **THUỘC TÍNH BỔ SUNG TÙY THEO \`skillType\` (CŨNG BẮT BUỘC):**
+            - Nếu \`skillType="${GameTemplates.SkillType.CONG_PHAP_TU_LUYEN}"\`:
+                - \`congPhapType\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.CongPhapType).join(' | ')}\`.
+                - \`congPhapGrade\`: BẮT BUỘC. Phải là một trong: \`${[...GameTemplates.CONG_PHAP_GRADES].join(' | ')}\`.
+            - Nếu \`skillType="${GameTemplates.SkillType.LINH_KI}"\`:
+                - \`linhKiCategory\`: BẮT BUỘC. Phải là một trong: \`${[...GameTemplates.LINH_KI_CATEGORIES].join(' | ')}\`.
+                - \`linhKiActivation\`: BẮT BUỘC. Phải là một trong: \`${[...GameTemplates.LINH_KI_ACTIVATION_TYPES].join(' | ')}\`.
+            - Nếu \`skillType="${GameTemplates.SkillType.CAM_THUAT}"\`:
+                - \`sideEffects\`: BẮT BUỘC. Mô tả tác dụng phụ.
+            - **THUỘC TÍNH CHIẾN ĐẤU CHUNG (Dùng cho Linh Kĩ (Chủ động), Thần Thông, Cấm Thuật):**
+                - \`manaCost\`, \`cooldown\`, \`baseDamage\`, \`damageMultiplier\`, \`healingAmount\`, \`healingMultiplier\`, \`specialEffects="Hiệu ứng 1;Hiệu ứng 2"\`.
+    `;
+
 
     return `
 **VAI TRÒ HỆ THỐNG (SYSTEM INSTRUCTION):**
@@ -76,7 +95,11 @@ Bạn là một "Kiến trúc sư Thế giới AI" thông minh và cẩn thận.
 *   **THÊM MỚI:** Sử dụng tag \`[SETUP_ADD_...: ...]\`. Bạn phải suy luận và điền đầy đủ các thuộc tính cần thiết cho yếu tố mới dựa trên yêu cầu ngắn gọn của người chơi.
     ${itemCreationInstructions}
     ${npcCreationInstructions}
-    *   (Áp dụng logic tương tự cho Skill, Lore, Location, Faction, YeuThu).
+    ${skillCreationInstructions}
+    *   **Tạo Yêu Thú:** \`[SETUP_ADD_YEUTHU: name="...", species="...", description="...", realm="...", isHostile=true/false]\`
+    *   **Tạo Tri Thức:** \`[SETUP_ADD_LORE: title="...", content="..."]\`
+    *   **Tạo Địa Điểm:** \`[SETUP_ADD_LOCATION: name="...", description="...", locationType="...", isSafeZone=true/false, mapX=..., mapY=...]\`
+    *   **Tạo Phe Phái:** \`[SETUP_ADD_FACTION: name="...", description="...", alignment="...", initialPlayerReputation=...]\`
 
 *   **SỬA ĐỔI:** Sử dụng tag \`[SETUP_EDIT_...: id="..." ...]\`.
     *   **BẮT BUỘC** phải có thuộc tính \`id\` chính xác của yếu tố đó, lấy từ JSON HIỆN TẠI.
