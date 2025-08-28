@@ -169,6 +169,36 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     }
   }, [settings.playerAvatarUrl]); // Removed playerUploadedAvatarData from deps here to prevent potential loops.
 
+  // NEW: Effect to assign temporary IDs to starting elements on load
+  useEffect(() => {
+    setSettings(prevSettings => {
+        const newSettings = { ...prevSettings };
+        let changed = false;
+
+        // Helper to assign IDs
+        const assignId = (arr: any[] | undefined, prefix: string) => {
+            if (!arr) return [];
+            return arr.map(item => {
+                if (!item.id) {
+                    changed = true;
+                    // Using a more robust random part
+                    return { ...item, id: `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}` };
+                }
+                return item;
+            });
+        };
+
+        newSettings.startingSkills = assignId(newSettings.startingSkills, 'skill');
+        newSettings.startingItems = assignId(newSettings.startingItems, 'item');
+        newSettings.startingNPCs = assignId(newSettings.startingNPCs, 'npc');
+        newSettings.startingYeuThu = assignId(newSettings.startingYeuThu, 'yeuthu');
+        newSettings.startingLore = assignId(newSettings.startingLore, 'lore');
+        newSettings.startingLocations = assignId(newSettings.startingLocations, 'location');
+        newSettings.startingFactions = assignId(newSettings.startingFactions, 'faction');
+        
+        return changed ? newSettings : prevSettings;
+    });
+  }, []); // Runs once on component mount
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -293,7 +323,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
       ...prev,
       startingSkills: [
         ...(prev.startingSkills || []),
-        { name: '', description: '', skillType: type }
+        { id: `skill-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, name: '', description: '', skillType: type }
       ]
     }));
   }, []);
@@ -349,7 +379,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
       });
   }, []);
 
-  const addStartingItem = useCallback(() => setSettings(prev => ({ ...prev, startingItems: [...(prev.startingItems || []), { name: '', description: '', quantity: 1, category: GameTemplates.ItemCategory.MISCELLANEOUS, rarity: GameTemplates.ItemRarity.PHO_THONG, value: 0, equipmentDetails: {}, potionDetails: {}, materialDetails: {}, questItemDetails: {}, miscDetails: {} }] })), []);
+  const addStartingItem = useCallback(() => setSettings(prev => ({ ...prev, startingItems: [...(prev.startingItems || []), { id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, name: '', description: '', quantity: 1, category: GameTemplates.ItemCategory.MISCELLANEOUS, rarity: GameTemplates.ItemRarity.PHO_THONG, value: 0, equipmentDetails: {}, potionDetails: {}, materialDetails: {}, questItemDetails: {}, miscDetails: {} }] })), []);
   const removeStartingItem = useCallback((index: number) => setSettings(prev => ({ ...prev, startingItems: (prev.startingItems || []).filter((_, i) => i !== index) })), []);
 
   const handleStartingNPCChange = useCallback((index: number, field: keyof StartingNPC, value: string | number | undefined) => setSettings(prev => {
@@ -360,7 +390,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     return { ...prev, startingNPCs: newNPCs };
   }), []);
 
-  const addStartingNPC = useCallback(() => setSettings(prev => ({ ...prev, startingNPCs: [...(prev.startingNPCs || []), { name: '', personality: '', initialAffinity: 0, details: '', gender: 'Không rõ', race: 'Nhân Tộc', realm: '', tuChat: 'Trung Đẳng', thoNguyen: 120, maxThoNguyen: 120 }] })), []);
+  const addStartingNPC = useCallback(() => setSettings(prev => ({ ...prev, startingNPCs: [...(prev.startingNPCs || []), { id: `npc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, name: '', personality: '', initialAffinity: 0, details: '', gender: 'Không rõ', race: 'Nhân Tộc', realm: '', tuChat: 'Trung Đẳng', thoNguyen: 120, maxThoNguyen: 120 }] })), []);
   const removeStartingNPC = useCallback((index: number) => setSettings(prev => ({ ...prev, startingNPCs: (prev.startingNPCs || []).filter((_, i) => i !== index) })), []);
 
   const handleStartingYeuThuChange = useCallback((index: number, field: keyof StartingYeuThu, value: string | boolean) => {
@@ -373,7 +403,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     });
   }, []);
 
-  const addStartingYeuThu = useCallback(() => setSettings(prev => ({ ...prev, startingYeuThu: [...(prev.startingYeuThu || []), { name: '', species: '', description: '', isHostile: true }] })), []);
+  const addStartingYeuThu = useCallback(() => setSettings(prev => ({ ...prev, startingYeuThu: [...(prev.startingYeuThu || []), { id: `yeuthu-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, name: '', species: '', description: '', isHostile: true }] })), []);
   const removeStartingYeuThu = useCallback((index: number) => setSettings(prev => ({ ...prev, startingYeuThu: (prev.startingYeuThu || []).filter((_, i) => i !== index) })), []);
 
   const handleStartingLoreChange = useCallback((index: number, field: keyof StartingLore, value: string) => setSettings(prev => {
@@ -384,7 +414,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     return { ...prev, startingLore: newLore };
   }), []);
 
-  const addStartingLore = useCallback(() => setSettings(prev => ({ ...prev, startingLore: [...(prev.startingLore || []), { title: '', content: '' }] })), []);
+  const addStartingLore = useCallback(() => setSettings(prev => ({ ...prev, startingLore: [...(prev.startingLore || []), { id: `lore-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, title: '', content: '' }] })), []);
   const removeStartingLore = useCallback((index: number) => setSettings(prev => ({ ...prev, startingLore: (prev.startingLore || []).filter((_, i) => i !== index) })), []);
 
   const handleStartingLocationChange = useCallback((index: number, field: keyof StartingLocation, value: string | boolean) => {
@@ -404,7 +434,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     });
   }, []);
 
-  const addStartingLocation = useCallback(() => setSettings(prev => ({ ...prev, startingLocations: [...(prev.startingLocations || []), { name: '', description: '', isSafeZone: false, regionId: '', mapX: undefined, mapY: undefined, locationType: GameTemplates.LocationType.DEFAULT }] })), []);
+  const addStartingLocation = useCallback(() => setSettings(prev => ({ ...prev, startingLocations: [...(prev.startingLocations || []), { id: `location-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, name: '', description: '', isSafeZone: false, regionId: '', mapX: undefined, mapY: undefined, locationType: GameTemplates.LocationType.DEFAULT }] })), []);
   const removeStartingLocation = useCallback((index: number) => setSettings(prev => ({ ...prev, startingLocations: (prev.startingLocations || []).filter((_, i) => i !== index) })), []);
 
   const handleStartingFactionChange = useCallback((index: number, field: keyof StartingFaction, value: string | number) => setSettings(prev => {
@@ -415,7 +445,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     return { ...prev, startingFactions: newFactions };
   }), []);
 
-  const addStartingFaction = useCallback(() => setSettings(prev => ({ ...prev, startingFactions: [...(prev.startingFactions || []), { name: '', description: '', alignment: GameTemplates.FactionAlignment.TRUNG_LAP, initialPlayerReputation: 0 }] })), []);
+  const addStartingFaction = useCallback(() => setSettings(prev => ({ ...prev, startingFactions: [...(prev.startingFactions || []), { id: `faction-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, name: '', description: '', alignment: GameTemplates.FactionAlignment.TRUNG_LAP, initialPlayerReputation: 0 }] })), []);
   const removeStartingFaction = useCallback((index: number) => setSettings(prev => ({ ...prev, startingFactions: (prev.startingFactions || []).filter((_, i) => i !== index) })), []);
 
   const handleAnalyzeWritingStyle = useCallback(async () => {
@@ -716,9 +746,30 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
     if (settings.genre === CUSTOM_GENRE_VALUE && !settings.customGenreName?.trim()) missingFields.push(VIETNAMESE.customGenreNameLabel);
     if (missingFields.length > 0) { setGeneratorMessage({ text: missingFieldsError + missingFields.join(', ') + ".", type: "error" }); if(!settings.playerName.trim() || !settings.playerPersonality.trim() || !settings.playerBackstory.trim() || !settings.playerGoal.trim()) setActiveTab('characterStory'); else if (!settings.theme.trim() || !settings.settingDescription.trim() || !settings.writingStyle.trim() || (settings.isCultivationEnabled && (settings.raceCultivationSystems.some(s => !s.raceName.trim() || !s.realmSystem.trim()) || !settings.canhGioiKhoiDau.trim())) || (settings.genre === CUSTOM_GENRE_VALUE && !settings.customGenreName?.trim())) setActiveTab('worldSettings'); return; }
     
-    const finalSettings = { ...settings, originalStorySummary: originalStorySummary };
+    // Create a deep copy to safely modify before passing to onSetupComplete
+    const finalSettings = JSON.parse(JSON.stringify({ ...settings, originalStorySummary: originalStorySummary }));
+    
+    // Helper function to remove temporary 'id' fields from arrays
+    const removeTempIds = (arr: any[] | undefined) => {
+        if (!arr) return [];
+        return arr.map(item => {
+            const { id, ...rest } = item;
+            return rest;
+        });
+    };
+
+    // Clean up temporary IDs from all relevant arrays
+    finalSettings.startingSkills = removeTempIds(finalSettings.startingSkills);
+    finalSettings.startingItems = removeTempIds(finalSettings.startingItems);
+    finalSettings.startingNPCs = removeTempIds(finalSettings.startingNPCs);
+    finalSettings.startingYeuThu = removeTempIds(finalSettings.startingYeuThu);
+    finalSettings.startingLore = removeTempIds(finalSettings.startingLore);
+    finalSettings.startingLocations = removeTempIds(finalSettings.startingLocations);
+    finalSettings.startingFactions = removeTempIds(finalSettings.startingFactions);
+    finalSettings.raceCultivationSystems = removeTempIds(finalSettings.raceCultivationSystems);
+
     if (!finalSettings.isCultivationEnabled) { 
-      finalSettings.raceCultivationSystems = [{ id: 'default-human-1', raceName: 'Nhân Tộc', realmSystem: VIETNAMESE.noCultivationSystem }];
+      finalSettings.raceCultivationSystems = [{ raceName: 'Nhân Tộc', realmSystem: VIETNAMESE.noCultivationSystem }];
       finalSettings.yeuThuRealmSystem = VIETNAMESE.noCultivationSystem;
       finalSettings.canhGioiKhoiDau = VIETNAMESE.mortalRealmName; 
     }
