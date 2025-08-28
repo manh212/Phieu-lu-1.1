@@ -160,14 +160,7 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
         <div ref={chatEndRef} />
       </div>
       <div className="flex-shrink-0 p-2 border-t border-gray-700 space-y-2">
-         <div className="grid grid-cols-2 gap-2 text-xs">
-            <Button variant="ghost" size="sm" onClick={() => handleQuickAction("Tôi nên làm gì tiếp theo?")} disabled={isLoadingApi}>💡 Cần Gợi Ý</Button>
-            <Button variant="ghost" size="sm" onClick={() => handleQuickAction("Tóm tắt tình hình hiện tại.")} disabled={isLoadingApi}>📚 Tóm Tắt</Button>
-            <Button variant="ghost" size="sm" onClick={() => handleQuickAction("Phân tích các lựa chọn của tôi.")} disabled={isLoadingApi}>🔍 Phân Tích</Button>
-            <Button variant="ghost" size="sm" onClick={() => { setMode('promptEditor'); setUserInput(''); }}>📝 Sửa Lời Nhắc</Button>
-            <Button variant="ghost" size="sm" onClick={() => setShowLastPrompt(true)} disabled={isLoadingApi || (sentCopilotPromptsLog || []).length === 0} className="col-span-2">ℹ️ Xem Bối Cảnh AI Nhận Được</Button>
-        </div>
-        <div className="flex items-center gap-2 text-xs pt-2 border-t border-gray-700/50">
+        <div className="flex items-center gap-2 text-xs">
             <label htmlFor="copilot-model-select" className="text-gray-400 flex-shrink-0">Model:</label>
             <select
                 id="copilot-model-select"
