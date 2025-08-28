@@ -1,7 +1,7 @@
-
 // src/utils/setupTagProcessor.ts
-import { WorldSettings, StartingNPC, StartingItem, StartingSkill, StartingLore, StartingLocation, StartingFaction, StartingYeuThu, RaceCultivationSystem } from '../types';
+import { WorldSettings, StartingNPC, StartingItem, StartingSkill, StartingLore, StartingLocation, StartingFaction, StartingYeuThu, RaceCultivationSystem, TuChatTier } from '../types';
 import { parseTagValue } from './parseTagValue';
+import { TU_CHAT_TIERS } from '../constants';
 
 /**
  * Processes a batch of AI-generated SETUP tags to modify the WorldSettings object.
@@ -64,9 +64,20 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                     if (!params.id) break;
                     const npcIndex = newSettings.startingNPCs.findIndex((npc: StartingNPC) => npc.id === params.id);
                     if (npcIndex > -1) {
+                         const npcToUpdate = newSettings.startingNPCs[npcIndex];
                         Object.keys(params).forEach(key => {
-                            if (key !== 'id') {
-                                (newSettings.startingNPCs[npcIndex] as any)[key] = params[key];
+                            if (key === 'id') return; // Skip the id field itself
+
+                            const valueStr = params[key];
+                            const typedKey = key as keyof StartingNPC;
+                            
+                            if (typedKey === 'initialAffinity' || typedKey === 'thoNguyen' || typedKey === 'maxThoNguyen') {
+                                const numValue = parseInt(valueStr, 10);
+                                if (!isNaN(numValue)) {
+                                    (npcToUpdate as any)[typedKey] = numValue;
+                                }
+                            } else {
+                                (npcToUpdate as any)[typedKey] = valueStr;
                             }
                         });
                     }
@@ -77,7 +88,6 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                     break;
 
                 // --- ITEM, SKILL, etc. HANDLING (can be added similarly) ---
-                // ... (Example for items)
                 case 'SETUP_ADD_ITEM':
                     const newItem: StartingItem = {
                         id: `item-${Date.now()}-${Math.random()}`,
@@ -85,6 +95,7 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                         description: params.description || '',
                         quantity: parseInt(params.quantity, 10) || 1,
                         category: params.category as any,
+                        value: params.value ? parseInt(params.value, 10) : undefined,
                     };
                     if (!newSettings.startingItems) newSettings.startingItems = [];
                     newSettings.startingItems.push(newItem);
@@ -93,9 +104,20 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                     if (!params.id) break;
                     const itemIndex = newSettings.startingItems.findIndex((item: StartingItem) => item.id === params.id);
                     if (itemIndex > -1) {
+                        const itemToUpdate = newSettings.startingItems[itemIndex];
                         Object.keys(params).forEach(key => {
-                            if (key !== 'id') {
-                                (newSettings.startingItems[itemIndex] as any)[key] = params[key];
+                            if (key === 'id') return;
+
+                            const valueStr = params[key];
+                            const typedKey = key as keyof StartingItem;
+
+                            if (typedKey === 'quantity' || typedKey === 'value') {
+                                const numValue = parseInt(valueStr, 10);
+                                if (!isNaN(numValue)) {
+                                    (itemToUpdate as any)[typedKey] = numValue;
+                                }
+                            } else {
+                                 (itemToUpdate as any)[typedKey] = valueStr;
                             }
                         });
                     }
@@ -131,6 +153,8 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                         console.warn(`SETUP_UPDATE_SETTING: Attempted to update a non-whitelisted or invalid field: "${field}". Skipping.`);
                     }
                     break;
+                
+                // Add other ADD/EDIT/DELETE cases for skills, lore, etc. as needed.
             }
         } catch (error) {
             console.error(`Error processing tag: ${tag}. Error:`, error);
