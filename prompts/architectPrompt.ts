@@ -1,11 +1,42 @@
-
 // src/prompts/architectPrompt.ts
+import * as GameTemplates from '../../templates';
+import { STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS } from '../../constants';
+
 
 export const generateArchitectPrompt = (
     settingsJSON: string,
     chatHistory: string,
     userRequest: string
 ): string => {
+    const itemCreationInstructions = `
+    *   **Tạo Vật Phẩm:** \`[SETUP_ADD_ITEM: ...]\`
+        - **HƯỚN DẪN CHI TIẾT:**
+        - **CHI TIẾT THUỘC TÍNH:**
+            - \`name\`, \`description\`, \`quantity\`: Bắt buộc.
+            - \`category\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.ItemCategory).join(' | ')}\`.
+            - \`rarity\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.ItemRarity).join(' | ')}\`.
+            - \`itemRealm\`: BẮT BUỘC. Cảnh giới của vật phẩm (ví dụ: "Luyện Khí", "Kim Đan").
+        - **THUỘC TÍNH BỔ SUNG TÙY THEO \`category\`:**
+            - Nếu \`category="Equipment"\`:
+                - \`equipmentType\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.EquipmentType).join(' | ')}\`.
+                - \`slot\`: TÙY CHỌN. Vị trí trang bị, ví dụ: "Vũ Khí Chính", "Giáp Thân".
+                - \`statBonusesJSON\`: BẮT BUỘC. Chuỗi JSON hợp lệ. Các khóa hợp lệ là: \`${Object.keys(STAT_POINT_VALUES).join(', ')}\`. Nếu không có, dùng \`statBonusesJSON='{}'\`. Ví dụ: \`statBonusesJSON='{"sucTanCong": 15, "maxSinhLuc": 100}'\`.
+                - \`uniqueEffectsList\`: BẮT BUỘC. Danh sách hiệu ứng, cách nhau bởi ';'. Nếu không có, dùng \`uniqueEffectsList="Không có gì đặc biệt"\`. Cố gắng sử dụng các từ khóa sau: \`${Object.keys(SPECIAL_EFFECT_KEYWORDS).join(', ')}\`. Ví dụ: \`uniqueEffectsList="hút máu 5%;tăng 10% chí mạng"\`.
+            - Nếu \`category="Potion"\`:
+                - \`potionType\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.PotionType).join(' | ')}\`.
+                - \`effectsList\`: BẮT BUỘC. Danh sách hiệu ứng, cách nhau bởi ';'. Ví dụ: "Hồi 50 HP;Tăng 10 công trong 3 lượt".
+            - (Các loại khác cũng cần các thuộc tính chuyên biệt tương ứng).
+    `;
+
+    const npcCreationInstructions = `
+    *   **Tạo NPC:** \`[SETUP_ADD_NPC: ...]\`
+        - **Hướng Dẫn Tạo Mục Tiêu & Vị Trí (CỰC KỲ QUAN TRỌNG):** Khi tạo một NPC, bạn PHẢI suy nghĩ và tạo ra:
+            - **longTermGoal**: Tham vọng lớn lao.
+            - **shortTermGoal**: Mục tiêu nhỏ, cụ thể.
+            - **locationName**: Tên một khu vực lớn (thành phố, tông môn, khu rừng). TUYỆT ĐỐI KHÔNG tạo địa điểm nhỏ (quán trọ, phòng riêng).
+        - **Định dạng Tag:** \`[SETUP_ADD_NPC: name="Tên", gender="Nam/Nữ", race="Chủng tộc", personality="Tính cách", longTermGoal="...", shortTermGoal="...", details="Vai trò", locationName="Tên địa điểm", realm="Cảnh giới", tuChat="Tư chất", ...]\`
+    `;
+
     return `
 **VAI TRÒ HỆ THỐNG (SYSTEM INSTRUCTION):**
 Bạn là một "Kiến trúc sư Thế giới AI" thông minh và cẩn thận. Nhiệm vụ của bạn là giúp người dùng xây dựng thế giới game bằng cách sửa đổi một đối tượng JSON \`settings\` dựa trên yêu cầu ngôn ngữ tự nhiên của họ. Bạn phải hành động như một trợ lý, hiểu yêu cầu, đề xuất thay đổi, và chờ xác nhận.
@@ -23,8 +54,11 @@ Bạn là một "Kiến trúc sư Thế giới AI" thông minh và cẩn thận.
 **QUY TẮC VỀ THẺ HÀNH ĐỘNG (ACTION TAGS - CỰC KỲ QUAN TRỌNG):**
 
 **A. Thao tác với các phần tử trong danh sách (NPCs, Items, Skills, Lore, etc.):**
-*   **THÊM MỚI:** Sử dụng tag \`[SETUP_ADD_...: ...]\`. Cung cấp đầy đủ các thuộc tính cần thiết cho yếu tố mới.
-    *   Ví dụ: \`[SETUP_ADD_NPC: name="Vương Ngũ", personality="Gian xảo", initialAffinity=-10, details="Một tên trộm vặt trong thành."]\`
+*   **THÊM MỚI:** Sử dụng tag \`[SETUP_ADD_...: ...]\`. Bạn phải suy luận và điền đầy đủ các thuộc tính cần thiết cho yếu tố mới dựa trên yêu cầu ngắn gọn của người chơi.
+    ${itemCreationInstructions}
+    ${npcCreationInstructions}
+    *   (Thêm hướng dẫn chi tiết tương tự cho Skill, Lore, Location, Faction, YeuThu nếu cần).
+
 *   **SỬA ĐỔI:** Sử dụng tag \`[SETUP_EDIT_...: id="..." ...]\`.
     *   **BẮT BUỘC** phải có thuộc tính \`id\` chính xác của yếu tố đó, lấy từ JSON HIỆN TẠI.
     *   Chỉ cần cung cấp các thuộc tính bạn muốn thay đổi.
