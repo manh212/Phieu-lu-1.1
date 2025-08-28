@@ -1,5 +1,6 @@
 
 
+
 import { HarmCategory, HarmBlockThreshold } from "@google/genai";
 import * as GameTemplates from './templates'; // Import all templates
 import { Operation as JsonPatchOperation } from 'fast-json-patch'; // Import Operation from fast-json-patch
@@ -236,6 +237,7 @@ export interface WorldLoreEntry {
 }
 
 export interface StartingSkill {
+  id?: string; // New temp ID
   name: string;
   description: string;
   skillType?: SkillTypeValues;
@@ -272,6 +274,7 @@ export interface StartingSkill {
 }
 
 export interface StartingItem {
+  id?: string; // New temp ID
   name: string; description: string; quantity: number; category: GameTemplates.ItemCategoryValues;
   rarity?: GameTemplates.EquipmentRarity; value?: number; itemRealm?: string; // NEW: Item Realm
   equipmentDetails?: { type?: GameTemplates.EquipmentTypeValues; slot?: string; statBonuses?: Partial<Omit<PlayerStats, 'realm' | 'currency' | 'isInCombat' | 'turn' | 'hieuUngBinhCanh' | 'baseMaxKinhNghiem' | 'baseMaxLinhLuc' | 'baseMaxSinhLuc' | 'baseSucTanCong' | 'activeStatusEffects'| 'spiritualRoot' | 'specialPhysique' | 'professions' | 'tuChat' | 'playerSpecialStatus'>>; statBonusesString?: string; uniqueEffects?: string[]; uniqueEffectsString?: string; };
@@ -287,6 +290,7 @@ export interface StartingItem {
 }
 
 export interface StartingNPC {
+  id?: string; // New temp ID
   name: string; personality: string; initialAffinity: number; details: string; gender?: 'Nam' | 'Nữ' | 'Khác' | 'Không rõ';
   race?: string; // NEW
   realm?: string; avatarUrl?: string; tuChat?: TuChatTier; relationshipToPlayer?: string;
@@ -300,6 +304,7 @@ export interface StartingNPC {
 }
 
 export interface StartingYeuThu {
+    id?: string; // New temp ID
     name: string;
     species: string;
     description: string;
@@ -307,9 +312,9 @@ export interface StartingYeuThu {
     isHostile: boolean;
 }
 
-export interface StartingLore { title: string; content: string; }
-export interface StartingLocation { name: string; description: string; isSafeZone?: boolean; regionId?: string; mapX?: number; mapY?: number; locationType?: GameTemplates.LocationTypeValues; }
-export interface StartingFaction { name: string; description: string; alignment: GameTemplates.FactionAlignmentValues; initialPlayerReputation: number; }
+export interface StartingLore { id?: string; title: string; content: string; }
+export interface StartingLocation { id?: string; name: string; description: string; isSafeZone?: boolean; regionId?: string; mapX?: number; mapY?: number; locationType?: GameTemplates.LocationTypeValues; }
+export interface StartingFaction { id?: string; name: string; description: string; alignment: GameTemplates.FactionAlignmentValues; initialPlayerReputation: number; }
 
 export type NsfwDescriptionStyle = 'Hoa Mỹ' | 'Trần Tục' | 'Gợi Cảm' | 'Mạnh Bạo (BDSM)' | 'Tùy Chỉnh (Phòng Tối AI)';
 export type ViolenceLevel = 'Nhẹ Nhàng' | 'Thực Tế' | 'Cực Đoan';
@@ -325,7 +330,7 @@ export interface WorldDate {
 
 // NEW: Interface for race-specific cultivation systems
 export interface RaceCultivationSystem {
-  id: string; // For React keys
+  id: string; // RE-PURPOSED: Now used for React keys and temp ID
   raceName: string;
   realmSystem: string; // e.g., "Luyện Khí - Trúc Cơ - ..."
 }

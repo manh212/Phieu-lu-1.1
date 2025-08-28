@@ -1,3 +1,5 @@
+
+
 import React, { ChangeEvent, useRef, useState, useEffect } from 'react';
 import { WorldSettings, GenreType, NsfwDescriptionStyle, ViolenceLevel, StoryTone } from '../../../types';
 import Button from '../../ui/Button';
@@ -113,6 +115,7 @@ interface AIAssistTabProps {
   isAnalyzingStyle: boolean;
   analysisResult: string | null;
   analysisError: string | null;
+  setIsArchitectModalOpen: (isOpen: boolean) => void; // New prop
 }
 
 const AIAssistTab: React.FC<AIAssistTabProps> = ({
@@ -133,7 +136,8 @@ const AIAssistTab: React.FC<AIAssistTabProps> = ({
   handleAnalyzeWritingStyle,
   isAnalyzingStyle,
   analysisResult,
-  analysisError
+  analysisError,
+  setIsArchitectModalOpen, // New prop
 }) => {
 
   const [writingStyleFile, setWritingStyleFile] = useState<File | null>(null);
@@ -201,6 +205,21 @@ const AIAssistTab: React.FC<AIAssistTabProps> = ({
 
   return (
     <div className="space-y-6">
+       {/* AI Architect Button */}
+      <fieldset className="border border-purple-700 p-4 rounded-md bg-purple-900/10">
+        <legend className="text-lg font-semibold text-purple-300 px-2">Kiến Trúc Sư AI</legend>
+        <p className="text-sm text-gray-400 mb-3">
+          Sử dụng ngôn ngữ tự nhiên để thay đổi bất kỳ thiết lập nào trên màn hình này. Bạn có thể yêu cầu AI thêm, sửa, xóa các yếu tố khởi đầu hoặc thay đổi các cài đặt của thế giới.
+        </p>
+        <Button
+            onClick={() => setIsArchitectModalOpen(true)}
+            variant="primary"
+            className="w-full sm:w-auto mt-3 bg-purple-600 hover:bg-purple-700 focus:ring-purple-500"
+        >
+          Trò chuyện với Kiến trúc sư AI
+        </Button>
+      </fieldset>
+
       <fieldset className="border border-green-700 p-4 rounded-md bg-green-900/10">
           <legend className="text-lg font-semibold text-green-300 px-2">Hoàn Thiện Tự Động</legend>
           <p className="text-sm text-gray-400 mb-3">

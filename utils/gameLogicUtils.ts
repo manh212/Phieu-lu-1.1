@@ -1,5 +1,6 @@
 
 
+
 import { AIContextConfig } from '../types';
 
 // NEW: AI Context Settings Logic
@@ -48,6 +49,7 @@ export * from './dateUtils'; // NEW: Export date utilities
 export * from './eventUtils'; // NEW: Export event utilities
 export * from './apiUsageTracker'; // NEW: Export API usage tracker
 export * from './livingWorldUtils'; // NEW: Export Living World utilities
+export * from './setupTagProcessor'; // NEW: Export Setup Tag Processor
 
 // NPC, YeuThu, and World Info Tag Processors
 export * from './tagProcessors/npcTagProcessor';

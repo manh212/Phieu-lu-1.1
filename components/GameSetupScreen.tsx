@@ -6,6 +6,7 @@ import Modal from './ui/Modal';
 import { VIETNAMESE, DEFAULT_WORLD_SETTINGS, CUSTOM_GENRE_VALUE, MAX_TOKENS_FANFIC, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, DEFAULT_NSFW_DESCRIPTION_STYLE } from '../constants';
 import { generateWorldDetailsFromStory, generateFanfictionWorldDetails, countTokens, generateCompletionForWorldDetails, analyzeWritingStyle } from '../services/geminiService';
 import * as GameTemplates from '../templates';
+import { AIArchitectModal } from './gameSetup/AIArchitectModal';
 
 // Import tab components
 import AIAssistTab from './gameSetup/tabs/AIAssistTab';
@@ -92,6 +93,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
   const [showRawResponseModal, setShowRawResponseModal] = useState(false);
   const [sentWorldGenPrompt, setSentWorldGenPrompt] = useState<string | null>(null);
   const [showSentPromptModal, setShowSentPromptModal] = useState(false);
+  const [isArchitectModalOpen, setIsArchitectModalOpen] = useState(false); // NEW for AI Architect
   
   // State for StartingElementsTab collapsible sections
   const [isSkillsSectionOpen, setIsSkillsSectionOpen] = useState(false);
@@ -895,6 +897,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
                 isAnalyzingStyle={isAnalyzingStyle}
                 analysisResult={analysisResult}
                 analysisError={analysisError}
+                setIsArchitectModalOpen={setIsArchitectModalOpen}
               />
             </div>
           )}
@@ -952,6 +955,14 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
           </Button>
         </div>
       </div>
+      {isArchitectModalOpen && (
+        <AIArchitectModal
+          isOpen={isArchitectModalOpen}
+          onClose={() => setIsArchitectModalOpen(false)}
+          currentSettings={settings}
+          onApplyChanges={setSettings}
+        />
+      )}
       {showRawResponseModal && rawApiResponseText && ( <Modal isOpen={showRawResponseModal} onClose={() => setShowRawResponseModal(false)} title={VIETNAMESE.rawAiResponseModalTitle}> <pre className="whitespace-pre-wrap break-all bg-gray-700 p-3 rounded-md text-xs text-gray-200 max-h-[60vh] overflow-y-auto custom-scrollbar"> {rawApiResponseText} </pre> </Modal> )}
       {showSentPromptModal && sentWorldGenPrompt && ( <Modal isOpen={showSentPromptModal} onClose={() => setShowSentPromptModal(false)} title={VIETNAMESE.sentPromptModalTitle}> <pre className="whitespace-pre-wrap break-all bg-gray-700 p-3 rounded-md text-xs text-gray-200 max-h-[60vh] overflow-y-auto custom-scrollbar"> {sentWorldGenPrompt} </pre> </Modal> )}
     </div>

@@ -1,3 +1,5 @@
+
+
 import { generateInitialPrompt } from './initialPrompt';
 import { generateContinuePrompt } from './continuePrompt';
 import { generateWorldDetailsPrompt } from './generateWorldDetailsPrompt';
@@ -31,6 +33,7 @@ import { generateAnalyzeStylePrompt } from './analyzeStylePrompt';
 import { generateRefreshChoicesPrompt } from './refreshChoicesPrompt';
 import { generateAICopilotPrompt } from './copilotPrompt'; // NEW IMPORT
 import { buildWorldTickPrompt } from './livingWorldPrompt'; // NEW: For Living World
+import { generateArchitectPrompt } from './architectPrompt'; // NEW IMPORT
 
 
 export const PROMPT_FUNCTIONS = {
@@ -67,6 +70,7 @@ export const PROMPT_FUNCTIONS = {
   refreshChoices: generateRefreshChoicesPrompt, // NEW
   copilot: generateAICopilotPrompt, // NEW
   livingWorldTick: buildWorldTickPrompt, // NEW
+  architect: generateArchitectPrompt, // NEW
 };
 
 // It's good practice to also export the type if other modules might need to know the shape of PROMPT_FUNCTIONS

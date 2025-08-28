@@ -1,3 +1,4 @@
+
 export const parseTagValue = (tagValue: string): Record<string, string> => {
     const result: Record<string, string> = {};
     if (!tagValue) return result;
@@ -45,7 +46,7 @@ export const parseTagValue = (tagValue: string): Record<string, string> => {
         }
 
         const rawKey = part.substring(0, eqIndex).trim();
-        // The fix is here: normalize the key by removing spaces
+        // FIX: Normalize the key by removing spaces to handle keys like "congPhap Type"
         const key = rawKey.replace(/\s+/g, '');
         let value = part.substring(eqIndex + 1).trim();
         

@@ -1,5 +1,6 @@
 
 
+
 import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, CountTokensResponse, Type } from "@google/genai";
 import { KnowledgeBase, ParsedAiResponse, AiChoice, WorldSettings, ApiConfig, SafetySetting, PlayerActionInputType, ResponseLength, StartingSkill, StartingItem, StartingNPC, StartingLore, GameMessage, GeneratedWorldElements, StartingLocation, StartingFaction, PlayerStats, Item as ItemType, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, TU_CHAT_TIERS, AuctionItem, GameLocation, AuctionState, WorldDate, CongPhapGrade, CongPhapType, LinhKiActivationType, LinhKiCategory, ProfessionGrade, ProfessionType, FindLocationParams, NPC, Skill, Prisoner, Wife, Slave, CombatEndPayload, RaceCultivationSystem, StartingYeuThu, AuctionSlave, WorldTickUpdate } from '../types'; 
 import { PROMPT_FUNCTIONS } from '../prompts';
@@ -1080,6 +1081,25 @@ export async function generateCopilotResponse(
     incrementApiCallCount('AI_COPILOT');
     return generateContentWithRateLimit(prompt, modelToUse, onPromptConstructed);
 }
+
+// --- NEW: AI Architect Function ---
+export async function generateArchitectResponse(
+    settingsJSON: string,
+    chatHistory: string,
+    userRequest: string
+): Promise<string> {
+    const { model } = getApiSettings();
+    const prompt = PROMPT_FUNCTIONS.architect(settingsJSON, chatHistory, userRequest);
+    
+    // Using generateContentAndCheck to ensure a valid response is returned
+    const response = await generateContentAndCheck({
+        model,
+        contents: [{ parts: [{ text: prompt }] }],
+    });
+
+    return response.text;
+}
+
 
 // --- NEW: Living World Functions ---
 
