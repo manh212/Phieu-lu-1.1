@@ -21,8 +21,7 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
         'playerThoNguyen', 'playerMaxThoNguyen', 'startingCurrency', 'nsfwMode',
         'nsfwDescriptionStyle', 'customNsfwPrompt', 'violenceLevel', 'storyTone',
         'genre', 'customGenreName', 'isCultivationEnabled', 'yeuThuRealmSystem',
-        'canhGioiKhoiDau'
-        // Note: Arrays like startingNPCs and complex objects like startingDate are handled by specific tags.
+        'canhGioiKhoiDau', 'playerAvatarUrl', 'writingStyleGuide'
     ];
 
     // 2. Loop through each tag.
@@ -150,7 +149,7 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                         
                         (newSettings as any)[field] = value;
                     } else {
-                        console.warn(`SETUP_UPDATE_SETTING: Attempted to update a non-whitelisted or invalid field: "${field}". Skipping.`);
+                        console.warn(`SETUP_UPDATE_SETTING: Attempted to update a non-whitelisted or invalid field: "${field}" value="${value}". Skipping.`);
                     }
                     break;
                 

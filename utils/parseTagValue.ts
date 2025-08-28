@@ -3,60 +3,20 @@ export const parseTagValue = (tagValue: string): Record<string, string> => {
     const result: Record<string, string> = {};
     if (!tagValue) return result;
 
-    const parts: string[] = [];
-    let quoteChar: "'" | '"' | null = null;
-    let lastSplit = 0;
-    let balance = 0; // for nested objects/arrays
+    // This regex is designed to find all occurrences of key=value pairs.
+    // It correctly handles values that are double-quoted, single-quoted, or unquoted (without spaces).
+    const regex = /([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s,]+))/g;
+    let match;
 
-    for (let i = 0; i < tagValue.length; i++) {
-        const char = tagValue[i];
-
-        if (quoteChar) {
-            if (char === quoteChar && (i === 0 || tagValue[i - 1] !== '\\')) {
-                quoteChar = null;
-            }
-            continue;
-        }
-
-        if (char === "'" || char === '"') {
-            quoteChar = char;
-            continue;
-        }
-
-        if (char === '{' || char === '[') {
-            balance++;
-        } else if (char === '}' || char === ']') {
-            balance--;
-        }
-
-        if (char === ',' && balance === 0) {
-            parts.push(tagValue.substring(lastSplit, i));
-            lastSplit = i + 1;
-        }
-    }
-    parts.push(tagValue.substring(lastSplit));
-
-    for (const part of parts) {
-        if (!part.trim()) continue;
+    while ((match = regex.exec(tagValue)) !== null) {
+        const key = match[1];
+        // The captured value will be in one of these groups, the others will be undefined.
+        const value = match[2] ?? match[3] ?? match[4]; 
         
-        const eqIndex = part.indexOf('=');
-        if (eqIndex === -1) {
-            console.warn(`Could not parse key-value pair from part: "${part}"`);
-            continue;
+        if (key && value !== undefined) {
+            // AI might escape quotes, so we un-escape them.
+            result[key] = value.replace(/\\"/g, '"').replace(/\\'/g, "'");
         }
-
-        const rawKey = part.substring(0, eqIndex).trim();
-        // FIX: Normalize the key by removing spaces to handle keys like "congPhap Type"
-        const key = rawKey.replace(/\s+/g, '');
-        let value = part.substring(eqIndex + 1).trim();
-        
-        const firstChar = value.charAt(0);
-        const lastChar = value.charAt(value.length - 1);
-        if ((firstChar === "'" && lastChar === "'") || (firstChar === '"' && lastChar === '"')) {
-            value = value.substring(1, value.length - 1);
-        }
-        
-        result[key] = value.replace(/\\"/g, '"').replace(/\\'/g, "'");
     }
     
     return result;
