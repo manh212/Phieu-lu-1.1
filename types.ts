@@ -1,6 +1,8 @@
 
 
 
+
+
 import { HarmCategory, HarmBlockThreshold } from "@google/genai";
 import * as GameTemplates from './templates'; // Import all templates
 import { Operation as JsonPatchOperation } from 'fast-json-patch'; // Import Operation from fast-json-patch
@@ -594,7 +596,7 @@ export interface ParsedAiResponse { narration: string; choices: AiChoice[]; tags
 export interface SafetySetting { category: HarmCategory; threshold: HarmBlockThreshold; }
 
 // New Type for selecting avatar generation engine
-export type AvatarGenerationEngine = 'imagen-3.0';
+export type AvatarGenerationEngine = 'imagen-4.0-generate-001';
 
 export interface ApiConfig {
   apiKeySource: 'system' | 'user';

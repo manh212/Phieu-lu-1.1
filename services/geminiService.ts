@@ -1,6 +1,8 @@
 
 
 
+
+
 import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, CountTokensResponse, Type } from "@google/genai";
 import { KnowledgeBase, ParsedAiResponse, AiChoice, WorldSettings, ApiConfig, SafetySetting, PlayerActionInputType, ResponseLength, StartingSkill, StartingItem, StartingNPC, StartingLore, GameMessage, GeneratedWorldElements, StartingLocation, StartingFaction, PlayerStats, Item as ItemType, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, TU_CHAT_TIERS, AuctionItem, GameLocation, AuctionState, WorldDate, CongPhapGrade, CongPhapType, LinhKiActivationType, LinhKiCategory, ProfessionGrade, ProfessionType, FindLocationParams, NPC, Skill, Prisoner, Wife, Slave, CombatEndPayload, RaceCultivationSystem, StartingYeuThu, AuctionSlave, WorldTickUpdate } from '../types'; 
 import { PROMPT_FUNCTIONS } from '../prompts';
@@ -788,12 +790,12 @@ export async function analyzeWritingStyle(textToAnalyze: string): Promise<string
     return response.text;
 }
 
-export async function generateImageWithImagen3(prompt: string): Promise<string> {
+export async function generateImageWithImagen4(prompt: string): Promise<string> {
   const geminiAi = getAiClient();
   incrementApiCallCount('IMAGE_GENERATION');
   try {
     const response = await geminiAi.models.generateImages({
-      model: 'imagen-3.0-generate-002',
+      model: 'imagen-4.0-generate-001',
       prompt: prompt,
       config: { numberOfImages: 1, outputMimeType: 'image/png' },
     });
@@ -816,7 +818,7 @@ export async function generateImageWithImagen3(prompt: string): Promise<string> 
         if (userMessage.includes("API key not valid") || userMessage.includes("PERMISSION_DENIED") || userMessage.includes("API_KEY_INVALID")) {
             userMessage = `Lỗi API: API key không hợp lệ hoặc không có quyền truy cập. Vui lòng kiểm tra lại API_KEY. Chi tiết: ${userMessage}`;
         } else if (userMessage.includes("Model not found") || userMessage.includes("does not exist") || userMessage.includes("model is not supported")) {
-            userMessage = `Lỗi API: 'imagen-3.0-generate-002' không được tìm thấy hoặc không được hỗ trợ. Chi tiết: ${userMessage}`;
+            userMessage = `Lỗi API: 'imagen-4.0-generate-001' không được tìm thấy hoặc không được hỗ trợ. Chi tiết: ${userMessage}`;
         } else if (userMessage.toLowerCase().includes("quota") || errorContext?.status === 429) {
             userMessage = `Lỗi API: Đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau. Chi tiết: ${userMessage}`;
         } else if (userMessage.includes("prompt was blocked")) {
@@ -831,11 +833,11 @@ export async function generateImageWithImagen3(prompt: string): Promise<string> 
 
 export async function generateImageUnified(prompt: string): Promise<string> {
     const { avatarGenerationEngine } = getApiSettings();
-    if (avatarGenerationEngine === 'imagen-3.0') {
-        return generateImageWithImagen3(prompt);
+    if (avatarGenerationEngine === 'imagen-4.0-generate-001') {
+        return generateImageWithImagen4(prompt);
     }
     // Fallback or other engines can be added here
-    return generateImageWithImagen3(prompt);
+    return generateImageWithImagen4(prompt);
 }
 
 export async function summarizeTurnHistory(messagesToSummarize: GameMessage[], worldTheme: string, playerName: string, genre: GenreType | undefined, customGenreName: string | undefined, onPromptConstructed?: (prompt: string) => void, onResponseReceived?: (response: string) => void): Promise<{ rawSummary: string, processedSummary: string }> {

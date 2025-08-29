@@ -13,9 +13,9 @@ export const DEFAULT_MODEL_ID = AVAILABLE_MODELS[0].id;
 
 // New: Constants for Avatar Generation Engine selection
 export const AVAILABLE_AVATAR_ENGINES: { id: AvatarGenerationEngine; name: string }[] = [
-    { id: 'imagen-3.0', name: 'Imagen 3.0 (Chất lượng cao)' },
+    { id: 'imagen-4.0-generate-001', name: 'Imagen 4.0 (Chất lượng cao)' },
 ];
-export const DEFAULT_AVATAR_GENERATION_ENGINE: AvatarGenerationEngine = 'imagen-3.0';
+export const DEFAULT_AVATAR_GENERATION_ENGINE: AvatarGenerationEngine = 'imagen-4.0-generate-001';
 
 export const DEFAULT_API_KEY_SOURCE: 'system' | 'user' = 'system';
 export const DEFAULT_AUTO_GENERATE_NPC_AVATARS = false;
