@@ -1,10 +1,8 @@
-
 import React, { useRef, useEffect, useState, useMemo, useLayoutEffect } from 'react';
 import { GameMessage, KnowledgeBase, StyleSettings, StyleSettingProperty } from '../../../types';
 import Button from '../../ui/Button';
 import Spinner from '../../ui/Spinner';
 import { VIETNAMESE } from '../../../constants';
-import ObservedMessage from './ObservedMessage'; // Import the new component
 import SystemMessageGroup from './SystemMessageGroup'; // Import the new grouping component
 import { useGame } from '../../../hooks/useGame';
 
@@ -124,20 +122,6 @@ const StoryLog: React.FC<StoryLogProps> = ({
   };
 
   const isMajorMessage = (type: GameMessage['type']) => type === 'narration' || type === 'player_action';
-
-  const getPlaceholderHeight = (type: GameMessage['type']): number => {
-    switch (type) {
-      case 'system':
-      case 'error':
-      case 'page_summary':
-      case 'event_summary':
-        return 36; // A smaller, more appropriate height for single-line system messages.
-      case 'narration':
-      case 'player_action':
-      default:
-        return 75; // The original default for longer content.
-    }
-  };
   
   // Group consecutive system messages for collapsibility
   const groupedMessages = useMemo(() => {
@@ -198,13 +182,11 @@ const StoryLog: React.FC<StoryLogProps> = ({
         if (isGroup) {
             const firstMessageInGroup = item[0];
             return (
-                <ObservedMessage key={`group-${firstMessageInGroup.id}`} placeholderHeight={getPlaceholderHeight('system')}>
-                    <div className={`flex justify-start ${containerMargin}`}>
-                        <div className="max-w-full w-full">
-                           <SystemMessageGroup messages={item} />
-                        </div>
+                <div key={`group-${firstMessageInGroup.id}`} className={`story-message-container flex justify-start ${containerMargin}`}>
+                    <div className="max-w-full w-full">
+                       <SystemMessageGroup messages={item} />
                     </div>
-                </ObservedMessage>
+                </div>
             );
         }
         
@@ -234,8 +216,7 @@ const StoryLog: React.FC<StoryLogProps> = ({
         }
 
         return (
-          <ObservedMessage key={msg.id} placeholderHeight={getPlaceholderHeight(msg.type)}>
-            <div className={`flex ${msg.isPlayerInput ? 'justify-end' : 'justify-start'} ${containerMargin}`}>
+          <div key={msg.id} className={`story-message-container flex ${msg.isPlayerInput ? 'justify-end' : 'justify-start'} ${containerMargin}`}>
               <div
                 id={`message-${msg.id}`}
                 ref={isLastNarrationMessage ? lastNarrationRef : null}
@@ -276,8 +257,7 @@ const StoryLog: React.FC<StoryLogProps> = ({
                   </div>
                 )}
               </div>
-            </div>
-          </ObservedMessage>
+          </div>
         );
       })}
       {(isLoadingUi && displayedMessages.length === 0) && <Spinner text={VIETNAMESE.contactingAI} size="sm" className="my-4" />}

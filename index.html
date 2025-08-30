@@ -57,6 +57,12 @@
         white-space: nowrap;
         border-width: 0;
       }
+
+      /* New style for Story Log optimization, replacing ObservedMessage */
+      .story-message-container {
+        content-visibility: auto;
+        contain-intrinsic-size: 75px; /* A reasonable default height for a message block */
+      }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

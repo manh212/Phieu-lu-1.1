@@ -1,4 +1,3 @@
-
 import React, { useState, ChangeEvent, useRef } from 'react'; 
 import { PlayerStats, Item, EquipmentSlotId, KnowledgeBase, StatusEffect, WorldDate, TuChatTier } from '../../../types';
 import { VIETNAMESE, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL } from '../../../constants';
@@ -264,53 +263,59 @@ const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = React.
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0.5">
-        {playerName && !isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.characterName}: </span>{playerName}</div>}
-        {isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.characterName}: </span>{playerName}</div>}
-        {playerGender && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.gender}: </span>{playerGender}</div>}
-        {playerRace && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.playerRaceLabel || "Chủng Tộc"}: </span>{playerRace}</div>}
-        {isPlayerContext && currentLocationName && <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.legendCurrentLocation}: </span>{currentLocationName}</div>}
-        
-        {isPlayerContext && worldDate && (
-            <div className="text-sm py-0.5 col-span-1 md:col-span-2">
-                <span className="font-semibold text-indigo-300">Thời Gian: </span>
-                <span className="text-gray-300">
-                    {`Ngày ${worldDate.day}, Tháng ${worldDate.month}, Năm ${worldDate.year} - ${String(worldDate.hour).padStart(2, '0')}:${String(worldDate.minute).padStart(2, '0')}`}
-                </span>
-            </div>
-        )}
-
-        {(playerName || playerGender || currentLocationName || worldDate) && <div className="md:col-span-2 h-1 my-1 border-t border-gray-700/50"></div>}
-
-        <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.spiritualRootLabel || 'Linh Căn'}: </span>{playerStats.spiritualRoot ?? 'Không rõ'}</div>
-        <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.specialPhysiqueLabel || 'Thể Chất'}: </span>{playerStats.specialPhysique ?? 'Không rõ'}</div>
-        {tuChatToDisplay && <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">Tư Chất: </span>{tuChatToDisplay}</div>}
-        
-        <div className="md:col-span-2 h-1 my-1 border-t border-gray-700/50"></div>
-
-        {isCultivationEnabled && 
-          <div className="text-sm py-0.5 col-span-1 md:col-span-2">
-              <span className="font-semibold text-indigo-300">Thọ Nguyên: </span>
-              <span className="text-lime-300 font-semibold">{Math.floor(playerStats.thoNguyen ?? 0)} / {playerStats.maxThoNguyen ?? 0} (năm)</span>
-          </div>
-        }
-        <div className="text-sm py-0.5 col-span-1 md:col-span-2">
-            <span className="font-semibold text-indigo-300">{realmLabel}: </span>
-            <span className="text-amber-400 font-semibold">{playerStats.realm ?? 'Không rõ'}</span>
+      <section aria-labelledby="thong-tin-co-ban">
+        <h4 id="thong-tin-co-ban" className="text-md font-semibold text-indigo-200 mt-3 mb-2 border-b border-gray-700 pb-1">Thông Tin Cơ Bản</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0.5">
+            {playerName && !isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.characterName}: </span>{playerName}</div>}
+            {isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.characterName}: </span>{playerName}</div>}
+            {playerGender && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.gender}: </span>{playerGender}</div>}
+            {playerRace && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.playerRaceLabel || "Chủng Tộc"}: </span>{playerRace}</div>}
+            {isPlayerContext && currentLocationName && <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.legendCurrentLocation}: </span>{currentLocationName}</div>}
+            {isPlayerContext && worldDate && (
+                <div className="text-sm py-0.5 col-span-1 md:col-span-2">
+                    <span className="font-semibold text-indigo-300">Thời Gian: </span>
+                    <span className="text-gray-300">
+                        {`Ngày ${worldDate.day}, Tháng ${worldDate.month}, Năm ${worldDate.year} - ${String(worldDate.hour).padStart(2, '0')}:${String(worldDate.minute).padStart(2, '0')}`}
+                    </span>
+                </div>
+            )}
         </div>
-        {renderStatLine(VIETNAMESE.sinhLucLabel, playerStats.baseMaxSinhLuc, playerStats.maxSinhLuc, getBonusForStat('maxSinhLuc'), playerStats.sinhLuc)}
-        {(isCultivationEnabled || (playerStats.maxLinhLuc ?? 0) > 0 || (playerStats.baseMaxLinhLuc ?? 0) > 0) && renderStatLine(energyLabel, playerStats.baseMaxLinhLuc, playerStats.maxLinhLuc, getBonusForStat('maxLinhLuc'), playerStats.linhLuc)}
-        {renderStatLine(VIETNAMESE.sucTanCongLabel, playerStats.baseSucTanCong, playerStats.sucTanCong, getBonusForStat('sucTanCong'))}
-        
-        {isCultivationEnabled && renderStatLine(experienceLabel, playerStats.baseMaxKinhNghiem, playerStats.maxKinhNghiem, getBonusForStat('maxKinhNghiem'), playerStats.kinhNghiem)}
+      </section>
+      
+      <section aria-labelledby="thong-tin-tu-luyen">
+        <h4 id="thong-tin-tu-luyen" className="text-md font-semibold text-indigo-200 mt-3 mb-2 border-b border-gray-700 pb-1">Thông Tin Tu Luyện</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0.5">
+            <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.spiritualRootLabel || 'Linh Căn'}: </span>{playerStats.spiritualRoot ?? 'Không rõ'}</div>
+            <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.specialPhysiqueLabel || 'Thể Chất'}: </span>{playerStats.specialPhysique ?? 'Không rõ'}</div>
+            {tuChatToDisplay && <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">Tư Chất: </span>{tuChatToDisplay}</div>}
+            {isCultivationEnabled && 
+            <div className="text-sm py-0.5 col-span-1 md:col-span-2">
+                <span className="font-semibold text-indigo-300">Thọ Nguyên: </span>
+                <span className="text-lime-300 font-semibold">{Math.floor(playerStats.thoNguyen ?? 0)} / {playerStats.maxThoNguyen ?? 0} (năm)</span>
+            </div>
+            }
+            <div className="text-sm py-0.5 col-span-1 md:col-span-2">
+                <span className="font-semibold text-indigo-300">{realmLabel}: </span>
+                <span className="text-amber-400 font-semibold">{playerStats.realm ?? 'Không rõ'}</span>
+            </div>
+        </div>
+      </section>
 
-        {isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{currencyName || "Tiền Tệ"}: </span>{playerStats.currency ?? 0}</div>}
-        {isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">Lượt: </span>{playerStats.turn ?? 0}</div>}
-      </div>
+      <section aria-labelledby="chi-so-chien-dau">
+        <h4 id="chi-so-chien-dau" className="text-md font-semibold text-indigo-200 mt-3 mb-2 border-b border-gray-700 pb-1">Chỉ Số Chiến Đấu</h4>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0.5">
+            {renderStatLine(VIETNAMESE.sinhLucLabel, playerStats.baseMaxSinhLuc, playerStats.maxSinhLuc, getBonusForStat('maxSinhLuc'), playerStats.sinhLuc)}
+            {(isCultivationEnabled || (playerStats.maxLinhLuc ?? 0) > 0 || (playerStats.baseMaxLinhLuc ?? 0) > 0) && renderStatLine(energyLabel, playerStats.baseMaxLinhLuc, playerStats.maxLinhLuc, getBonusForStat('maxLinhLuc'), playerStats.linhLuc)}
+            {renderStatLine(VIETNAMESE.sucTanCongLabel, playerStats.baseSucTanCong, playerStats.sucTanCong, getBonusForStat('sucTanCong'))}
+            {isCultivationEnabled && renderStatLine(experienceLabel, playerStats.baseMaxKinhNghiem, playerStats.maxKinhNghiem, getBonusForStat('maxKinhNghiem'), playerStats.kinhNghiem)}
+            {isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{currencyName || "Tiền Tệ"}: </span>{playerStats.currency ?? 0}</div>}
+            {isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">Lượt: </span>{playerStats.turn ?? 0}</div>}
+        </div>
+      </section>
       
       {playerStats.playerSpecialStatus && isPlayerContext && (
-        <div className="mt-3 pt-3 border-t-2 border-red-700/60">
-            <h4 className="text-md font-semibold text-red-300 mb-1.5">{VIETNAMESE.specialStatusSection}</h4>
+        <section aria-labelledby="than-phan-dac-biet" className="mt-3 pt-3 border-t-2 border-red-700/60">
+            <h4 id="than-phan-dac-biet" className="text-md font-semibold text-red-300 mb-1.5">{VIETNAMESE.specialStatusSection}</h4>
             <div className="space-y-1 text-sm bg-red-900/20 p-2 rounded-md">
                 <p>
                     <strong className="text-red-400">Trạng Thái: </strong> 
@@ -328,12 +333,12 @@ const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = React.
                     <p><strong className="text-indigo-300">{VIETNAMESE.statTrust}:</strong> {playerStats.playerSpecialStatus.trust ?? 0}</p>
                 </div>
             </div>
-        </div>
+        </section>
       )}
 
       {(playerStats.activeStatusEffects ?? []).length > 0 && (
-        <div className="mt-3 pt-3 border-t border-gray-700">
-            <h4 className="text-md font-semibold text-indigo-300 mb-1.5">{VIETNAMESE.statusEffectsSection}</h4>
+        <section aria-labelledby="hieu-ung-hien-tai" className="mt-3 pt-3 border-t border-gray-700">
+            <h4 id="hieu-ung-hien-tai" className="text-md font-semibold text-indigo-200 mb-1.5">{VIETNAMESE.statusEffectsSection}</h4>
             <ul className="space-y-1 text-xs">
                 {(playerStats.activeStatusEffects ?? []).map(effect => (
                     <li 
@@ -357,7 +362,7 @@ const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = React.
                     </li>
                 ))}
             </ul>
-        </div>
+        </section>
       )}
     </div>
 
