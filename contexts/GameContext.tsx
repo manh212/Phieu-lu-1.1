@@ -1,4 +1,3 @@
-
 import React, { createContext, ReactNode, useRef, useState, useCallback, useEffect } from 'react';
 import * as jsonpatch from 'fast-json-patch';
 import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, AvatarUploadHandlers, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction } from '../types';
@@ -10,7 +9,7 @@ import { useGameNotifications, NotificationState } from '../hooks/useGameNotific
 import { useGameData } from '../hooks/useGameData';
 import { useGameplayModals } from '../hooks/useGameplayModals';
 import type { GameEntity, GameEntityType } from '../hooks/types';
-import { calculateRealmBaseStats, calculateEffectiveStats, getMessagesForPage, performTagProcessing, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, convertNpcActionToTag } from '../utils/gameLogicUtils'; 
+import { calculateRealmBaseStats, calculateEffectiveStats, getMessagesForPage, performTagProcessing, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, handleLocationEntryEvents, searchVectors, extractEntityContextsFromString, worldDateToTotalMinutes, convertNpcActionToTag } from '../utils/gameLogicUtils'; 
 import { getApiSettings as getGeminiApiSettings, countTokens, generateCraftedItemViaAI, generateDefeatConsequence, summarizeTurnHistory, generateWorldTickUpdate } from '../services/geminiService'; 
 import { uploadImageToCloudinary } from '../services/cloudinaryService';
 import { isValidImageUrl } from '../utils/imageValidationUtils';
@@ -211,6 +210,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         gameData.setLatestPromptTokenCount('Chưa kiểm tra');
     }, [gameData.setSentPromptsLog, gameData.setLatestPromptTokenCount]);
     
+    // This function will need `allActions` which is defined later.
+    // We declare it here but its dependency on `allActions` means we must be careful with its usage.
     const handleProcessDebugTags = useCallback(async (narration: string, tags: string) => {
         setIsLoadingApi(true);
         try {
@@ -231,8 +232,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             finalKb.playerStats = calculateEffectiveStats(finalKb.playerStats, finalKb.equippedItems, finalKb.inventory);
     
             if (finalKb.playerStats.sinhLuc <= 0) {
-                // Use allActions which is defined below. This is a bit of a dependency circle but works in JS.
-                await allActions.handleNonCombatDefeat(finalKb, narration || 'Bạn đã bị gục ngã do một sự kiện không rõ.');
+                // This is a tricky part due to initialization order. We will call it directly from `allActions` later.
+                // For now, this logic is deferred to the context value creation.
+                // await allActions.handleNonCombatDefeat(finalKb, narration || 'Bạn đã bị gục ngã do một sự kiện không rõ.');
                 return;
             }
     
@@ -257,8 +259,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [gameData, setIsLoadingApi, showNotification, logNpcAvatarPromptCallback]);
 
     // *** COMPOSITION ROOT ***
-    // 1. Create a single props object for all action hooks
-    const actionProps = {
+    // 1. Create a base props object that ALL action hooks will need.
+    const baseActionProps = {
         ...gameData,
         onQuit,
         showNotification,
@@ -266,8 +268,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAutoPlaying,
         setIsAutoPlaying,
         executeSaveGame,
-        storageType: 'local' as StorageType,
-        firebaseUser: null,
         isLoadingApi,
         setIsLoadingApi,
         logNpcAvatarPromptCallback,
@@ -279,20 +279,27 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         previousPageSummaries: previousPageSummariesContent,
         lastNarrationFromPreviousPage,
         handleProcessDebugTags,
-        logSentPromptCallback,
     };
+    
+    // 2. Instantiate hooks that are dependencies for other hooks.
+    const livingWorldActions = useLivingWorldActions(baseActionProps as any);
+    const postCombatActions = usePostCombatActions(baseActionProps as any);
+    
+    // 3. Instantiate the main game loop, injecting its dependencies.
+    const mainGameLoopActions = useMainGameLoopActions({
+        ...baseActionProps,
+        executeWorldTick: livingWorldActions.executeWorldTick,
+        handleNonCombatDefeat: postCombatActions.handleNonCombatDefeat,
+    } as any);
 
-    // 2. Instantiate all action hooks
-    const mainGameLoopActions = useMainGameLoopActions(actionProps as any);
-    const setupActions = useSetupActions(actionProps);
-    const auctionActions = useAuctionActions(actionProps);
-    const cultivationActions = useCultivationActions(actionProps);
-    const characterActions = useCharacterActions(actionProps as any);
-    const postCombatActions = usePostCombatActions(actionProps);
-    const livingWorldActions = useLivingWorldActions(actionProps);
-    const copilotActions = useCopilotActions(actionProps);
+    // 4. Instantiate the remaining independent action hooks.
+    const setupActions = useSetupActions(baseActionProps as any);
+    const auctionActions = useAuctionActions(baseActionProps as any);
+    const cultivationActions = useCultivationActions(baseActionProps as any);
+    const characterActions = useCharacterActions(baseActionProps as any);
+    const copilotActions = useCopilotActions(baseActionProps as any);
 
-    // 3. Combine all actions into a single object
+    // 5. Combine all actions into a single object for the context value.
     const allActions: Omit<GameContextType, keyof typeof gameData | 'currentScreen' | 'styleSettings' | 'storageSettings' | 'isInitialLoading' | 'storageInitError' | 'notification' | 'apiError' | 'isLoadingApi' | 'isSummarizingNextPageTransition' | 'isAutoPlaying' | 'isSavingGame' | 'isAutoSaving' | 'isSummarizingOnLoad' | 'isCraftingItem' | 'isUploadingAvatar' | 'isCultivating' | 'sentNpcAvatarPromptsLog' | 'currentPageMessagesLog' | 'previousPageSummaries' | 'lastNarrationFromPreviousPage' | 'selectedEntity' | 'isStyleSettingsModalOpen' | 'isAiContextModalOpen' | 'activeEconomyModal' | 'activeSlaveMarketModal' | 'isCurrentlyActivePage' | 'gameplayScrollPosition' | 'justLoadedGame' | 'setKnowledgeBase' | 'setGameMessages' | 'setCurrentScreen' | 'setStyleSettings' | 'openEntityModal' | 'closeModal' | 'closeEconomyModal' | 'setIsStyleSettingsModalOpen' | 'setIsAiContextModalOpen' | 'setActiveEconomyModal' | 'setActiveSlaveMarketModal' | 'closeSlaveMarketModal' | 'onSettingsSaved'> = {
         ...mainGameLoopActions,
         ...setupActions,
@@ -651,7 +658,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
         if (isLoadingApi) showNotification(VIETNAMESE.actionStoppedAndRolledBack, 'info');
-        else showNotification(VIETNAMESE.rollbackSuccess, 'info');
+        else showNotification(VIETNAMESE.rollbackSuccess, 'success');
         setIsLoadingApi(false);
         if (apiErrorTimer.current) clearTimeout(apiErrorTimer.current);
         setApiError(null);

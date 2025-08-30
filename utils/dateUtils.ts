@@ -116,6 +116,7 @@ export const getWorldDateDifferenceString = (startDate: WorldDate, endDate: Worl
  * @returns A formatted string e.g., "Ngày 1, Tháng 1, Năm 1 - 08:00".
  */
 export const formatWorldDateToString = (date: WorldDate): string => {
+  // FIX: Added a null/undefined check to prevent crashes if the date object is missing.
   if (!date) return 'Không rõ';
   const hour = String(date.hour).padStart(2, '0');
   const minute = String(date.minute).padStart(2, '0');

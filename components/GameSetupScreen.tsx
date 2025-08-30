@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, ChangeEvent, useRef, useEffect } from 'react';
 import { GameScreen, WorldSettings, StartingSkill, StartingItem, StartingNPC, StartingLore, StartingLocation, StartingFaction, PlayerStats, GenreType, WorldDate, StartingYeuThu, RaceCultivationSystem, GeneratedWorldElements } from '../types'; 
 import Button from './ui/Button';
@@ -496,6 +495,8 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         }
         return item;
       });
+      // FIX: Added robust fallback for startingDate to prevent crashes if AI doesn't provide it.
+      const startingDateOrDefault = response.startingDate || settings.startingDate || DEFAULT_WORLD_SETTINGS.startingDate;
 
       setSettings(prev => ({
         ...prev,
@@ -526,7 +527,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         nsfwDescriptionStyle: prev.nsfwMode && response.nsfwDescriptionStyle ? response.nsfwDescriptionStyle : prev.nsfwDescriptionStyle,
         violenceLevel: prev.nsfwMode && response.violenceLevel ? response.violenceLevel : prev.violenceLevel,
         storyTone: prev.nsfwMode && response.storyTone ? response.storyTone : prev.storyTone,
-        startingDate: response.startingDate || prev.startingDate,
+        startingDate: startingDateOrDefault,
         playerSpiritualRoot: response.playerSpiritualRoot || prev.playerSpiritualRoot,
         playerSpecialPhysique: response.playerSpecialPhysique || prev.playerSpecialPhysique,
         playerThoNguyen: response.playerThoNguyen || prev.playerThoNguyen,
@@ -595,6 +596,8 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         }
         return item;
       });
+      // FIX: Added robust fallback for startingDate to prevent crashes if AI doesn't provide it.
+      const startingDateOrDefault = response.startingDate || settings.startingDate || DEFAULT_WORLD_SETTINGS.startingDate;
 
       setSettings(prev => ({
         ...prev,
@@ -626,7 +629,7 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
         nsfwDescriptionStyle: prev.nsfwMode && response.nsfwDescriptionStyle ? response.nsfwDescriptionStyle : prev.nsfwDescriptionStyle,
         violenceLevel: prev.nsfwMode && response.violenceLevel ? response.violenceLevel : prev.violenceLevel,
         storyTone: prev.nsfwMode && response.storyTone ? response.storyTone : prev.storyTone,
-        startingDate: response.startingDate || prev.startingDate,
+        startingDate: startingDateOrDefault,
         playerSpiritualRoot: response.playerSpiritualRoot || prev.playerSpiritualRoot,
         playerSpecialPhysique: response.playerSpecialPhysique || prev.playerSpecialPhysique,
         playerThoNguyen: response.playerThoNguyen || prev.playerThoNguyen,
@@ -686,6 +689,13 @@ const GameSetupScreen = ({ setCurrentScreen, onSetupComplete }: GameSetupScreenP
             if (isFalsyOrEmpty(prev.raceCultivationSystems) && (mergedResponse.raceCultivationSystems || []).length > 0) newSettings.raceCultivationSystems = mergedResponse.raceCultivationSystems;
             if (isFalsyOrEmpty(prev.yeuThuRealmSystem) && mergedResponse.yeuThuRealmSystem) newSettings.yeuThuRealmSystem = mergedResponse.yeuThuRealmSystem;
             if (isFalsyOrEmpty(prev.canhGioiKhoiDau) && mergedResponse.canhGioiKhoiDau) newSettings.canhGioiKhoiDau = mergedResponse.canhGioiKhoiDau;
+            
+            // FIX: Robust startingDate handling for completion
+            if (mergedResponse.startingDate) {
+                newSettings.startingDate = mergedResponse.startingDate;
+            } else if (isFalsyOrEmpty(prev.startingDate) || typeof prev.startingDate.year !== 'number') { // Check if prev date is invalid
+                newSettings.startingDate = DEFAULT_WORLD_SETTINGS.startingDate;
+            }
             
             // Fill array fields if they are empty
             if (isFalsyOrEmpty(prev.startingSkills) && (mergedResponse.startingSkills || []).length > 0) newSettings.startingSkills = mergedResponse.startingSkills;

@@ -122,58 +122,65 @@ export const parseAndValidateResponse = (jsonString: string, kb: KnowledgeBase):
 export const convertNpcActionToTag = (action: NpcAction, npc: NPC): string | string[] | null => {
     const params = action.parameters;
     
+    // Add a defensive check for reason, even if schema requires it.
     const createLogReason = (actionDescription: string): string => {
-        return `Hành động: ${actionDescription}. Lý do: ${action.reason.replace(/"/g, '\\"')}`;
+        return `Hành động: ${actionDescription}. Lý do: ${(action.reason ?? '').replace(/"/g, '\\"')}`;
     };
     
     switch (params.type) {
         case 'MOVE':
-            return `[LOCATION_CHANGE: characterName="${npc.name.replace(/"/g, '\\"')}", destination="${params.destinationLocationId}"]`;
+            if (!params.destinationLocationId) return null;
+            return `[LOCATION_CHANGE: characterName="${(npc.name ?? '').replace(/"/g, '\\"')}", destination="${params.destinationLocationId}"]`;
         
         case 'UPDATE_GOAL': {
-            let goalTag = `[NPC_UPDATE: name="${npc.name.replace(/"/g, '\\"')}", shortTermGoal="${params.newShortTermGoal.replace(/"/g, '\\"')}"`;
+            if (!params.newShortTermGoal) return null;
+            let goalTag = `[NPC_UPDATE: name="${(npc.name ?? '').replace(/"/g, '\\"')}", shortTermGoal="${(params.newShortTermGoal ?? '').replace(/"/g, '\\"')}"`;
             if (params.newLongTermGoal) {
-                goalTag += `, longTermGoal="${params.newLongTermGoal.replace(/"/g, '\\"')}"`;
+                goalTag += `, longTermGoal="${(params.newLongTermGoal ?? '').replace(/"/g, '\\"')}"`;
             }
             goalTag += ']';
             return goalTag;
         }
 
         case 'UPDATE_PLAN': {
+            if (!params.newPlanSteps || params.newPlanSteps.length === 0) return null;
             const planString = params.newPlanSteps.join('; ');
-            return `[NPC_UPDATE: name="${npc.name.replace(/"/g, '\\"')}", currentPlan="${planString.replace(/"/g, '\\"')}" ]`;
+            return `[NPC_UPDATE: name="${(npc.name ?? '').replace(/"/g, '\\"')}", currentPlan="${(planString ?? '').replace(/"/g, '\\"')}" ]`;
         }
 
         case 'BUILD_RELATIONSHIP': {
+            if (!params.targetNpcId) return null;
             const affinityChange = params.relationshipType === 'rivalry' ? -10 : 10;
             const reasonText = `chủ động xây dựng mối quan hệ ${params.relationshipType}`.replace(/"/g, '\\"');
-            return `[RELATIONSHIP_EVENT: source="${npc.name.replace(/"/g, '\\"')}", target="${params.targetNpcId}", reason="${reasonText}", affinity_change=${affinityChange}]`;
+            return `[RELATIONSHIP_EVENT: source="${(npc.name ?? '').replace(/"/g, '\\"')}", target="${params.targetNpcId}", reason="${reasonText}", affinity_change=${affinityChange}]`;
         }
         
         case 'INFLUENCE_FACTION': {
+            if (!params.factionId) return null;
             const repChange = params.influenceType === 'positive' ? params.magnitude : -params.magnitude;
-            return `[FACTION_UPDATE: name="${params.factionId.replace(/"/g, '\\"')}", npcIdForReputationUpdate="${npc.id}", reputationChange=${repChange}]`;
+            return `[FACTION_UPDATE: name="${(params.factionId ?? '').replace(/"/g, '\\"')}", npcIdForReputationUpdate="${npc.id}", reputationChange=${repChange}]`;
         }
 
         case 'PRODUCE_ITEM': {
-            // This now becomes an executable action instead of just a log.
-            return `[NPC_PRODUCE_ITEM: npcId="${npc.id}", itemName="${params.itemName.replace(/"/g, '\\"')}", quantity=${params.quantity}]`;
+            if (!params.itemName) return null;
+            return `[NPC_PRODUCE_ITEM: npcId="${npc.id}", itemName="${(params.itemName ?? '').replace(/"/g, '\\"')}", quantity=${params.quantity}]`;
         }
 
         case 'OFFER_SERVICE': {
-             // This becomes two executable actions, one for each NPC's currency.
-            const serviceReceiverTag = `[NPC_UPDATE: name="${params.targetNpcId.replace(/"/g, '\\"')}", currency=-=${params.price}]`;
-            const serviceProviderTag = `[NPC_UPDATE: name="${npc.name.replace(/"/g, '\\"')}", currency=+=${params.price}]`;
+            if (!params.targetNpcId) return null;
+            const serviceReceiverTag = `[NPC_UPDATE: name="${(params.targetNpcId ?? '').replace(/"/g, '\\"')}", currency=-=${params.price}]`;
+            const serviceProviderTag = `[NPC_UPDATE: name="${(npc.name ?? '').replace(/"/g, '\\"')}", currency=+=${params.price}]`;
             return [serviceReceiverTag, serviceProviderTag];
         }
         
         case 'COMMIT_CRIME': {
             if (params.crimeType === 'theft') {
-                 // This becomes an inventory transfer action.
-                return `[NPC_INVENTORY_TRANSFER: fromNpcId="${params.targetNpcId}", toNpcId="${npc.id}", itemName="${params.itemName.replace(/"/g, '\\"')}", quantity=${params.quantity}]`;
+                if (!params.targetNpcId || !params.itemName) return null;
+                return `[NPC_INVENTORY_TRANSFER: fromNpcId="${params.targetNpcId}", toNpcId="${npc.id}", itemName="${(params.itemName ?? '').replace(/"/g, '\\"')}", quantity=${params.quantity}]`;
             } else {
+                 if (!params.target) return null;
                  const logReason = createLogReason(`Phạm tội ${params.crimeType} nhắm vào ${params.target}`);
-                 return `[NPC_ACTION_LOG: npcName="${npc.name.replace(/"/g, '\\"')}", reason="${logReason}"]`;
+                 return `[NPC_ACTION_LOG: npcName="${(npc.name ?? '').replace(/"/g, '\\"')}", reason="${logReason}"]`;
             }
         }
 
@@ -189,6 +196,6 @@ export const convertNpcActionToTag = (action: NpcAction, npc: NPC): string | str
         case 'CONVERSE':
         default:
              const simpleLogReason = createLogReason(`Thực hiện hành động '${action.type}'`);
-             return `[NPC_ACTION_LOG: npcName="${npc.name.replace(/"/g, '\\"')}", reason="${simpleLogReason}"]`;
+             return `[NPC_ACTION_LOG: npcName="${(npc.name ?? '').replace(/"/g, '\\"')}", reason="${simpleLogReason}"]`;
     }
 };
