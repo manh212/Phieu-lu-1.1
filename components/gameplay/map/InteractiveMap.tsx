@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { GameLocation } from '../../../types';
 import { MAP_COLORS, MAP_SIZES } from './mapConstants';
@@ -109,6 +108,21 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         const y = loc.mapY ?? MAP_SIZES.SVG_VIEWBOX_HEIGHT / 2;
 
         const IconComponent = getLocationIconComponent(loc);
+        
+        // --- START: Accessibility Label Enhancement ---
+        const statusText = isCurrent ? 'Vị trí hiện tại' : (loc.visited ? 'Đã đến' : 'Chưa đến');
+        const safetyText = loc.isSafeZone ? 'An toàn' : 'Nguy hiểm';
+        const connectionNames = (loc.connections ?? [])
+            .filter(conn => conn.isDiscovered)
+            .map(conn => {
+                const targetLoc = locations.find(l => l.id === conn.targetLocationId);
+                return targetLoc ? targetLoc.name : null;
+            })
+            .filter(Boolean)
+            .join(', ');
+        
+        const ariaLabel = `Địa điểm: ${loc.name}. Trạng thái: ${statusText}, ${safetyText}. ${connectionNames ? `Kết nối đến: ${connectionNames}.` : 'Không có kết nối nào được biết.'}`;
+        // --- END: Accessibility Label Enhancement ---
 
         return (
           <g
@@ -116,7 +130,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             transform={`translate(${x}, ${y})`}
             onClick={() => !isEditMode && onLocationClick(loc.id)}
             className={`group ${isEditMode ? 'cursor-move' : 'cursor-pointer'}`}
-            aria-label={`Địa điểm: ${loc.name}`}
+            aria-label={ariaLabel}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && !isEditMode && onLocationClick(loc.id)}

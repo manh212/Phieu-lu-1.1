@@ -7,6 +7,7 @@ import { generateCombatTurn } from '../services/geminiService';
 import CombatDebugPanel from './gameplay/CombatDebugPanel';
 import OpponentStatsPanel from './gameplay/OpponentStatsPanel';
 import Modal from './ui/Modal'; // Import Modal
+import { useGame } from '../hooks/useGame'; // Import useGame hook
 
 // --- TYPE DEFINITIONS FOR COMBATANTS ---
 type DefeatedEntity = (NPC & { entityType: 'npc' }) | (YeuThu & { entityType: 'yeuThu' });
@@ -189,14 +190,14 @@ const PostCombatDecisionModal: React.FC<{
                 <p className="text-center text-gray-300">Quyết định số phận của kẻ địch đã bị đánh bại:</p>
                 <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar p-2">
                     {defeatedNpcs.map(npc => (
-                        <div key={npc.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-700 p-2 rounded-md gap-2">
-                            <span className="font-semibold">{npc.name} ({npc.realm})</span>
-                            <div className="flex gap-2 flex-shrink-0 self-end sm:self-center">
+                        <fieldset key={npc.id} className="bg-gray-700 p-3 rounded-md border border-gray-600">
+                            <legend className="font-semibold px-2 text-gray-100">{npc.name} ({npc.realm})</legend>
+                            <div className="flex gap-2 justify-end pt-2">
                                 <Button size="sm" variant={localDispositions[npc.id] === 'kill' ? 'danger' : 'secondary'} onClick={() => setDisposition(npc.id, 'kill')}>Kết Liễu</Button>
                                 <Button size="sm" variant={localDispositions[npc.id] === 'capture' ? 'primary' : 'secondary'} onClick={() => setDisposition(npc.id, 'capture')}>Bắt Giữ</Button>
                                 <Button size="sm" variant={localDispositions[npc.id] === 'release' ? 'secondary' : 'secondary'} onClick={() => setDisposition(npc.id, 'release')}>Thả Đi</Button>
                             </div>
-                        </div>
+                        </fieldset>
                     ))}
                 </div>
                  <Button
@@ -237,6 +238,7 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
   previousPageSummaries,
   lastNarrationFromPreviousPage,
 }) => {
+    const game = useGame(); // Use Game hook to get showNotification
     const [combatants, setCombatants] = useState<Combatant[]>([]);
     const [combatMessages, setCombatMessages] = useState<string[]>([]);
     const [suggestedActions, setSuggestedActions] = useState<AiChoice[]>([]);
@@ -245,7 +247,6 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
     const [combatEnded, setCombatEnded] = useState<'victory' | 'defeat' | 'escaped' | 'surrendered' | null>(null);
     const initialActionFired = useRef(false);
     const [statNotifications, setStatNotifications] = useState<StatUpdateNotification[]>([]);
-    const [liveRegionMessage, setLiveRegionMessage] = useState('');
     const [isReaderMode, setIsReaderMode] = useState(false);
     const [selectedStatusEffect, setSelectedStatusEffect] = useState<StatusEffect | null>(null);
     const [selectedSkillForDetail, setSelectedSkillForDetail] = useState<Skill | null>(null);
@@ -265,13 +266,6 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
         );
         return () => timers.forEach(clearTimeout);
     }, [statNotifications]);
-
-    useEffect(() => {
-        if (liveRegionMessage) {
-            const timer = setTimeout(() => setLiveRegionMessage(''), 500); // Clear after a short delay so it can be re-triggered
-            return () => clearTimeout(timer);
-        }
-    }, [liveRegionMessage]);
 
     const handleCombatAction = useCallback(async (action: string) => {
         setIsLoading(true);
@@ -295,14 +289,15 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
                     const colorClass = change > 0 ? 'text-green-300' : 'text-red-400';
                     const message = (<span><span className={colorClass}>{`${symbol}${change} ${statLabel}`}</span><span className="text-yellow-100"> cho </span><span className="font-bold text-white">{target.name}</span></span>);
                     newNotifications.push({ id: `${update.targetId}-${update.stat}-${Date.now()}-${Math.random()}`, message });
-                    srMessages.push(`${symbol}${change} ${statLabel} cho ${target.name}.`);
+                    const changeText = change > 0 ? `hồi ${change}` : `mất ${Math.abs(change)}`;
+                    srMessages.push(`${target.name} ${changeText} ${statLabel}.`);
                 }
             });
             if(newNotifications.length > 0) {
                 setStatNotifications(prev => [...prev, ...newNotifications]);
             }
             if(srMessages.length > 0) {
-                setLiveRegionMessage(srMessages.join(' '));
+                game.showNotification(srMessages.join(' '), 'info');
             }
 
             setCombatants(prevCombatants => {
@@ -339,7 +334,7 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
         } finally {
             setIsLoading(false);
         }
-    }, [knowledgeBase, combatants, combatMessages, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage]);
+    }, [knowledgeBase, combatants, combatMessages, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage, game]);
 
     useEffect(() => {
         if (knowledgeBase.pendingCombat) {
@@ -412,7 +407,6 @@ const CombatScreen: React.FC<CombatScreenProps> = ({
 
     return (
         <>
-            <div className="sr-only" aria-live="polite" role="log">{liveRegionMessage}</div>
             <div className="h-screen w-screen bg-gray-900/95 flex flex-col p-2 sm:p-4 text-gray-100 font-sans">
                 <header className="mb-2 flex justify-between items-center flex-shrink-0">
                     <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500">

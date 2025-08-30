@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NPC, YeuThu } from '../../types';
 import { VIETNAMESE } from '../../constants';
@@ -26,6 +25,7 @@ const OpponentStatsPanel: React.FC<{ opponents: (NPC | YeuThu)[] }> = ({ opponen
                             <div className="space-y-1.5 text-xs">
                                 {/* HP Bar */}
                                 <div title={`HP: ${opp.stats.sinhLuc} / ${opp.stats.maxSinhLuc}`}>
+                                    <span className="sr-only">HP của {opp.name}: {opp.stats.sinhLuc} trên {opp.stats.maxSinhLuc}</span>
                                     <div className="flex justify-between mb-0.5 text-red-300 text-[10px]">
                                         <span>HP</span>
                                         <span>{opp.stats.sinhLuc} / {opp.stats.maxSinhLuc}</span>
@@ -37,6 +37,7 @@ const OpponentStatsPanel: React.FC<{ opponents: (NPC | YeuThu)[] }> = ({ opponen
                                 {/* MP Bar (if applicable) */}
                                 {(opp.stats.maxLinhLuc ?? 0) > 0 && (
                                     <div title={`MP: ${opp.stats.linhLuc} / ${opp.stats.maxLinhLuc}`}>
+                                        <span className="sr-only">MP của {opp.name}: {opp.stats.linhLuc} trên {opp.stats.maxLinhLuc}</span>
                                         <div className="flex justify-between mb-0.5 text-blue-300 text-[10px]">
                                             <span>MP</span>
                                             <span>{opp.stats.linhLuc} / {opp.stats.maxLinhLuc}</span>
