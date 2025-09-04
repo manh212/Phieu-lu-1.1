@@ -22,7 +22,8 @@ export const getMessagesForPage = (
   const summaryForThisPage = knowledgeBase.pageSummaries?.[pageNumber];
   if (summaryForThisPage && turnStartOfPage > 0 && turnEndOfPage >= turnStartOfPage) { 
      const summaryTurn = turnEndOfPage; 
-     if (!messages.find(m => m.type === 'page_summary' && m.turnNumber === summaryTurn && m.content.includes(summaryForThisPage))) {
+     // FIX: Added type guard to ensure content is a string before calling .includes()
+     if (!messages.find(m => m.type === 'page_summary' && m.turnNumber === summaryTurn && typeof m.content === 'string' && m.content.includes(summaryForThisPage))) {
         messages.push({
             id: `page-summary-display-${pageNumber}-${Date.now()}`,
             type: 'page_summary',

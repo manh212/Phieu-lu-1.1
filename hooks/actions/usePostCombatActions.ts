@@ -3,9 +3,7 @@ import {
     KnowledgeBase, GameMessage, GameScreen, CombatEndPayload
 } from '../../types';
 import {
-    generateVictoryConsequence,
-    summarizeCombat,
-    generateDefeatConsequence,
+    generateCombatConsequence,
     generateNonCombatDefeatConsequence
 } from '../../services/geminiService';
 import { performTagProcessing } from '../../utils/tagProcessingUtils';
@@ -54,65 +52,46 @@ export const usePostCombatActions = (props: UsePostCombatActionsProps) => {
     const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
         setIsLoadingApi(true);
         resetApiError();
-        const kbAfterCombat = { ...knowledgeBase, playerStats: result.finalPlayerState, pendingCombat: null, postCombatState: null };
-        setKnowledgeBase(kbAfterCombat);
+        // The player's stats have already been updated by the combat context.
+        // We just clear the postCombatState from the hook's perspective.
+        const kbForConsequence = { ...knowledgeBase, postCombatState: null };
+        setKnowledgeBase(kbForConsequence);
 
         try {
-            const summary = await summarizeCombat(
-                result.summary.split('\n'), result.outcome,
-                (prompt) => setSentCombatSummaryPromptsLog(prev => [prompt, ...prev].slice(0, 10))
-            );
-            setReceivedCombatSummaryResponsesLog(prev => [summary, ...prev].slice(0, 10));
-            const updatedResultWithSummary = { ...result, summary };
-            
+            // Add a summary message to the log for context
             const summaryMessage: GameMessage = {
                 id: 'combat-summary-' + Date.now(), type: 'event_summary',
-                content: `Tóm tắt trận chiến: ${summary}`,
-                timestamp: Date.now(), turnNumber: kbAfterCombat.playerStats.turn
+                content: `Tóm tắt trận chiến: ${result.summary || 'Trận chiến đã kết thúc.'}`,
+                timestamp: Date.now(), turnNumber: kbForConsequence.playerStats.turn
             };
-            addMessageAndUpdateState([summaryMessage], kbAfterCombat);
+            addMessageAndUpdateState([summaryMessage], kbForConsequence);
 
-            if (result.outcome === 'victory' || result.outcome === 'surrendered') {
-                const { response: consequenceResponse, rawText } = await generateVictoryConsequence(
-                    kbAfterCombat, updatedResultWithSummary, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage,
-                    (prompt) => setSentVictoryConsequencePromptsLog(prev => [prompt, ...prev].slice(0, 10))
-                );
-                setReceivedVictoryConsequenceResponsesLog(prev => [rawText, ...prev].slice(0, 10));
-                const { newKb: kbAfterTags, systemMessagesFromTags } = await performTagProcessing(
-                    kbAfterCombat, consequenceResponse.tags, kbAfterCombat.playerStats.turn + 1, setKnowledgeBase, logNpcAvatarPromptCallback
-                );
-                const finalMessages: GameMessage[] = [ ...systemMessagesFromTags, {
-                    id: 'victory-consequence-' + Date.now(), type: 'narration', content: consequenceResponse.narration,
-                    timestamp: Date.now(), choices: consequenceResponse.choices, turnNumber: kbAfterTags.playerStats.turn
-                }];
-                addMessageAndUpdateState(finalMessages, kbAfterTags);
-            } else if (result.outcome === 'defeat') {
-                const { response: consequenceResponse, rawText } = await generateDefeatConsequence(
-                    kbAfterCombat, updatedResultWithSummary, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage,
-                    (prompt) => setSentVictoryConsequencePromptsLog(prev => [prompt, ...prev].slice(0, 10))
-                );
-                setReceivedVictoryConsequenceResponsesLog(prev => [rawText, ...prev].slice(0, 10));
-                const { newKb: kbAfterTags, systemMessagesFromTags } = await performTagProcessing(
-                    kbAfterCombat, consequenceResponse.tags, kbAfterCombat.playerStats.turn + 1, setKnowledgeBase, logNpcAvatarPromptCallback
-                );
-                const finalMessages: GameMessage[] = [ ...systemMessagesFromTags, {
-                    id: 'defeat-consequence-' + Date.now(), type: 'narration', content: consequenceResponse.narration,
-                    timestamp: Date.now(), choices: consequenceResponse.choices, turnNumber: kbAfterTags.playerStats.turn
-                }];
-                addMessageAndUpdateState(finalMessages, kbAfterTags);
-            }
-            setCurrentScreen(GameScreen.Gameplay);
+            const { response: consequenceResponse, rawText } = await generateCombatConsequence(
+                kbForConsequence, result, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage,
+                (prompt) => setSentVictoryConsequencePromptsLog(prev => [prompt, ...prev].slice(0, 10))
+            );
+            setReceivedVictoryConsequenceResponsesLog(prev => [rawText, ...prev].slice(0, 10));
+
+            const turnForTags = kbForConsequence.playerStats.turn + 1;
+            const { newKb: kbAfterTags, systemMessagesFromTags } = await performTagProcessing(
+                kbForConsequence, consequenceResponse.tags, turnForTags, setKnowledgeBase, logNpcAvatarPromptCallback
+            );
+
+            const finalMessages: GameMessage[] = [ ...systemMessagesFromTags, {
+                id: 'combat-consequence-' + Date.now(), type: 'narration', content: consequenceResponse.narration,
+                timestamp: Date.now(), choices: consequenceResponse.choices, turnNumber: kbAfterTags.playerStats.turn
+            }];
+            addMessageAndUpdateState(finalMessages, kbAfterTags);
+
         } catch (error) {
             const errorMsg = `Lỗi tạo hậu quả sau trận chiến: ${error instanceof Error ? error.message : String(error)}`;
             setApiErrorWithTimeout(errorMsg);
-            setCurrentScreen(GameScreen.Gameplay);
         } finally {
             setIsLoadingApi(false);
         }
     }, [
         knowledgeBase, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage,
         addMessageAndUpdateState, setIsLoadingApi, resetApiError,
-        setSentCombatSummaryPromptsLog, setReceivedCombatSummaryResponsesLog,
         setSentVictoryConsequencePromptsLog, setReceivedVictoryConsequenceResponsesLog,
         setKnowledgeBase, logNpcAvatarPromptCallback, setCurrentScreen, setApiErrorWithTimeout
     ]);
@@ -149,7 +128,6 @@ export const usePostCombatActions = (props: UsePostCombatActionsProps) => {
                 kbStateAtDefeat, response.tags, kbStateAtDefeat.playerStats.turn + 1,
                 setKnowledgeBase, logNpcAvatarPromptCallback
             );
-            kbAfterTags.pendingCombat = null;
 
             const narrationMessage: GameMessage = {
                 id: 'non-combat-defeat-narration-' + Date.now(), type: 'narration',

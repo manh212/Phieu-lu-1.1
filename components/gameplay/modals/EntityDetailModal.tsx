@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { GameEntity, GameEntityType } from '../../../hooks/types';
 import { KnowledgeBase, PlayerStats, Item, Skill, Quest, NPC, GameLocation, WorldLoreEntry, Companion, Faction, YeuThu, Wife, Slave, Prisoner, ActivityLogEntry } from '../../../types';
@@ -32,6 +31,12 @@ const renderStatBonuses = (bonuses: Partial<PlayerStats>) => {
         linhLuc: "Linh Lực Hiện Tại", maxLinhLuc: "Linh Lực Tối Đa",
         sucTanCong: "Sức Tấn Công",
         kinhNghiem: "Kinh Nghiệm", maxKinhNghiem: "Kinh Nghiệm Tối Đa",
+        phongThu: "Phòng Thủ",
+        tocDo: "Tốc Độ",
+        chinhXac: "Chính Xác",
+        neTranh: "Né Tránh",
+        tiLeChiMang: "Tỉ Lệ Chí Mạng",
+        satThuongChiMang: "Sát Thương Chí Mạng",
     };
     return (
         <ul className="list-disc list-inside pl-4 text-xs">
@@ -109,30 +114,30 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
     if (!isOpen || !selectedEntity) return null;
 
     const { type, entity } = selectedEntity;
-    const isCharacter = ['npc', 'prisoner', 'wife', 'slave'].includes(type);
+    const isCharacter = ['npc', 'prisoner', 'wife', 'slave', 'yeuThu'].includes(type);
 
     let title = "Chi Tiết";
     let content: React.ReactNode = null;
 
     if (isCharacter) {
-        const person = entity as NPC | Prisoner | Wife | Slave;
+        const person = entity as NPC | Prisoner | Wife | Slave | YeuThu;
         const personTypeLabel = ('entityType' in person && person.entityType)
             ? (person.entityType === 'wife' ? 'Đạo Lữ' : person.entityType === 'slave' ? 'Nô Lệ' : 'Tù Nhân')
-            : 'NPC';
+            : ('species' in person ? 'Yêu Thú' : 'NPC');
         title = `Chi Tiết ${personTypeLabel}: ${person.name}`;
         
         const activeTabStyle = "whitespace-nowrap py-2 px-4 border-b-2 font-medium text-sm border-indigo-500 text-indigo-400 focus:outline-none";
         const inactiveTabStyle = "whitespace-nowrap py-2 px-4 border-b-2 font-medium text-sm border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500 focus:outline-none";
 
-        const relationships = Object.entries(person.relationships || {}).filter(([_, rel]: [string, any]) => rel.type !== 'Người lạ');
+        const relationships = 'relationships' in person ? Object.entries(person.relationships || {}).filter(([_, rel]: [string, any]) => rel.type !== 'Người lạ') : [];
 
         content = (
             <div className="flex flex-col h-full">
                 <div className="border-b border-gray-700 flex-shrink-0">
                     <nav className="-mb-px flex space-x-6" aria-label="Tabs">
                         <button onClick={() => setActiveTab('overview')} className={activeTab === 'overview' ? activeTabStyle : inactiveTabStyle}>Tổng Quan</button>
-                        <button onClick={() => setActiveTab('mind')} className={activeTab === 'mind' ? activeTabStyle : inactiveTabStyle}>Nội Tâm</button>
-                        <button onClick={() => setActiveTab('log')} className={activeTab === 'log' ? activeTabStyle : inactiveTabStyle}>Nhật Ký</button>
+                        {'mood' in person && <button onClick={() => setActiveTab('mind')} className={activeTab === 'mind' ? activeTabStyle : inactiveTabStyle}>Nội Tâm</button>}
+                        {'activityLog' in person && <button onClick={() => setActiveTab('log')} className={activeTab === 'log' ? activeTabStyle : inactiveTabStyle}>Nhật Ký</button>}
                     </nav>
                 </div>
                 <div className="mt-4 flex-grow overflow-y-auto custom-scrollbar pr-2 -mr-2">
@@ -142,17 +147,18 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                             <div className="text-center">
                                 <img src={getDeterministicAvatarSrc(person)} alt={person.name} className="w-32 h-32 rounded-lg object-cover mx-auto mb-3 border-2 border-pink-500 shadow-md" />
                                 <h3 className="text-2xl font-bold">{person.name}</h3>
-                                <p className="text-md text-gray-400">{person.race || 'Không rõ'}</p>
-                                {person.title && <p className="text-sm text-gray-500">{person.title}</p>}
+                                {'race' in person && <p className="text-md text-gray-400">{person.race || 'Không rõ'}</p>}
+                                {'species' in person && <p className="text-md text-gray-400">{person.species || 'Không rõ'}</p>}
+                                {'title' in person && person.title && <p className="text-sm text-gray-500">{person.title}</p>}
                             </div>
                     
                             <DetailSection title="Tu Luyện">
                                 <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                                    <StatField label="Giới tính" value={person.gender} />
+                                    {'gender' in person && <StatField label="Giới tính" value={person.gender} />}
                                     <StatField label="Cảnh giới" value={person.realm} valueClassName="text-amber-400 font-bold"/>
-                                    <StatField label="Tư chất" value={person.tuChat} />
-                                    <StatField label="Linh Căn" value={person.spiritualRoot} />
-                                    <div className="col-span-2"><StatField label="Thể Chất" value={person.specialPhysique} /></div>
+                                    {'tuChat' in person && <StatField label="Tư chất" value={person.tuChat} />}
+                                    {'spiritualRoot' in person && <StatField label="Linh Căn" value={person.spiritualRoot} />}
+                                    {'specialPhysique' in person && <div className="col-span-2"><StatField label="Thể Chất" value={person.specialPhysique} /></div>}
                                 </div>
                             </DetailSection>
                             
@@ -169,11 +175,17 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                             
                             {person.stats && (person.stats.maxSinhLuc != null || person.stats.sucTanCong != null) && (
                                 <DetailSection title="Chỉ số chiến đấu">
-                                    <ul className="text-sm space-y-1.5">
+                                    <ul className="text-sm space-y-1.5 grid grid-cols-2 gap-x-4">
                                         {person.stats.maxSinhLuc != null && <li><strong className="text-gray-400">Sinh Lực:</strong> {person.stats.sinhLuc ?? '??'} / {person.stats.maxSinhLuc}</li>}
                                         {person.stats.maxLinhLuc != null && person.stats.maxLinhLuc > 0 && <li><strong className="text-gray-400">Linh Lực:</strong> {person.stats.linhLuc ?? '??'} / {person.stats.maxLinhLuc}</li>}
                                         {person.stats.sucTanCong != null && <li><strong className="text-gray-400">Sức Tấn Công:</strong> {person.stats.sucTanCong}</li>}
-                                        {person.stats.maxKinhNghiem != null && person.stats.maxKinhNghiem > 0 && <li><strong className="text-gray-400">Kinh Nghiệm:</strong> {person.stats.kinhNghiem ?? '??'} / {person.stats.maxKinhNghiem}</li>}
+                                        {person.stats.phongThu != null && <li><strong className="text-gray-400">Phòng Thủ:</strong> {person.stats.phongThu}</li>}
+                                        {person.stats.tocDo != null && <li><strong className="text-gray-400">Tốc Độ:</strong> {person.stats.tocDo}</li>}
+                                        {person.stats.chinhXac != null && <li><strong className="text-gray-400">Chính Xác:</strong> {person.stats.chinhXac}</li>}
+                                        {person.stats.neTranh != null && <li><strong className="text-gray-400">Né Tránh:</strong> {person.stats.neTranh}</li>}
+                                        {person.stats.tiLeChiMang != null && <li><strong className="text-gray-400">Tỉ Lệ Chí Mạng:</strong> {person.stats.tiLeChiMang}%</li>}
+                                        {person.stats.satThuongChiMang != null && <li><strong className="text-gray-400">Sát Thương Chí Mạng:</strong> x{person.stats.satThuongChiMang}</li>}
+                                        {person.stats.maxKinhNghiem != null && person.stats.maxKinhNghiem > 0 && <li className="col-span-2"><strong className="text-gray-400">Kinh Nghiệm:</strong> {person.stats.kinhNghiem ?? '??'} / {person.stats.maxKinhNghiem}</li>}
                                         {person.stats.thoNguyen !== undefined && <li className="col-span-2"><strong className="text-gray-400">Thọ Nguyên:</strong> {Math.floor(person.stats.thoNguyen)} / {person.stats.maxThoNguyen ?? '??'}</li>}
                                     </ul>
                                 </DetailSection>
@@ -181,25 +193,25 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                             <p className="text-sm italic text-gray-400 pt-3 border-t border-gray-700/50">{person.description}</p>
                         </div>
                     )}
-                    {activeTab === 'mind' && (
+                    {'mood' in person && activeTab === 'mind' && (
                         // Tab 2: Nội Tâm
                         <div className="space-y-4">
                              <DetailSection title="Trạng Thái Hiện Tại">
                                 <StatField 
                                     label="Vị Trí & Hoạt Động" 
-                                    value={`${(person.currentPlan && person.currentPlan.length > 0 ? person.currentPlan.join(' -> ') : 'Đang nghỉ ngơi')} tại ${knowledgeBase.discoveredLocations.find(l => l.id === person.locationId)?.name || 'Vị trí không xác định'}`} 
+                                    value={`${('currentPlan' in person && person.currentPlan && person.currentPlan.length > 0) ? person.currentPlan.join(' -> ') : 'Đang nghỉ ngơi'} tại ${knowledgeBase.discoveredLocations.find(l => l.id === person.locationId)?.name || 'Vị trí không xác định'}`} 
                                 />
                              </DetailSection>
                              <DetailSection title="Mục Tiêu">
                                 <div className="space-y-2 text-sm">
-                                    <p><strong className="text-gray-400">Dài hạn:</strong> <span className="italic">{person.longTermGoal || 'Chưa có'}</span></p>
-                                    <p><strong className="text-gray-400">Ngắn hạn:</strong> <span className="italic">{person.shortTermGoal || 'Chưa có'}</span></p>
+                                    <p><strong className="text-gray-400">Dài hạn:</strong> <span className="italic">{'longTermGoal' in person && person.longTermGoal || 'Chưa có'}</span></p>
+                                    <p><strong className="text-gray-400">Ngắn hạn:</strong> <span className="italic">{'shortTermGoal' in person && person.shortTermGoal || 'Chưa có'}</span></p>
                                 </div>
                              </DetailSection>
                              <DetailSection title="Trạng Thái Tinh Thần">
                                  <div className="space-y-3">
-                                    <StatField label="Tâm trạng" value={person.mood || 'Bình Thường'} />
-                                    {renderNeeds(person.needs || {})}
+                                    <StatField label="Tâm trạng" value={'mood' in person && person.mood || 'Bình Thường'} />
+                                    {'needs' in person && renderNeeds(person.needs || {})}
                                  </div>
                              </DetailSection>
                              <DetailSection title="Mối Quan Hệ">
@@ -223,7 +235,7 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                              </DetailSection>
                         </div>
                     )}
-                    {activeTab === 'log' && (
+                    {'activityLog' in person && activeTab === 'log' && (
                         // Tab 3: Nhật Ký
                         <div className="space-y-3">
                             {person.activityLog && person.activityLog.length > 0 ? (

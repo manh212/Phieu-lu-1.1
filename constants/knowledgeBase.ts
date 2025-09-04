@@ -43,8 +43,8 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   currentLocationId: undefined,
   auctionState: null,
   slaveAuctionState: null, // New
-  pendingCombat: null,
   postCombatState: null, // NEW
+  pendingOpponentIdsForCombat: null, // NEW for combat init
   userPrompts: [], // NEW
   // New Entities
   prisoners: [],

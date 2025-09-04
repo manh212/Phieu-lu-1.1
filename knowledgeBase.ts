@@ -43,7 +43,7 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   currentLocationId: undefined,
   auctionState: null,
   slaveAuctionState: null, // New
-  pendingCombat: null,
+  // FIX: Removed 'pendingCombat' property which is not defined in the KnowledgeBase type.
   postCombatState: null, // NEW
   userPrompts: [], // NEW
   // New Entities

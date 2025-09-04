@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useGame } from '../../hooks/useGame';
 import OffCanvasPanel from '../ui/OffCanvasPanel';
@@ -129,7 +130,8 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
         {(aiCopilotMessages || []).map((msg, index) => (
           <div key={msg.id || index} className={`flex ${msg.isPlayerInput ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.type === 'error' ? 'bg-red-800 text-red-100' : (msg.isPlayerInput ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200')}`}>
-              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              {/* FIX: Ensure content is a string before rendering */}
+              <p className="text-sm whitespace-pre-wrap">{typeof msg.content === 'string' ? msg.content : null}</p>
               {msg.actionTags && msg.actionTags.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-gray-500/50">
                   <p className="text-xs text-amber-300 mb-2">AI đề xuất các thay đổi sau:</p>

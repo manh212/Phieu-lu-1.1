@@ -17,7 +17,8 @@ const SystemMessageGroup: React.FC<SystemMessageGroupProps> = ({ messages }) => 
   if (messages.length === 1) {
     return (
         <div className="bg-yellow-600 bg-opacity-30 text-yellow-200 border border-yellow-500 italic text-xs sm:text-sm p-2 sm:p-3 rounded-xl shadow">
-            {messages[0].content}
+            {/* FIX: Ensure content is a string before rendering */}
+            {typeof messages[0].content === 'string' ? messages[0].content : null}
         </div>
     );
   }
@@ -47,7 +48,8 @@ const SystemMessageGroup: React.FC<SystemMessageGroupProps> = ({ messages }) => 
         <div className="p-2 sm:p-3 border-t border-gray-600/50 space-y-1">
           {messages.map(msg => (
             <p key={msg.id} className="text-xs text-yellow-200/90 italic">
-              - {msg.content}
+              {/* FIX: Ensure content is a string before rendering */}
+              - {typeof msg.content === 'string' ? msg.content : null}
             </p>
           ))}
         </div>

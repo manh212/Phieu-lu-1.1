@@ -1,7 +1,3 @@
-
-
-
-
 import React from 'react';
 
 import { GameProvider } from './contexts/GameContext';
@@ -10,6 +6,7 @@ import AppRouter from './components/AppRouter';
 import Spinner from './components/ui/Spinner';
 import { VIETNAMESE } from './constants';
 import { GameScreen } from './types';
+import { CombatProvider } from './contexts/CombatContext'; // NEW: Import CombatProvider
 
 // New imports for modals
 import EntityDetailModal from './components/gameplay/modals/EntityDetailModal';
@@ -94,7 +91,9 @@ const AppContent: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <GameProvider>
-      <AppContent />
+      <CombatProvider>
+        <AppContent />
+      </CombatProvider>
     </GameProvider>
   );
 };

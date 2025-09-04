@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
-import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation } from './types';
+import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase } from './types';
 import { VIETNAMESE } from './constants';
 import * as GameTemplates from './templates'; // Import GameTemplates
 
@@ -16,21 +16,22 @@ import WorldSidePanel from './components/gameplay/WorldSidePanel';
 import DebugPanelDisplay from './components/gameplay/DebugPanelDisplay';
 import MiniInfoPopover from './components/ui/MiniInfoPopover';
 import { MainMenuPanel } from './components/gameplay/layout/MainMenuPanel';
-import AICopilotPanel from './components/gameplay/AICopilotPanel'; // NEW
+import AICopilotPanel from './components/gameplay/AICopilotPanel';
 
 // Import Custom Hooks
 import { useGameplayPanels } from './hooks/useGameplayPanels';
 import { usePlayerInput } from './hooks/usePlayerInput';
 import { usePopover } from './hooks/usePopover';
+import { useGame } from './hooks/useGame'; // Using useGame to get context
+import { useCombat } from './hooks/useCombat'; // NEW: Import combat hook
 
 // Import Utilities
 import { parseAndHighlightText as parseAndHighlightTextUtil } from './utils/textHighlighting';
-import { useGame } from './hooks/useGame'; // Using useGame to get context
-import Button from './components/ui/Button'; // Import Button
 import Spinner from './components/ui/Spinner'; // Import Spinner
 
 export const GameplayScreen: React.FC = () => {
     const game = useGame(); // Get all props from context
+    const combat = useCombat(); // NEW: Get combat context
     const storyLogRef = useRef<HTMLDivElement>(null);
 
     // Use custom hooks for UI state not needed globally
@@ -54,6 +55,70 @@ export const GameplayScreen: React.FC = () => {
 
     const isLoadingUi = game.isLoadingApi || game.isUploadingAvatar || game.knowledgeBase.isWorldTicking;
     const isSummarizingUi = game.isSummarizingNextPageTransition || game.isSummarizingOnLoad;
+
+    // --- NEW: Effect to start combat ---
+    useEffect(() => {
+        if (game.knowledgeBase.pendingOpponentIdsForCombat && game.knowledgeBase.pendingOpponentIdsForCombat.length > 0) {
+            combat.startCombat(game.knowledgeBase.pendingOpponentIdsForCombat);
+            // Clear the pending state after starting combat to prevent re-triggering
+            game.setKnowledgeBase((prev: KnowledgeBase) => ({
+                ...prev,
+                pendingOpponentIdsForCombat: null
+            }));
+            // Switch to combat screen
+            game.setCurrentScreen(GameScreen.Combat);
+        }
+    }, [game.knowledgeBase.pendingOpponentIdsForCombat, combat.startCombat, game.setKnowledgeBase, game.setCurrentScreen]);
+
+    // --- NEW: Effect to handle post-combat results ---
+    useEffect(() => {
+        if (game.knowledgeBase.postCombatState) {
+            game.handleCombatEnd(game.knowledgeBase.postCombatState);
+        }
+    }, [game.knowledgeBase.postCombatState, game.handleCombatEnd]);
+
+
+    const handleStartDebugCombat = useCallback(() => {
+        const { knowledgeBase, setKnowledgeBase, showNotification } = game;
+        const { combatState } = combat;
+    
+        if (combatState.isInCombat) {
+            showNotification("Đã ở trong trận chiến!", 'warning');
+            return;
+        }
+    
+        const opponentsInLocation = [
+            ...knowledgeBase.discoveredNPCs.filter((npc: any) => npc.locationId === knowledgeBase.currentLocationId && !npc.isEssential),
+            ...knowledgeBase.discoveredYeuThu.filter((yt: any) => yt.locationId === knowledgeBase.currentLocationId)
+        ];
+
+        let potentialOpponents = opponentsInLocation;
+
+        if(potentialOpponents.length === 0) {
+             potentialOpponents = [
+                ...knowledgeBase.discoveredNPCs.filter((npc: any) => !npc.isEssential),
+                ...knowledgeBase.discoveredYeuThu
+            ];
+        }
+    
+        if (potentialOpponents.length === 0) {
+            showNotification("Không tìm thấy đối thủ nào để bắt đầu chiến đấu thử.", 'error');
+            return;
+        }
+    
+        const shuffled = potentialOpponents.sort(() => 0.5 - Math.random());
+        const selectedOpponents = shuffled.slice(0, Math.min(2, shuffled.length));
+        const opponentIds = selectedOpponents.map((opp: any) => opp.id);
+    
+        showNotification(`Bắt đầu chiến đấu thử với: ${selectedOpponents.map((o: any) => o.name).join(', ')}`, 'info');
+    
+        setKnowledgeBase((prev: KnowledgeBase) => ({
+            ...prev,
+            pendingOpponentIdsForCombat: opponentIds
+        }));
+    
+    }, [game, combat]);
+
 
     // Scroll management
     useLayoutEffect(() => {
@@ -93,7 +158,6 @@ export const GameplayScreen: React.FC = () => {
         return () => document.removeEventListener('keydown', handleEsc);
     }, [closePopover, game, setIsCopilotOpen]);
     
-    // Correctly implemented style function for story messages
     const getDynamicMessageStyles = useCallback((msgType: GameMessage['type']): React.CSSProperties => {
         const styles: React.CSSProperties = {};
         let settingsToApply: StyleSettingProperty | undefined;
@@ -106,7 +170,7 @@ export const GameplayScreen: React.FC = () => {
                 settingsToApply = game.styleSettings.playerAction;
                 break;
             default:
-                return {}; // No custom styles for system, error, etc.
+                return {};
         }
 
         if (settingsToApply) {
@@ -127,7 +191,6 @@ export const GameplayScreen: React.FC = () => {
         return styles;
     }, [game.styleSettings]);
     
-    // Correctly implemented style function for choice buttons
     const getChoiceButtonStyles = useCallback((): React.CSSProperties => {
         const styles: React.CSSProperties = {};
         const settingsToApply = game.styleSettings.choiceButton;
@@ -200,7 +263,7 @@ export const GameplayScreen: React.FC = () => {
                     knowledgeBase={game.knowledgeBase}
                     setIsMainMenuOpen={setIsMainMenuOpen}
                     onRollbackTurn={game.onRollbackTurn}
-                    isStopButtonDisabled={isStopButtonDisabled || !!game.knowledgeBase.pendingCombat}
+                    isStopButtonDisabled={isStopButtonDisabled}
                     isLoading={isLoadingUi}
                     onSaveGame={game.onSaveGame}
                     isSaveDisabled={isSaveDisabled}
@@ -229,8 +292,8 @@ export const GameplayScreen: React.FC = () => {
                     knowledgeBase={game.knowledgeBase}
                     styleSettings={game.styleSettings}
                     messageIdBeingEdited={game.messageIdBeingEdited}
-                    currentEditText={""} // The parent context will handle the actual edit text state
-                    setCurrentEditText={() => {}} // Parent handles
+                    currentEditText={""}
+                    setCurrentEditText={() => {}}
                     onStartEditMessage={game.onStartEditMessage}
                     onSaveEditedMessage={game.onSaveEditedMessage}
                     onCancelEditMessage={game.onCancelEditMessage}
@@ -244,52 +307,36 @@ export const GameplayScreen: React.FC = () => {
                 />
                  {!isReaderMode && (
                     <div className="flex-shrink-0">
-                        {game.knowledgeBase.pendingCombat ? (
-                            <div className="p-4 bg-red-900/50 border-t-2 border-red-500 flex flex-col items-center justify-center gap-4">
-                                <p className="text-lg font-bold text-red-300 animate-pulse">Một trận chiến sắp bắt đầu!</p>
-                                <Button 
-                                    variant="danger" 
-                                    size="lg"
-                                    onClick={() => game.setCurrentScreen(GameScreen.Combat)}
-                                >
-                                    {VIETNAMESE.startCombatButton || "Bắt Đầu Chiến Đấu"}
-                                </Button>
-                            </div>
-                        ) : (
-                            <>
-                                <PlayerInputArea 
-                                    latestMessageWithChoices={[...game.getMessagesForPage(game.currentPageDisplay)].reverse().find(msg => msg.type === 'narration' && msg.choices && msg.choices.length > 0)}
-                                    showAiSuggestions={showAiSuggestions} setShowAiSuggestions={setShowAiSuggestions}
-                                    playerInput={playerInput} setPlayerInput={setPlayerInput}
-                                    currentActionType={currentActionType} setCurrentActionType={setCurrentActionType}
-                                    selectedResponseLength={selectedResponseLength} setSelectedResponseLength={setSelectedResponseLength}
-                                    isResponseLengthDropdownOpen={isResponseLengthDropdownOpen} setIsResponseLengthDropdownOpen={setIsResponseLengthDropdownOpen}
-                                    responseLengthDropdownRef={responseLengthDropdownRef}
-                                    isLoadingUi={isLoadingUi}
-                                    isSummarizingUi={isSummarizingUi}
-                                    isCurrentlyActivePage={game.isCurrentlyActivePage}
-                                    messageIdBeingEdited={game.messageIdBeingEdited}
-                                    handleChoiceClick={handleChoiceClick}
-                                    handleSubmit={handleSubmit}
-                                    handleRefresh={handleRefresh}
-                                    choiceButtonStyles={getChoiceButtonStyles()}
-                                    currentPage={game.currentPageDisplay}
-                                    totalPages={game.totalPages}
-                                    onPrev={game.onGoToPrevPage}
-                                    onNext={game.onGoToNextPage}
-                                    onJump={game.onJumpToPage}
-                                    economySubLocations={economySubLocations}
-                                    onEconomyLocationClick={handleEconomyLocationClick}
-                                    isStrictMode={isStrictMode}
-                                    setIsStrictMode={setIsStrictMode}
-                                />
-                            </>
-                        )}
+                        <PlayerInputArea 
+                            latestMessageWithChoices={[...game.getMessagesForPage(game.currentPageDisplay)].reverse().find(msg => msg.type === 'narration' && msg.choices && msg.choices.length > 0)}
+                            showAiSuggestions={showAiSuggestions} setShowAiSuggestions={setShowAiSuggestions}
+                            playerInput={playerInput} setPlayerInput={setPlayerInput}
+                            currentActionType={currentActionType} setCurrentActionType={setCurrentActionType}
+                            selectedResponseLength={selectedResponseLength} setSelectedResponseLength={setSelectedResponseLength}
+                            isResponseLengthDropdownOpen={isResponseLengthDropdownOpen} setIsResponseLengthDropdownOpen={setIsResponseLengthDropdownOpen}
+                            responseLengthDropdownRef={responseLengthDropdownRef}
+                            isLoadingUi={isLoadingUi}
+                            isSummarizingUi={isSummarizingUi}
+                            isCurrentlyActivePage={game.isCurrentlyActivePage}
+                            messageIdBeingEdited={game.messageIdBeingEdited}
+                            handleChoiceClick={handleChoiceClick}
+                            handleSubmit={handleSubmit}
+                            handleRefresh={handleRefresh}
+                            choiceButtonStyles={getChoiceButtonStyles()}
+                            currentPage={game.currentPageDisplay}
+                            totalPages={game.totalPages}
+                            onPrev={game.onGoToPrevPage}
+                            onNext={game.onGoToNextPage}
+                            onJump={game.onJumpToPage}
+                            economySubLocations={economySubLocations}
+                            onEconomyLocationClick={handleEconomyLocationClick}
+                            isStrictMode={isStrictMode}
+                            setIsStrictMode={setIsStrictMode}
+                        />
                     </div>
                  )}
             </div>
 
-            {/* Main Menu Panel */}
             <OffCanvasPanel isOpen={isMainMenuOpen} onClose={() => setIsMainMenuOpen(false)} title="Menu Trò Chơi" position="right">
                 <MainMenuPanel
                     onClose={() => setIsMainMenuOpen(false)}
@@ -301,7 +348,6 @@ export const GameplayScreen: React.FC = () => {
                 />
             </OffCanvasPanel>
 
-            {/* Side Panels */}
             <OffCanvasPanel isOpen={isCharPanelOpen} onClose={() => setIsCharPanelOpen(false)} title={VIETNAMESE.characterPanelTitle} position="right">
                 <CharacterSidePanel knowledgeBase={game.knowledgeBase} onItemClick={(item) => game.openEntityModal('item', item)} onSkillClick={(skill) => game.openEntityModal('skill', skill)} onPlayerAvatarUploadRequest={game.onUpdatePlayerAvatar} isUploadingPlayerAvatar={game.isUploadingAvatar} />
             </OffCanvasPanel>
@@ -320,10 +366,8 @@ export const GameplayScreen: React.FC = () => {
                 />
             </OffCanvasPanel>
             
-            {/* AI Copilot Panel - NEW */}
             <AICopilotPanel isOpen={isCopilotOpen} onClose={() => setIsCopilotOpen(false)} />
 
-            {/* Popover & Debug */}
             <MiniInfoPopover isOpen={popover.isOpen} targetRect={popover.targetRect} entity={popover.entity} entityType={popover.entityType} onClose={closePopover} knowledgeBase={game.knowledgeBase} />
             {!isReaderMode && showDebugPanel && <DebugPanelDisplay 
                 kb={game.knowledgeBase} 
@@ -343,7 +387,7 @@ export const GameplayScreen: React.FC = () => {
                 totalPages={game.totalPages} 
                 isAutoPlaying={game.isAutoPlaying} 
                 onToggleAutoPlay={game.onToggleAutoPlay} 
-                onStartDebugCombat={()=>{}} 
+                onStartDebugCombat={handleStartDebugCombat} 
                 onProcessDebugTags={game.handleProcessDebugTags} 
                 isLoading={isLoadingUi} 
                 onCheckTokenCount={game.handleCheckTokenCount}

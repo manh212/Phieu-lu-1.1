@@ -1,8 +1,9 @@
+
 import { useState, useRef, useCallback } from 'react';
-import { PlayerActionInputType, ResponseLength } from '../types';
+import { PlayerActionInputType, ResponseLength, AiChoice } from '../types';
 
 interface UsePlayerInputProps {
-  onPlayerAction: (action: string, isChoice: boolean, inputType: PlayerActionInputType, responseLength: ResponseLength, isStrictMode: boolean) => void;
+  onPlayerAction: (action: AiChoice | string, isChoice: boolean, inputType: PlayerActionInputType, responseLength: ResponseLength, isStrictMode: boolean) => void;
   onRefreshChoices: (playerHint: string) => void;
   isLoading: boolean;
   isSummarizing: boolean;
@@ -20,12 +21,12 @@ export const usePlayerInput = ({ onPlayerAction, onRefreshChoices, isLoading, is
 
   const responseLengthDropdownRef = useRef<HTMLDivElement | null>(null);
   
-  const handleChoiceClick = useCallback((choiceText: string) => {
+  const handleChoiceClick = useCallback((choice: AiChoice) => {
     if (!isLoading && !isSummarizing && isCurrentlyActivePage) {
-      onPlayerAction(choiceText, true, 'action', selectedResponseLength, isStrictMode); // Pass isStrictMode
+      onPlayerAction(choice, true, 'action', selectedResponseLength, isStrictMode);
       setPlayerInput('');
     }
-  }, [isLoading, isSummarizing, isCurrentlyActivePage, onPlayerAction, selectedResponseLength, isStrictMode]); // Add isStrictMode
+  }, [isLoading, isSummarizing, isCurrentlyActivePage, onPlayerAction, selectedResponseLength, isStrictMode]);
   
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();

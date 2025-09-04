@@ -1,8 +1,3 @@
-
-
-
-
-
 import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, CountTokensResponse, Type } from "@google/genai";
 import { KnowledgeBase, ParsedAiResponse, AiChoice, WorldSettings, ApiConfig, SafetySetting, PlayerActionInputType, ResponseLength, StartingSkill, StartingItem, StartingNPC, StartingLore, GameMessage, GeneratedWorldElements, StartingLocation, StartingFaction, PlayerStats, Item as ItemType, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, TU_CHAT_TIERS, AuctionItem, GameLocation, AuctionState, WorldDate, CongPhapGrade, CongPhapType, LinhKiActivationType, LinhKiCategory, ProfessionGrade, ProfessionType, FindLocationParams, NPC, Skill, Prisoner, Wife, Slave, CombatEndPayload, RaceCultivationSystem, StartingYeuThu, AuctionSlave, WorldTickUpdate } from '../types'; 
 import { PROMPT_FUNCTIONS } from '../prompts';
@@ -21,15 +16,6 @@ let lastUsedEffectiveApiKey: string | null = null;
 let lastUsedApiKeySource: 'system' | 'user' | null = null;
 let lastUsedModelForClient: string | null = null;
 let currentApiKeyIndex = 0; // for round-robin
-
-// New type for parsed combat response
-export interface ParsedCombatResponse {
-  narration: string;
-  choices: AiChoice[];
-  statUpdates: Array<{ targetId: string; stat: keyof PlayerStats; change: number }>;
-  combatEnd: 'victory' | 'defeat' | 'escaped' | 'surrendered' | null;
-  tags: string[]; // Added tags for post-combat processing
-}
 
 
 export const getApiSettings = (): ApiConfig => {
@@ -851,76 +837,18 @@ export async function summarizeTurnHistory(messagesToSummarize: GameMessage[], w
     return { rawSummary: rawText, processedSummary: rawText.trim() };
 }
 
-export const generateCombatTurn = async (
-    knowledgeBase: KnowledgeBase,
-    playerAction: string,
-    combatLog: string[],
-    currentPageMessagesLog: string,
-    previousPageSummaries: string[],
-    lastNarrationFromPreviousPage: string | undefined,
-    onPromptConstructed?: (prompt: string) => void
-): Promise<{response: ParsedCombatResponse, rawText: string}> => {
+export async function generateCombatConsequence(kb: KnowledgeBase, combatResult: CombatEndPayload, currentPageMessagesLog: string, previousPageSummaries: string[], lastNarrationFromPreviousPage: string | undefined, onPromptConstructed?: (prompt: string) => void): Promise<{response: ParsedAiResponse, rawText: string}> {
     const { model } = getApiSettings();
-    const prompt = PROMPT_FUNCTIONS.combatTurn(knowledgeBase, playerAction, combatLog, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage);
-    if (onPromptConstructed) onPromptConstructed(prompt);
-    incrementApiCallCount('COMBAT_TURN');
-    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
-    const rawText = response.text;
-    
-    // Parse combat-specific response
-    const { narration, choices, tags } = parseAiResponseText(rawText);
-    const statUpdates: ParsedCombatResponse['statUpdates'] = [];
-    let combatEnd: ParsedCombatResponse['combatEnd'] = null;
-    const postCombatTags: string[] = [];
-    
-    tags.forEach(tag => {
-        const match = tag.match(/\[(.*?):(.*)\]/s);
-        if(!match) return;
-        const tagName = match[1].trim().toUpperCase();
-        const tagParams = parseTagParams(match[2].trim());
-
-        if (tagName === 'COMBAT_STAT_UPDATE') {
-            statUpdates.push({
-                targetId: tagParams.targetId,
-                stat: tagParams.stat as keyof PlayerStats,
-                change: parseInt(tagParams.change),
-            });
-        } else if (tagName === 'COMBAT_END') {
-            combatEnd = tagParams.outcome as ParsedCombatResponse['combatEnd'];
-        } else {
-            postCombatTags.push(tag);
-        }
-    });
-
-    return { response: { narration, choices, statUpdates, combatEnd, tags: postCombatTags }, rawText };
-}
-
-export async function generateDefeatConsequence(kb: KnowledgeBase, combatResult: CombatEndPayload, currentPageMessagesLog: string, previousPageSummaries: string[], lastNarrationFromPreviousPage: string | undefined, onPromptConstructed?: (prompt: string) => void): Promise<{response: ParsedAiResponse, rawText: string}> {
-    const { model } = getApiSettings();
-    const prompt = PROMPT_FUNCTIONS.generateDefeatConsequence(kb, combatResult, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage);
+    const prompt = PROMPT_FUNCTIONS.summarizeCombat(kb, combatResult, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage);
     incrementApiCallCount('COMBAT_SUMMARY');
     return generateContentWithRateLimit(prompt, model, onPromptConstructed);
 }
+
 export async function generateNonCombatDefeatConsequence(kb: KnowledgeBase, currentPageMessagesLog: string, previousPageSummaries: string[], fatalNarration: string, lastNarrationFromPreviousPage: string | undefined, onPromptConstructed?: (prompt: string) => void): Promise<{response: ParsedAiResponse, rawText: string}> {
     const { model } = getApiSettings();
     const prompt = PROMPT_FUNCTIONS.generateNonCombatDefeatConsequence(kb, currentPageMessagesLog, previousPageSummaries, fatalNarration, lastNarrationFromPreviousPage);
     incrementApiCallCount('COMBAT_SUMMARY');
     return generateContentWithRateLimit(prompt, model, onPromptConstructed);
-}
-
-export async function generateVictoryConsequence(kb: KnowledgeBase, combatResult: CombatEndPayload, currentPageMessagesLog: string, previousPageSummaries: string[], lastNarrationFromPreviousPage: string | undefined, onPromptConstructed?: (prompt: string) => void): Promise<{response: ParsedAiResponse, rawText: string}> {
-    const { model } = getApiSettings();
-    const prompt = PROMPT_FUNCTIONS.generateVictoryConsequence(kb, combatResult, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage);
-    incrementApiCallCount('COMBAT_SUMMARY');
-    return generateContentWithRateLimit(prompt, model, onPromptConstructed);
-}
-
-export async function summarizeCombat(combatLog: string[], outcome: 'victory' | 'defeat' | 'escaped' | 'surrendered', onPromptConstructed?: (prompt: string) => void): Promise<string> {
-    const { model } = getApiSettings();
-    const prompt = PROMPT_FUNCTIONS.summarizeCombat(combatLog, outcome);
-    incrementApiCallCount('COMBAT_SUMMARY');
-    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
-    return response.text.trim();
 }
 
 export async function generateCraftedItemViaAI(desiredCategory: GameTemplates.ItemCategoryValues, requirements: string, materials: ItemType[], playerStats: PlayerStats, worldConfig: WorldSettings | null, currentPageMessagesLog: string, previousPageSummaries: string[], lastNarrationFromPreviousPage: string | undefined, onPromptConstructed?: (prompt: string) => void): Promise<{response: ParsedAiResponse, rawText: string}> {

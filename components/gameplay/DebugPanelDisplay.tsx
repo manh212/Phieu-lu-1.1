@@ -21,6 +21,7 @@ interface DebugPanelDisplayProps {
   totalPages: number;
   isAutoPlaying: boolean;
   onToggleAutoPlay: () => void;
+  // FIX: Renamed prop to match what is being passed from GameplayScreen, resolving the error.
   onStartDebugCombat: () => void;
   onProcessDebugTags: (narration: string, tags: string) => Promise<void>;
   isLoading: boolean;

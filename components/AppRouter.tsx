@@ -14,7 +14,6 @@ import LoadGameScreen from './LoadGameScreen';
 import StorageSettingsScreen from './StorageSettingsScreen';
 import ImportExportScreen from './ImportExportScreen';
 import MapPanel from './gameplay/map/MapPanel';
-import CombatScreen from './CombatScreen';
 import AuctionScreen from './AuctionScreen';
 import CultivationScreen from './CultivationScreen';
 import CompanionManagementScreen from './CompanionManagementScreen';
@@ -23,6 +22,7 @@ import { CompanionEquipmentScreen } from './gameplay/equipment/CompanionEquipmen
 import SlaveAuctionScreen from './SlaveAuctionScreen';
 import PromptsScreen from './PromptsScreen';
 import EventsScreen from './EventsScreen';
+import CombatScreen from './screens/CombatScreen'; // NEW: Import CombatScreen
 import { VIETNAMESE } from '../constants';
 
 const AppRouter: React.FC = () => {
@@ -42,6 +42,8 @@ const AppRouter: React.FC = () => {
             />;
         case GameScreen.Gameplay:
             return <GameplayScreen />;
+        case GameScreen.Combat: // NEW: Add case for CombatScreen
+            return <CombatScreen />;
         case GameScreen.Events:
             return <EventsScreen />;
         case GameScreen.Equipment: 
@@ -91,14 +93,6 @@ const AppRouter: React.FC = () => {
                 isLoading={game.isLoadingApi}
                 sentEconomyPromptsLog={game.sentEconomyPromptsLog}
                 receivedEconomyResponsesLog={game.receivedEconomyResponsesLog}
-            />;
-        case GameScreen.Combat:
-            return <CombatScreen
-                knowledgeBase={game.knowledgeBase}
-                onCombatEnd={game.handleCombatEnd}
-                currentPageMessagesLog={game.currentPageMessagesLog}
-                previousPageSummaries={game.previousPageSummaries}
-                lastNarrationFromPreviousPage={game.lastNarrationFromPreviousPage}
             />;
         case GameScreen.Cultivation:
             return <CultivationScreen

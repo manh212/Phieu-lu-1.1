@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo, useLayoutEffect } from 'react';
-import { GameMessage, KnowledgeBase, StyleSettings, StyleSettingProperty } from '../../../types';
+import { GameMessage, KnowledgeBase, StyleSettings, StyleSettingProperty, CombatLogContent } from '../../../types';
 import Button from '../../ui/Button';
 import Spinner from '../../ui/Spinner';
 import { VIETNAMESE } from '../../../constants';
@@ -25,6 +25,65 @@ interface StoryLogProps {
   onClick: () => void;
   onAskCopilotAboutError: (errorMsg: string) => void;
 }
+
+// New Component for rendering structured combat logs
+const CombatLogRenderer: React.FC<{ log: CombatLogContent }> = ({ log }) => {
+    if (log.type === 'info') {
+        return (
+            <p className="text-center font-semibold text-gray-400 my-2">
+                {log.message}
+            </p>
+        );
+    }
+
+    const {
+        actorName, targetName, damage, healing,
+        didCrit, didEvade, finalTargetHp, maxTargetHp,
+        isPlayerActor, isPlayerTarget, message
+    } = log;
+
+    let damageColorClass = '';
+    if (damage !== undefined) {
+        if (isPlayerActor) damageColorClass = 'text-yellow-400';
+        else if (isPlayerTarget) damageColorClass = 'text-red-400';
+        else damageColorClass = 'text-gray-300';
+    }
+
+    return (
+        <p>
+            <span>{actorName}</span>
+            <span className="text-gray-400"> tấn công </span>
+            <span>{targetName}</span>
+            <span className="text-gray-400">. </span>
+
+            {didEvade ? (
+                <span className="italic text-sky-400">Né tránh!</span>
+            ) : (
+                <>
+                    {didCrit && <span className="font-bold text-red-500 animate-pulse">CHÍ MẠNG! </span>}
+                    {damage !== undefined && damage > 0 && (
+                        <>
+                            <span className="text-gray-400">Gây </span>
+                            <span className={`font-bold ${damageColorClass}`}>{damage}</span>
+                            <span className="text-gray-400"> sát thương. </span>
+                        </>
+                    )}
+                    {healing !== undefined && healing > 0 && (
+                         <>
+                            <span className="text-gray-400">Hồi phục </span>
+                            <span className="font-bold text-green-400">{healing}</span>
+                            <span className="text-gray-400"> sinh lực. </span>
+                        </>
+                    )}
+                    <span className="text-xs text-gray-500">
+                        (HP của {targetName}: {finalTargetHp}/{maxTargetHp})
+                    </span>
+                </>
+            )}
+        </p>
+    );
+};
+
 
 const StoryLog: React.FC<StoryLogProps> = ({
   storyLogRef,
@@ -56,7 +115,9 @@ const StoryLog: React.FC<StoryLogProps> = ({
   useEffect(() => {
     if (messageIdBeingEdited) {
         const msgToEdit = displayedMessages.find(m => m.id === messageIdBeingEdited);
-        setEditingText(msgToEdit?.content || '');
+        if (msgToEdit && typeof msgToEdit.content === 'string') {
+            setEditingText(msgToEdit.content);
+        }
     }
   }, [messageIdBeingEdited, displayedMessages]);
 
@@ -78,14 +139,12 @@ const StoryLog: React.FC<StoryLogProps> = ({
     const newLength = displayedMessages.length;
     const lengthIncreased = newLength > prevMessagesLength.current;
 
-    // Only focus on new messages if it's the active page, not loading, and a message was actually added
     if (isCurrentlyActivePage && !isLoadingUi && !isSummarizingUi && lengthIncreased) {
         const lastMessage = displayedMessages[newLength - 1];
-        // Check if the last message is an AI narration, which is the most logical focus target
-        if (lastMessage && lastMessage.type === 'narration' && !lastMessage.isPlayerInput) {
+        if (lastMessage && (lastMessage.type === 'narration' || lastMessage.type === 'combat_log') && !lastMessage.isPlayerInput) {
             setTimeout(() => {
                 lastNarrationRef.current?.focus();
-            }, 100); // Delay to allow DOM update
+            }, 100);
         }
     }
 
@@ -95,21 +154,19 @@ const StoryLog: React.FC<StoryLogProps> = ({
   // Effect for screen reader announcement of new content
   useEffect(() => {
     const lastMessage = displayedMessages[displayedMessages.length - 1];
-    // Check if a new message was added and it's an AI narration on the active page
     if (
         displayedMessages.length > prevMessagesLengthForAnnouncement.current &&
         lastMessage &&
-        lastMessage.type === 'narration' &&
+        (lastMessage.type === 'narration' || lastMessage.type === 'combat_log') &&
         !lastMessage.isPlayerInput &&
         isCurrentlyActivePage
     ) {
-        // Announce the new content directly for screen readers
-        // We also add a prefix to provide context that this is an AI narration
-        const announcement = `AI kể: ${lastMessage.content}`;
+        const announcement = (typeof lastMessage.content === 'string') 
+            ? `AI kể: ${lastMessage.content}` 
+            : `Diễn biến chiến đấu: ${(lastMessage.content as CombatLogContent).message}`;
         setLiveRegionText(announcement);
     }
     
-    // After the check, update the ref to the current length for the next render.
     prevMessagesLengthForAnnouncement.current = displayedMessages.length;
   }, [displayedMessages, isCurrentlyActivePage]);
 
@@ -121,29 +178,24 @@ const StoryLog: React.FC<StoryLogProps> = ({
     onClick();
   };
 
-  const isMajorMessage = (type: GameMessage['type']) => type === 'narration' || type === 'player_action';
+  const isMajorMessage = (type: GameMessage['type']) => type === 'narration' || type === 'player_action' || type === 'combat_log';
   
-  // Group consecutive system messages for collapsibility
   const groupedMessages = useMemo(() => {
     const result: (GameMessage | GameMessage[])[] = [];
     let currentSystemGroup: GameMessage[] = [];
 
     displayedMessages.forEach((msg) => {
-        // Only group 'system' messages. Other types are distinct.
         if (msg.type === 'system') {
             currentSystemGroup.push(msg);
         } else {
-            // If we encounter a non-system message, push any existing group first
             if (currentSystemGroup.length > 0) {
                 result.push(currentSystemGroup);
                 currentSystemGroup = [];
             }
-            // Then push the non-system message
             result.push(msg);
         }
     });
 
-    // Push any remaining group at the end of the loop
     if (currentSystemGroup.length > 0) {
         result.push(currentSystemGroup);
     }
@@ -167,18 +219,14 @@ const StoryLog: React.FC<StoryLogProps> = ({
       {groupedMessages.map((item, index) => {
         const isGroup = Array.isArray(item);
         
-        let containerMargin = 'mt-2'; // Default margin
+        let containerMargin = 'mt-2';
         if (index > 0) {
             const prevItem = groupedMessages[index - 1];
             const currentItemIsMajor = isMajorMessage(isGroup ? 'system' : item.type);
             const prevItemIsMajor = isMajorMessage(Array.isArray(prevItem) ? 'system' : prevItem.type);
-
-            if (currentItemIsMajor !== prevItemIsMajor) {
-                containerMargin = 'mt-3 sm:mt-4';
-            }
+            if (currentItemIsMajor !== prevItemIsMajor) containerMargin = 'mt-3 sm:mt-4';
         }
         
-        // Render a group
         if (isGroup) {
             const firstMessageInGroup = item[0];
             return (
@@ -190,25 +238,25 @@ const StoryLog: React.FC<StoryLogProps> = ({
             );
         }
         
-        // Render a single message
         const msg = item;
-        const isLastNarrationMessage = lastMessageOverall && msg.id === lastMessageOverall.id && msg.type === 'narration' && !msg.isPlayerInput;
+        const isLastNarrationMessage = lastMessageOverall && msg.id === lastMessageOverall.id && (msg.type === 'narration' || msg.type === 'combat_log') && !msg.isPlayerInput;
         const messageBaseClass = 'max-w-full p-2 sm:p-3 rounded-xl shadow text-sm sm:text-base relative outline-none focus:ring-2 focus:ring-indigo-400';
         let typeSpecificClass = '';
         let dynamicStyle = getDynamicMessageStyles(msg.type);
-        const isEditable = (msg.type === 'narration' || msg.type === 'player_action') && isCurrentlyActivePage;
+        const isEditable = (msg.type === 'narration' || msg.type === 'player_action') && isCurrentlyActivePage && typeof msg.content === 'string';
 
         switch (msg.type) {
             case 'narration':
-            if (!dynamicStyle.backgroundColor) typeSpecificClass = 'bg-gray-700';
-            if (!dynamicStyle.color) typeSpecificClass += (typeSpecificClass ? ' ' : '') + 'text-gray-100';
-            dynamicStyle.whiteSpace = 'pre-wrap';
-            break;
+            case 'combat_log': // Combat logs use narration style as base
+                if (!dynamicStyle.backgroundColor) typeSpecificClass = 'bg-gray-700';
+                if (!dynamicStyle.color) typeSpecificClass += (typeSpecificClass ? ' ' : '') + 'text-gray-100';
+                dynamicStyle.whiteSpace = 'pre-wrap';
+                break;
             case 'player_action':
-            if (!dynamicStyle.backgroundColor) typeSpecificClass = 'bg-indigo-600';
-            if (!dynamicStyle.color) typeSpecificClass += (typeSpecificClass ? ' ' : '') + 'text-white';
-            dynamicStyle.whiteSpace = 'pre-wrap';
-            break;
+                if (!dynamicStyle.backgroundColor) typeSpecificClass = 'bg-indigo-600';
+                if (!dynamicStyle.color) typeSpecificClass += (typeSpecificClass ? ' ' : '') + 'text-white';
+                dynamicStyle.whiteSpace = 'pre-wrap';
+                break;
             case 'error': typeSpecificClass = 'bg-red-700 text-white'; break;
             case 'page_summary': typeSpecificClass = 'bg-purple-800 bg-opacity-50 text-purple-200 border border-purple-600 italic text-xs sm:text-sm'; break;
             case 'event_summary': typeSpecificClass = 'bg-green-800 bg-opacity-50 text-green-200 border border-green-600 italic text-xs sm:text-sm'; break;
@@ -229,7 +277,7 @@ const StoryLog: React.FC<StoryLogProps> = ({
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                   </button>
                 )}
-                {messageIdBeingEdited === msg.id ? (
+                {messageIdBeingEdited === msg.id && typeof msg.content === 'string' ? (
                   <div className="mt-1">
                     <textarea value={editingText} onChange={(e) => setEditingText(e.target.value)} className="w-full p-2 text-sm bg-gray-600 border border-gray-500 rounded-md focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 text-gray-100 min-h-[80px]" rows={Math.max(3, editingText.split('\\n').length)} />
                     <div className="flex justify-end space-x-2 mt-2">
@@ -239,13 +287,17 @@ const StoryLog: React.FC<StoryLogProps> = ({
                   </div>
                 ) : (
                   <div className="flex flex-col items-start">
-                    <p className="leading-relaxed">{React.Children.toArray(parseAndHighlightText(String(msg.content)))}</p>
+                    {msg.type === 'combat_log' ? (
+                        <CombatLogRenderer log={msg.content as CombatLogContent} />
+                    ) : typeof msg.content === 'string' && (
+                        <p className="leading-relaxed">{React.Children.toArray(parseAndHighlightText(msg.content))}</p>
+                    )}
                      {msg.type === 'error' && (
                         <Button 
                             variant="ghost" 
                             size="sm" 
                             className="!py-1 !px-2 text-xs border-cyan-400 text-cyan-300 hover:bg-cyan-700 mt-2 self-start"
-                            onClick={() => onAskCopilotAboutError(msg.content)}
+                            onClick={() => onAskCopilotAboutError(msg.content as string)}
                             title="Hỏi Siêu Trợ Lý AI về lỗi này"
                         >
                             <span className="flex items-center gap-1">
@@ -262,7 +314,7 @@ const StoryLog: React.FC<StoryLogProps> = ({
       })}
       {(isLoadingUi && displayedMessages.length === 0) && <Spinner text={VIETNAMESE.contactingAI} size="sm" className="my-4" />}
       {(isLoadingUi && !isSummarizingUi && isCurrentlyActivePage && displayedMessages.length > 0) && <div role="status" aria-live="polite" className="text-center text-gray-400 italic py-2 mt-2 text-xs sm:text-sm">{VIETNAMESE.contactingAI}</div>}
-      {isSummarizingUi && <div className="text-center text-gray-400 italic py-2 mt-2"><Spinner text={displayedMessages.some(m => m.content.includes(VIETNAMESE.creatingMissingSummary)) ? VIETNAMESE.creatingMissingSummary : VIETNAMESE.summarizingAndPreparingNextPage} size="sm" /></div>}
+      {isSummarizingUi && <div className="text-center text-gray-400 italic py-2 mt-2"><Spinner text={displayedMessages.some(m => typeof m.content === 'string' && m.content.includes(VIETNAMESE.creatingMissingSummary)) ? VIETNAMESE.creatingMissingSummary : VIETNAMESE.summarizingAndPreparingNextPage} size="sm" /></div>}
       <div ref={messagesEndRef} />
     </div>
   );

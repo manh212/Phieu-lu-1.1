@@ -21,7 +21,7 @@ export const processBeginCombat = (
     currentKb: KnowledgeBase,
     tagParams: Record<string, string>
 ): { updatedKb: KnowledgeBase; systemMessages: GameMessage[] } => {
-    const newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
+    let newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
     const systemMessages: GameMessage[] = [];
     const opponentIdsStr = tagParams.opponentIds;
 
@@ -29,52 +29,26 @@ export const processBeginCombat = (
         console.warn("BEGIN_COMBAT: Missing opponentIds parameter.", tagParams);
         return { updatedKb: newKb, systemMessages };
     }
-
+    
     const opponentNamesOrIds = opponentIdsStr.split(',').map(id => id.trim()).filter(id => id);
-    const resolvedOpponentIds: string[] = [];
+    if(opponentNamesOrIds.length === 0){
+        console.warn("BEGIN_COMBAT: opponentIds parameter is empty after parsing.", tagParams);
+        return { updatedKb: newKb, systemMessages };
+    }
+
+    newKb.playerStats.isInCombat = true;
+    newKb.pendingOpponentIdsForCombat = opponentNamesOrIds;
+    
+    // Log activity for the opponents
     const allCombatants: (NPC | YeuThu)[] = [...newKb.discoveredNPCs, ...newKb.discoveredYeuThu];
 
-    opponentNamesOrIds.forEach(nameOrId => {
-        // 1. Exact ID match across both lists
-        let opponent: (NPC | YeuThu) | undefined = allCombatants.find(c => c.id === nameOrId);
+     opponentNamesOrIds.forEach(nameOrId => {
+        let opponent: (NPC | YeuThu) | undefined = allCombatants.find(c => c.id === nameOrId || c.name.toLowerCase() === nameOrId.toLowerCase());
         
-        // 2. Exact name match if no ID match
-        if (!opponent) {
-            opponent = allCombatants.find(c => c.name.toLowerCase() === nameOrId.toLowerCase());
-        }
-
-        // 3. Fuzzy name match if still no match
-        if (!opponent) {
-            let bestMatch: { entity: NPC | YeuThu | null; score: number } = { entity: null, score: 0 };
-            const normalizedNameOrId = normalizeStringForComparison(nameOrId);
-
-            allCombatants.forEach(potentialOpponent => {
-                const normalizedEntityName = normalizeStringForComparison(potentialOpponent.name);
-                const score = diceCoefficient(normalizedNameOrId, normalizedEntityName);
-                if (score > bestMatch.score) {
-                    bestMatch = { entity: potentialOpponent, score: score };
-                }
-            });
-
-            if (bestMatch.entity && bestMatch.score >= SIMILARITY_THRESHOLD) {
-                console.log(`[BEGIN_COMBAT_FUZZY] Matched "${nameOrId}" to "${bestMatch.entity.name}" with score ${bestMatch.score.toFixed(2)}`);
-                opponent = bestMatch.entity;
-            }
-        }
-        
-        if (opponent) {
-            resolvedOpponentIds.push(opponent.id);
-        } else {
-            console.warn(`BEGIN_COMBAT: Could not find NPC or YeuThu with ID or name "${nameOrId}". No fuzzy match found above threshold.`);
-        }
-    });
-
-    resolvedOpponentIds.forEach(id => {
-        const opponent = allCombatants.find(c => c.id === id);
-        if (opponent && 'activityLog' in opponent) { // Check if it's an NPC-like entity with an activity log
+        if (opponent && 'activityLog' in opponent) {
             if (!opponent.activityLog) opponent.activityLog = [];
             const logEntry: ActivityLogEntry = {
-                turnNumber: newKb.playerStats.turn, // Combat starts at the current turn
+                turnNumber: newKb.playerStats.turn,
                 description: `Đã giao chiến với ${newKb.worldConfig?.playerName || 'người chơi'}.`,
                 locationId: opponent.locationId || newKb.currentLocationId || 'unknown'
             };
@@ -82,18 +56,6 @@ export const processBeginCombat = (
             if (opponent.activityLog.length > 30) opponent.activityLog.shift();
         }
     });
-    
-    const surrenderedNpcIds = tagParams.surrenderedNpcIds?.split(',').map(id => id.trim()).filter(id => id) || [];
-
-
-    if (resolvedOpponentIds.length > 0) {
-        newKb.pendingCombat = {
-            opponentIds: resolvedOpponentIds,
-            surrenderedNpcIds: surrenderedNpcIds,
-        };
-    } else {
-        console.warn("BEGIN_COMBAT: No valid opponents found after resolving IDs.");
-    }
     
     return { updatedKb: newKb, systemMessages };
 };

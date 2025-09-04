@@ -1,15 +1,10 @@
-
-
 import { generateInitialPrompt } from './initialPrompt';
 import { generateContinuePrompt } from './continuePrompt';
 import { generateWorldDetailsPrompt } from './generateWorldDetailsPrompt';
 import { generateFanfictionWorldDetailsPrompt } from './generateFanfictionWorldDetailsPrompt';
 import { generateSummarizePagePrompt } from './summarizePagePrompt';
 import { generateCraftItemPrompt } from './craftItemPrompt';
-import { generateCombatTurnPrompt } from './combatPrompt';
 import { generateSummarizeCombatPrompt } from './summarizeCombatPrompt';
-import { generateDefeatConsequencePrompt } from './defeatConsequencePrompt';
-import { generateVictoryConsequencePrompt } from './victoryConsequencePrompt';
 import { generateNonCombatDefeatConsequencePrompt } from './nonCombatDefeatConsequencePrompt';
 import { generateAuctionDataPrompt } from './generateAuctionDataPrompt';
 import { runAuctionTurnPrompt } from './runAuctionTurnPrompt';
@@ -43,10 +38,7 @@ export const PROMPT_FUNCTIONS = {
   generateFanfictionWorldDetails: generateFanfictionWorldDetailsPrompt,
   summarizePage: generateSummarizePagePrompt,
   craftItem: generateCraftItemPrompt,
-  combatTurn: generateCombatTurnPrompt,
   summarizeCombat: generateSummarizeCombatPrompt,
-  generateDefeatConsequence: generateDefeatConsequencePrompt,
-  generateVictoryConsequence: generateVictoryConsequencePrompt,
   generateNonCombatDefeatConsequence: generateNonCombatDefeatConsequencePrompt,
   generateAuctionData: generateAuctionDataPrompt,
   runAuctionTurn: runAuctionTurnPrompt,

@@ -1,4 +1,3 @@
-
 import React, { ChangeEvent } from 'react';
 
 export interface InputFieldProps {
@@ -9,7 +8,8 @@ export interface InputFieldProps {
   checked?: boolean;
   onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   type?: string;
-  options?: string[];
+  // FIX: Allow readonly arrays for options prop to support arrays defined with 'as const'
+  options?: readonly string[];
   textarea?: boolean;
   className?: string;
   placeholder?: string;

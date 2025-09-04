@@ -1,3 +1,4 @@
+
 import React, { useState, ChangeEvent, useRef } from 'react'; 
 import { PlayerStats, Item, EquipmentSlotId, KnowledgeBase, StatusEffect, WorldDate, TuChatTier } from '../../../types';
 import { VIETNAMESE, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL } from '../../../constants';
@@ -60,7 +61,7 @@ const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = React.
   
   const tuChatToDisplay = tuChat || playerStats.tuChat;
 
-  const getBonusForStat = (statKey: keyof Omit<PlayerStats, 'realm' | 'currency' | 'isInCombat' | 'turn' | 'hieuUngBinhCanh' | 'sinhLuc' | 'linhLuc' | 'kinhNghiem' | 'activeStatusEffects' | 'spiritualRoot' | 'specialPhysique' | 'professions' | 'tuChat'>): number => {
+  const getBonusFromEquipment = (statKey: keyof PlayerStats): number => {
     let totalBonus = 0;
     for (const slotId in equippedItems) {
       const itemId = equippedItems[slotId as EquipmentSlotId];
@@ -68,44 +69,79 @@ const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = React.
         const item = inventory.find(i => i.id === itemId);
         if (item && item.category === GameTemplates.ItemCategory.EQUIPMENT) {
           const equipment = item as GameTemplates.EquipmentTemplate;
-          if (equipment.statBonuses && typeof (equipment.statBonuses as any)[statKey] === 'number') {
-            totalBonus += (equipment.statBonuses as any)[statKey]!;
+          const bonusValue = equipment.statBonuses?.[statKey as keyof typeof equipment.statBonuses];
+          if (typeof bonusValue === 'number') {
+            totalBonus += bonusValue;
           }
         }
       }
     }
     return totalBonus;
   };
+  
+  const getBonusFromStatusEffects = (statKey: keyof PlayerStats, baseValue: number, equipBonus: number): number => {
+      const basePlusEquip = baseValue + equipBonus;
+      let finalValue = basePlusEquip;
+      
+      (playerStats.activeStatusEffects || []).forEach(effect => {
+          const modValue = effect.statModifiers[statKey as keyof typeof effect.statModifiers];
+          if (typeof modValue === 'string') {
+              if (modValue.endsWith('%')) {
+                  const percentage = parseFloat(modValue.slice(0, -1)) / 100;
+                  if (!isNaN(percentage)) finalValue *= (1 + percentage);
+              } else {
+                  const flat = parseInt(modValue, 10);
+                  if (!isNaN(flat)) finalValue += flat;
+              }
+          } else if (typeof modValue === 'number') {
+              finalValue += modValue;
+          }
+      });
+      
+      return finalValue - basePlusEquip;
+  };
 
-  const renderStatLine = (
+
+  const renderStatLineWithBreakdown = (
     label: string, 
-    baseValue: number | undefined, 
-    effectiveValue: number | undefined, 
-    bonusValue?: number,
-    currentStatValueForDisplay?: number | undefined
+    statKey: keyof PlayerStats,
+    baseStatKey: keyof PlayerStats,
+    currentValueForDisplay?: number,
+    isPercentage: boolean = false,
+    isMultiplier: boolean = false
     ) => {
-    const baseVal = baseValue ?? 0;
-    const effectiveVal = effectiveValue ?? 0;
-    const equipBonus = bonusValue !== undefined ? bonusValue : (effectiveVal - baseVal);
-    const displayValue = currentStatValueForDisplay !== undefined 
-        ? `${currentStatValueForDisplay}/${effectiveVal}` 
-        : effectiveVal;
     
-    let displayedBonusString = "";
-    if (equipBonus !== 0) {
-         displayedBonusString = ` (CB: ${baseVal}, TB: ${equipBonus > 0 ? '+' : ''}${equipBonus})`;
-    }
+    const baseVal = (playerStats[baseStatKey] as number) ?? 0;
+    const effectiveVal = (playerStats[statKey] as number) ?? 0;
+    const equipBonus = getBonusFromEquipment(statKey);
+    const effectsBonus = getBonusFromStatusEffects(statKey, baseVal, equipBonus);
+
+    const total = baseVal + equipBonus + effectsBonus;
+    
+    const displayValue = currentValueForDisplay !== undefined 
+        ? `${currentValueForDisplay}/${total.toFixed(isMultiplier ? 2 : 0)}` 
+        : `${total.toFixed(isMultiplier ? 2 : 0)}`;
+
+    const formatBonus = (val: number) => {
+        if (Math.abs(val) < 0.01 && isMultiplier) return ''; // Don't show tiny multiplier changes
+        if (val === 0) return '';
+        const rounded = Number(val.toFixed(isMultiplier ? 2 : 0));
+        return rounded > 0 ? ` + ${rounded}` : ` - ${Math.abs(rounded)}`;
+    };
+
+    const equipColor = equipBonus > 0 ? 'text-green-400' : 'text-red-400';
+    const effectColor = effectsBonus > 0 ? 'text-green-400' : (effectsBonus < 0 ? 'text-red-400' : '');
 
     return (
       <div className="text-sm py-0.5">
         <span className="font-semibold text-indigo-300">{label}: </span>
-        <span className="text-gray-100" title={`Cơ bản: ${baseVal}, Trang bị: ${equipBonus > 0 ? '+' : ''}${equipBonus}`}>
-          {displayValue}
-          {equipBonus !== 0 && (
-            <span className={`ml-1 text-xs ${equipBonus > 0 ? 'text-green-400' : 'text-red-400'}`}>
-              ({baseVal}{equipBonus > 0 ? `+${equipBonus}` : equipBonus})
-            </span>
-          )}
+        <span className="text-gray-100">
+          {displayValue}{isPercentage ? '%' : ''}
+          <span className="ml-1 text-xs text-gray-400">
+            ({baseVal.toFixed(isMultiplier ? 2 : 0)}
+            {equipBonus !== 0 && <span className={equipColor}>{formatBonus(equipBonus)}</span>}
+            {effectsBonus !== 0 && <span className={effectColor}>{formatBonus(effectsBonus)}</span>})
+          </span>
         </span>
       </div>
     );
@@ -304,10 +340,16 @@ const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = React.
       <section aria-labelledby="chi-so-chien-dau">
         <h4 id="chi-so-chien-dau" className="text-md font-semibold text-indigo-200 mt-3 mb-2 border-b border-gray-700 pb-1">Chỉ Số Chiến Đấu</h4>
          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0.5">
-            {renderStatLine(VIETNAMESE.sinhLucLabel, playerStats.baseMaxSinhLuc, playerStats.maxSinhLuc, getBonusForStat('maxSinhLuc'), playerStats.sinhLuc)}
-            {(isCultivationEnabled || (playerStats.maxLinhLuc ?? 0) > 0 || (playerStats.baseMaxLinhLuc ?? 0) > 0) && renderStatLine(energyLabel, playerStats.baseMaxLinhLuc, playerStats.maxLinhLuc, getBonusForStat('maxLinhLuc'), playerStats.linhLuc)}
-            {renderStatLine(VIETNAMESE.sucTanCongLabel, playerStats.baseSucTanCong, playerStats.sucTanCong, getBonusForStat('sucTanCong'))}
-            {isCultivationEnabled && renderStatLine(experienceLabel, playerStats.baseMaxKinhNghiem, playerStats.maxKinhNghiem, getBonusForStat('maxKinhNghiem'), playerStats.kinhNghiem)}
+            {renderStatLineWithBreakdown(VIETNAMESE.sinhLucLabel, 'maxSinhLuc', 'baseMaxSinhLuc', playerStats.sinhLuc)}
+            {(isCultivationEnabled || (playerStats.maxLinhLuc ?? 0) > 0 || (playerStats.baseMaxLinhLuc ?? 0) > 0) && renderStatLineWithBreakdown(energyLabel, 'maxLinhLuc', 'baseMaxLinhLuc', playerStats.linhLuc)}
+            {renderStatLineWithBreakdown(VIETNAMESE.sucTanCongLabel, 'sucTanCong', 'baseSucTanCong')}
+            {renderStatLineWithBreakdown("Phòng Thủ", 'phongThu', 'basePhongThu')}
+            {renderStatLineWithBreakdown("Tốc Độ", 'tocDo', 'baseTocDo')}
+            {renderStatLineWithBreakdown("Chính Xác", 'chinhXac', 'baseChinhXac')}
+            {renderStatLineWithBreakdown("Né Tránh", 'neTranh', 'baseNeTranh')}
+            {renderStatLineWithBreakdown("Tỉ Lệ Chí Mạng", 'tiLeChiMang', 'baseTiLeChiMang', undefined, true)}
+            {renderStatLineWithBreakdown("Sát Thương Chí Mạng", 'satThuongChiMang', 'baseSatThuongChiMang', undefined, false, true)}
+            {isCultivationEnabled && renderStatLineWithBreakdown(experienceLabel, 'maxKinhNghiem', 'baseMaxKinhNghiem', playerStats.kinhNghiem)}
             {isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{currencyName || "Tiền Tệ"}: </span>{playerStats.currency ?? 0}</div>}
             {isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">Lượt: </span>{playerStats.turn ?? 0}</div>}
         </div>

@@ -540,6 +540,8 @@ export const VIETNAMESE_TRANSLATIONS = {
   executeButton: "Kết Liễu",
   confirmPostCombatActions: "Xác Nhận",
   leaveButtonCombat: "Tha cho chúng",
+  // FIX: Add missing fleeAttempt translation key for combat.
+  fleeAttempt: "Thử bỏ chạy",
   findLocationButtonTitle: "Tìm kiếm một địa điểm cụ thể bằng AI",
   findLocationButtonLabel: "Tìm Kiếm địa điểm mới",
   findingLocationMessage: "AI đang tìm kiếm địa điểm...",

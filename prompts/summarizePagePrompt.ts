@@ -27,11 +27,13 @@ ${messagesToSummarize
             prefix = "AI kể: ";
         } else if (msg.type === 'event_summary') {
             // Add a prefix for event summaries if they don't already have one.
-            if (!msg.content.toLowerCase().startsWith('tóm tắt')) {
+            // FIX: Add type guard to ensure content is a string before using string methods.
+            if (typeof msg.content === 'string' && !msg.content.toLowerCase().startsWith('tóm tắt')) {
                 prefix = "Tóm tắt sự kiện: ";
             }
         }
-        return `${prefix}${msg.content}`;
+        // FIX: Ensure content is a string before concatenation to avoid [object Object].
+        return typeof msg.content === 'string' ? `${prefix}${msg.content}` : '';
       }).join("\n---\n")}
 
 **YÊU CẦU:**

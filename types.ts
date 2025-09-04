@@ -1,8 +1,3 @@
-
-
-
-
-
 import { HarmCategory, HarmBlockThreshold } from "@google/genai";
 import * as GameTemplates from './templates'; // Import all templates
 import { Operation as JsonPatchOperation } from 'fast-json-patch'; // Import Operation from fast-json-patch
@@ -35,18 +30,17 @@ export const PROFICIENCY_TIERS = ["Sơ Nhập", "Tiểu Thành", "Đại Thành"
 export type ProficiencyTier = typeof PROFICIENCY_TIERS[number];
 
 export enum GameScreen {
-  Initial = 'Initial', GameSetup = 'GameSetup', Gameplay = 'Gameplay', Combat = 'Combat', ApiSettings = 'ApiSettings',
+  Initial = 'Initial', GameSetup = 'GameSetup', Gameplay = 'Gameplay', ApiSettings = 'ApiSettings',
   LoadGameSelection = 'LoadGameSelection', StorageSettings = 'StorageSettings', ImportExport = 'ImportExport', Equipment = 'Equipment', 
   Crafting = 'Crafting', Map = 'Map', Auction = 'Auction', Cultivation = 'Cultivation',
-  // New Screens for Companions and Prisoners
   CompanionManagement = 'CompanionManagement',
   PrisonerManagement = 'PrisonerManagement',
   CompanionEquipment = 'CompanionEquipment',
-  // New Screen for Slave Auction
   SlaveAuction = 'SlaveAuction',
   Prompts = 'Prompts', // NEW
   Events = 'Events', // NEW: Event Screen
   AICopilotPanel = 'AICopilotPanel', // NEW
+  Combat = 'Combat', // NEW: Combat Screen
 }
 
 // NEW: For AI Context Settings screen
@@ -103,7 +97,7 @@ export type StatusEffectType = 'buff' | 'debuff' | 'neutral';
 
 export interface StatusEffect {
   id: string; name: string; description: string; type: StatusEffectType; durationTurns: number;
-  statModifiers: Partial<Record<keyof Omit<PlayerStats, 'realm' | 'currency' | 'isInCombat' | 'turn' | 'hieuUngBinhCanh' | 'activeStatusEffects' | 'sinhLuc' | 'linhLuc' | 'kinhNghiem' | 'baseMaxKinhNghiem' | 'baseMaxLinhLuc' | 'baseMaxSinhLuc' | 'baseSucTanCong' | 'spiritualRoot' | 'specialPhysique' | 'professions' | 'tuChat' | 'playerSpecialStatus'>, string | number>>;
+  statModifiers: Partial<Record<keyof Omit<PlayerStats, 'realm' | 'currency' | 'isInCombat' | 'turn' | 'hieuUngBinhCanh' | 'activeStatusEffects' | 'sinhLuc' | 'linhLuc' | 'kinhNghiem' | 'baseMaxKinhNghiem' | 'baseMaxLinhLuc' | 'baseMaxSinhLuc' | 'baseSucTanCong' | 'spiritualRoot' | 'specialPhysique' | 'professions' | 'tuChat' | 'playerSpecialStatus' | 'basePhongThu' | 'baseTocDo' | 'baseChinhXac' | 'baseNeTranh' | 'baseTiLeChiMang' | 'baseSatThuongChiMang'>, string | number>>;
   specialEffects: string[]; icon?: string; source?: string;
 }
 
@@ -127,6 +121,21 @@ export interface PlayerSpecialStatus {
 export interface PlayerStats {
   baseMaxSinhLuc: number; baseMaxLinhLuc: number; baseSucTanCong: number; baseMaxKinhNghiem: number;
   sinhLuc: number; maxSinhLuc: number; linhLuc: number; maxLinhLuc: number; sucTanCong: number; kinhNghiem: number; maxKinhNghiem: number;
+  
+  // NEW STATS
+  basePhongThu: number;
+  phongThu: number;
+  baseTocDo: number;
+  tocDo: number;
+  baseChinhXac: number;
+  chinhXac: number;
+  baseNeTranh: number;
+  neTranh: number;
+  baseTiLeChiMang: number;
+  tiLeChiMang: number;
+  baseSatThuongChiMang: number;
+  satThuongChiMang: number;
+
   realm: string; currency: number; isInCombat: boolean; turn: number; hieuUngBinhCanh: boolean;
   activeStatusEffects: StatusEffect[];
   spiritualRoot: string; // New: Linh Căn
@@ -177,8 +186,7 @@ export interface PersonBase {
     tuChat?: TuChatTier;
     spiritualRoot?: string;
     specialPhysique?: string;
-    stats?: Partial<PlayerStats>;
-    // FIX: Add optional locationId to PersonBase to align with implementing types and resolve type errors.
+    stats: Partial<PlayerStats>;
     locationId?: string;
 }
 
@@ -189,7 +197,6 @@ export interface Prisoner extends PersonBase {
     resistance: number;     // 0-100: Hostility towards player
     obedience: number;      // 0-100: Willingness to obey
     // Optional Living World properties
-    locationId?: string;
     mood?: 'Vui Vẻ' | 'Hài Lòng' | 'Bình Thường' | 'Bực Bội' | 'Giận Dữ' | 'Nghi Ngờ';
     needs?: Record<string, number>;
     longTermGoal?: string;
@@ -210,7 +217,6 @@ export interface ComplexCompanionBase extends PersonBase {
     isBinhCanh?: boolean; // NEW
     binhCanhCounter?: number; // NEW
     // Optional Living World properties
-    locationId?: string;
     mood?: 'Vui Vẻ' | 'Hài Lòng' | 'Bình Thường' | 'Bực Bội' | 'Giận Dữ' | 'Nghi Ngờ';
     needs?: Record<string, number>;
     longTermGoal?: string;
@@ -279,7 +285,7 @@ export interface StartingItem {
   id?: string; // New temp ID
   name: string; description: string; quantity: number; category: GameTemplates.ItemCategoryValues;
   rarity?: GameTemplates.EquipmentRarity; value?: number; itemRealm?: string; // NEW: Item Realm
-  equipmentDetails?: { type?: GameTemplates.EquipmentTypeValues; slot?: string; statBonuses?: Partial<Omit<PlayerStats, 'realm' | 'currency' | 'isInCombat' | 'turn' | 'hieuUngBinhCanh' | 'baseMaxKinhNghiem' | 'baseMaxLinhLuc' | 'baseMaxSinhLuc' | 'baseSucTanCong' | 'activeStatusEffects'| 'spiritualRoot' | 'specialPhysique' | 'professions' | 'tuChat' | 'playerSpecialStatus'>>; statBonusesString?: string; uniqueEffects?: string[]; uniqueEffectsString?: string; };
+  equipmentDetails?: { type?: GameTemplates.EquipmentTypeValues; slot?: string; statBonuses?: Partial<Omit<PlayerStats, 'realm' | 'currency' | 'isInCombat' | 'turn' | 'hieuUngBinhCanh' | 'baseMaxKinhNghiem' | 'baseMaxLinhLuc' | 'baseMaxSinhLuc' | 'baseSucTanCong' | 'activeStatusEffects'| 'sinhLuc' | 'linhLuc' | 'kinhNghiem' | 'spiritualRoot' | 'specialPhysique' | 'professions' | 'tuChat' | 'playerSpecialStatus' | 'basePhongThu' | 'baseTocDo' | 'baseChinhXac' | 'baseNeTranh' | 'baseTiLeChiMang' | 'baseSatThuongChiMang'>>; statBonusesString?: string; uniqueEffects?: string[]; uniqueEffectsString?: string; };
   potionDetails?: { type?: GameTemplates.PotionTypeValues; effects?: string[]; effectsString?: string; durationTurns?: number; cooldownTurns?: number; };
   materialDetails?: { type?: GameTemplates.MaterialTypeValues; };
   questItemDetails?: { questIdAssociated?: string; };
@@ -367,6 +373,13 @@ export interface TurnHistoryEntry {
 
 export interface RealmBaseStatDefinition {
   hpBase: number; hpInc: number; mpBase: number; mpInc: number; atkBase: number; atkInc: number; expBase: number; expInc: number;
+  // NEW
+  phongThuBase: number; phongThuInc: number;
+  tocDoBase: number; tocDoInc: number;
+  chinhXacBase: number; chinhXacInc: number;
+  neTranhBase: number; neTranhInc: number;
+  tiLeChiMangBase: number; tiLeChiMangInc: number;
+  satThuongChiMangBase: number; satThuongChiMangInc: number;
 }
 
 export type EquipmentSlotId = | 'mainWeapon' | 'offHandWeapon' | 'head' | 'body' | 'hands' | 'legs' | 'artifact' | 'pet' | 'accessory1' | 'accessory2';
@@ -434,7 +447,6 @@ export interface Master extends PersonBase {
     // For 18+ mode
     favor?: number; // 0-100, Sủng Ái
     // For consistency with other character types
-    locationId?: string;
     relationships?: Record<string, { type: string; affinity: number; }>;
     activityLog?: ActivityLogEntry[];
 }
@@ -494,8 +506,8 @@ export interface KnowledgeBase {
   playerAvatarData?: string; discoveredRegions: Region[]; currentMapId?: string; currentLocationId?: string;
   auctionState?: AuctionState | null; 
   slaveAuctionState?: SlaveAuctionState | null; // New
-  pendingCombat?: { opponentIds: string[]; surrenderedNpcIds?: string[] } | null;
   postCombatState?: CombatEndPayload | null; // NEW
+  pendingOpponentIdsForCombat?: string[] | null; // NEW for combat init
   userPrompts?: string[]; // NEW
   // New Entities
   prisoners: Prisoner[];
@@ -569,14 +581,14 @@ export type ActionParameters =
     | { type: 'INFLUENCE_FACTION'; factionId: string; influenceType: 'positive' | 'negative'; magnitude: number; }
     | { type: 'PRODUCE_ITEM'; itemName: string; quantity: number; materialsUsed: string[]; }
     | { type: 'OFFER_SERVICE'; serviceName: string; targetNpcId: string; price: number; }
-    | { type: 'RESEARCH_TOPIC'; topic: string; locationId: string; }
-    | { type: 'PATROL_AREA'; locationId: string; durationTurns: number; }
-    | { type: 'COMMIT_CRIME'; crimeType: 'theft'; targetNpcId: string; itemName: string; quantity: number; }
-    | { type: 'COMMIT_CRIME'; crimeType: 'smuggling' | 'assault'; target: string; };
+    | { type: 'RESEARCH_TOPIC'; topic: string; }
+    | { type: 'PATROL_AREA'; areaLocationIds: string[]; durationTurns: number; }
+    // FIX: Add optional itemName and quantity for theft crime type
+    | { type: 'COMMIT_CRIME'; crimeType: 'theft' | 'assault' | 'vandalism'; targetNpcId?: string; target?: string; locationId?: string; itemName?: string; quantity?: number; };
 
 export interface NpcAction {
     type: NpcActionType;
-    parameters: ActionParameters; 
+    parameters: ActionParameters;
     reason: string;
 }
 
@@ -588,88 +600,214 @@ export interface NpcActionPlan {
 export interface WorldTickUpdate {
     npcUpdates: NpcActionPlan[];
 }
-// --- END: Living World JSON Schema Definitions ---
 
-export interface AiChoice { text: string; actionTag?: string; }
-export interface GameMessage { id: string; type: 'narration' | 'choice' | 'system' | 'player_action' | 'error' | 'page_summary' | 'event_summary'; content: string; timestamp: number; choices?: AiChoice[]; isPlayerInput?: boolean; turnNumber: number; actionTags?: string[]; }
-export interface ParsedAiResponse { narration: string; choices: AiChoice[]; tags: string[]; systemMessage?: string; }
-export interface SafetySetting { category: HarmCategory; threshold: HarmBlockThreshold; }
+// --- NEW: COMBAT TYPES (Client-Side) ---
+export type CombatDisposition = 'kill' | 'capture' | 'release';
+export type CombatDispositionMap = Record<string, CombatDisposition>;
 
-// New Type for selecting avatar generation engine
-export type AvatarGenerationEngine = 'imagen-4.0-generate-001';
-
-export interface ApiConfig {
-  apiKeySource: 'system' | 'user';
-  userApiKeys: string[];
-  model: string;
-  economyModel?: string;
-  safetySettings?: SafetySetting[];
-  autoGenerateNpcAvatars: boolean;
-  avatarGenerationEngine?: AvatarGenerationEngine;
-  ragTopK?: number;
-}
-export interface SaveGameData { id?: string; name: string; timestamp: any; knowledgeBase: KnowledgeBase; gameMessages: GameMessage[]; appVersion?: string; }
-export interface SaveGameMeta { id: string; name: string; timestamp: Date; size?: number; }
-export type PlayerActionInputType = 'action' | 'story';
-export type ResponseLength = 'default' | 'short' | 'medium' | 'long';
-export interface StyleSettingProperty { fontFamily?: string; fontSize?: string; textColor: string; backgroundColor?: string; }
-export interface StyleSettings { 
-  narration: StyleSettingProperty; 
-  playerAction: StyleSettingProperty; 
-  choiceButton: StyleSettingProperty; 
-  keywordHighlight: StyleSettingProperty; 
-  dialogueHighlight: StyleSettingProperty; 
-  enableKeywordHighlighting: boolean; 
+export interface Combatant {
+    id: string;
+    name: string;
+    entityType: 'player' | 'npc' | 'yeuThu' | 'wife' | 'slave';
+    isPlayer: boolean;
+    currentStats: PlayerStats;
+    avatarUrl?: string;
+    gender?: 'Nam' | 'Nữ' | 'Khác' | 'Không rõ';
+    disposition?: CombatDisposition;
 }
 
-export interface GeneratedWorldElements {
-  startingSkills: StartingSkill[]; startingItems: StartingItem[]; startingNPCs: StartingNPC[]; startingLore: StartingLore[];
-  startingYeuThu?: StartingYeuThu[]; // New
-  startingLocations?: StartingLocation[]; startingFactions?: StartingFaction[]; playerName?: string; playerGender?: 'Nam' | 'Nữ' | 'Khác';
-  playerRace?: string; // New
-  playerPersonality?: string; playerBackstory?: string; playerGoal?: string; playerStartingTraits?: string;
-  playerSpiritualRoot?: string; // New
-  playerSpecialPhysique?: string; // New
-  playerThoNguyen?: number; // New
-  playerMaxThoNguyen?: number; // New
-  playerAvatarUrl?: string; worldTheme?: string; worldSettingDescription?: string; worldWritingStyle?: string; currencyName?: string;
-  originalStorySummary?: string;
-  raceCultivationSystems?: RaceCultivationSystem[]; // REPLACES heThongCanhGioi
-  yeuThuRealmSystem?: string; // NEW
-  canhGioiKhoiDau?: string; saveGameName?: string; genre?: GenreType;
-  customGenreName?: string; isCultivationEnabled?: boolean; nsfwDescriptionStyle?: NsfwDescriptionStyle;
-  violenceLevel?: ViolenceLevel; storyTone?: StoryTone; startingDate?: WorldDate;
-  startingCurrency?: number;
+export interface CombatState {
+    isInCombat: boolean;
+    combatants: Combatant[];
+    turnOrder: string[]; // Array of combatant IDs
+    currentTurnIndex: number;
+    totalTurns: number;
+    playerActionChoices: AiChoice[];
+    // For payload generation
+    damageDealtByPlayer: number;
+    damageTakenByPlayer: number;
+    notableEvents: string[];
+    fleeAttempts: number;
 }
 
-export interface AvatarUploadHandlers {
-  onPlayerAvatarUploadRequest: (base64Data: string) => Promise<void>;
-  onNpcAvatarUploadRequest: (npcId: string, base64Data: string, gender: NPC['gender']) => Promise<void>;
-}
-
-// Types for new "Find Location" feature
-export type SearchMethod = 'Hỏi Thăm Dân Địa Phương' | 'Tra Cứu Cổ Tịch / Bản Đồ Cũ' | 'Dùng Thần Thức / Linh Cảm' | 'Đi Lang Thang Vô Định';
-export const SEARCH_METHODS: SearchMethod[] = ['Hỏi Thăm Dân Địa Phương', 'Tra Cứu Cổ Tịch / Bản Đồ Cũ', 'Dùng Thần Thức / Linh Cảm', 'Đi Lang Thang Vô Định'];
-
-export interface FindLocationParams {
-  locationTypes: GameTemplates.LocationTypeValues[];
-  isSafeZone: boolean | null; // null means 'any'
-  keywords: string;
-  searchMethod: SearchMethod;
-}
-
-export type CombatDisposition = 'capture' | 'kill' | 'release';
-export interface CombatDispositionMap {
-  [npcId: string]: CombatDisposition;
+export interface CombatActionOutcome {
+    damage: number;
+    healing?: number;
+    didCrit: boolean;
+    didEvade: boolean;
+    description: string;
+    statusEffectsToApply?: StatusEffect[];
 }
 
 export interface CombatEndPayload {
-    finalPlayerState: PlayerStats;
-    dispositions: CombatDispositionMap;
-    summary: string;
-    outcome: 'victory' | 'defeat' | 'escaped' | 'surrendered';
-    opponentIds: string[]; // NEW
+  outcome: 'victory' | 'defeat' | 'escaped' | 'surrendered';
+  summary?: string; // Added from old version for AI context
+  totalTurns: number;
+  damageDealtByPlayer: number;
+  damageTakenByPlayer: number;
+  killingBlowBy: string; // 'player' or an NPC's ID
+  notableEvents: string[];
+  finalPlayerState: PlayerStats;
+  finalCombatantStates: Array<{ id: string; finalStats: PlayerStats }>;
+  opponentIds: string[];
+  dispositions: CombatDispositionMap;
 }
 
+// --- END NEW COMBAT TYPES ---
 
-export const DIALOGUE_MARKER = '"';
+export type PlayerActionInputType = 'action' | 'story';
+export type ResponseLength = 'default' | 'short' | 'medium' | 'long';
+
+export const DIALOGUE_MARKER = '§';
+
+export interface ParsedAiResponse {
+  narration: string;
+  choices: AiChoice[];
+  tags: string[];
+  systemMessage?: string;
+}
+
+export interface AiChoice {
+  text: string;
+  actionTag?: string; // NEW for combat
+}
+
+export interface ApiConfig {
+    apiKeySource: 'system' | 'user';
+    userApiKeys: string[];
+    model: string;
+    economyModel: string;
+    safetySettings: SafetySetting[];
+    autoGenerateNpcAvatars: boolean;
+    avatarGenerationEngine: AvatarGenerationEngine; // NEW
+    ragTopK: number; // NEW
+}
+export type AvatarGenerationEngine = 'imagen-4.0-generate-001';
+
+export interface SafetySetting {
+  category: HarmCategory;
+  threshold: HarmBlockThreshold;
+}
+
+// For GameSetupScreen's AI assist
+export interface GeneratedWorldElements {
+    startingSkills: StartingSkill[];
+    startingItems: StartingItem[];
+    startingNPCs: StartingNPC[];
+    startingYeuThu: StartingYeuThu[]; // New
+    startingLore: StartingLore[];
+    startingLocations: StartingLocation[]; // New
+    startingFactions: StartingFaction[]; // New
+    playerName?: string;
+    playerGender?: 'Nam' | 'Nữ' | 'Khác';
+    playerRace?: string;
+    playerPersonality?: string;
+    playerBackstory?: string;
+    playerGoal?: string;
+    playerStartingTraits?: string;
+    playerAvatarUrl?: string; 
+    worldTheme?: string;
+    worldSettingDescription?: string;
+    worldWritingStyle?: string;
+    currencyName?: string;
+    originalStorySummary?: string;
+    raceCultivationSystems: RaceCultivationSystem[]; // NEW
+    yeuThuRealmSystem: string; // NEW
+    canhGioiKhoiDau?: string;
+    genre: GenreType;
+    customGenreName?: string; 
+    isCultivationEnabled: boolean;
+    nsfwDescriptionStyle: NsfwDescriptionStyle;
+    violenceLevel: ViolenceLevel;
+    storyTone: StoryTone;
+    startingDate?: WorldDate; // Make optional as a failsafe
+    playerSpiritualRoot?: string;
+    playerSpecialPhysique?: string;
+    playerThoNguyen?: number;
+    playerMaxThoNguyen?: number;
+    startingCurrency?: number;
+}
+
+// --- NEW: Combat Log for Rich Display ---
+export interface CombatLogContent {
+    type: 'action' | 'info';
+    // For 'action' type
+    actorId?: string;
+    actorName?: string;
+    targetId?: string;
+    targetName?: string;
+    actionName?: string;
+    damage?: number;
+    healing?: number;
+    didCrit?: boolean;
+    didEvade?: boolean;
+    finalTargetHp?: number;
+    maxTargetHp?: number;
+    isPlayerActor?: boolean;
+    isPlayerTarget?: boolean;
+    effect?: string; // For status effects like "dính độc"
+    // For 'info' type
+    message: string;
+    turnNumber?: number; // e.g., for "--- Lượt 3 ---"
+}
+
+export type GameMessageContent = string | CombatLogContent;
+
+export interface GameMessage {
+  id: string;
+  type: 'narration' | 'player_action' | 'system' | 'error' | 'page_summary' | 'event_summary' | 'combat_log';
+  content: GameMessageContent;
+  timestamp: number;
+  choices?: AiChoice[];
+  isPlayerInput?: boolean; 
+  turnNumber: number; 
+  actionTags?: string[]; // NEW for AI Copilot
+}
+
+// For save games list
+export interface SaveGameMeta {
+  id: string;
+  name: string;
+  timestamp: Date;
+  size?: number; // Size in bytes, optional
+}
+
+export interface SaveGameData {
+  id?: string | number; 
+  name: string;
+  timestamp: Date | string; // Allow string for serialization
+  knowledgeBase: KnowledgeBase;
+  gameMessages: GameMessage[];
+  appVersion?: string;
+}
+
+export interface StyleSettingProperty {
+    fontFamily?: string;
+    fontSize?: string;
+    textColor: string;
+    backgroundColor?: string;
+}
+
+export interface StyleSettings {
+    narration: StyleSettingProperty;
+    playerAction: StyleSettingProperty;
+    choiceButton: StyleSettingProperty;
+    keywordHighlight: StyleSettingProperty;
+    dialogueHighlight: StyleSettingProperty;
+    enableKeywordHighlighting: boolean;
+}
+
+export const SEARCH_METHODS = [
+  "Hỏi Thăm Dân Địa Phương",
+  "Tra Cứu Cổ Tịch / Bản Đồ Cũ",
+  "Dùng Thần Thức / Linh Cảm",
+  "Đi Lang Thang Vô Định",
+] as const;
+export type SearchMethod = typeof SEARCH_METHODS[number];
+
+export interface FindLocationParams {
+  locationTypes: GameTemplates.LocationTypeValues[];
+  isSafeZone: boolean | null;
+  keywords: string;
+  searchMethod: SearchMethod;
+}

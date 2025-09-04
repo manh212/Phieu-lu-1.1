@@ -1,3 +1,4 @@
+
 import { PlayerStats, RealmBaseStatDefinition, Item, EquipmentSlotId, StatusEffect, GameMessage, KnowledgeBase, Slave } from '../types';
 import { 
     DEFAULT_PLAYER_STATS, 
@@ -21,12 +22,12 @@ import {
 import * as GameTemplates from '../templates';
 import { normalizeStringForComparison } from './questUtils';
 
-// Calculates base stats (maxHP, maxMP, baseATK, maxEXP) based on realm.
+// Calculates base stats (maxHP, maxMP, baseATK, maxEXP, etc.) based on realm.
 export const calculateRealmBaseStats = (
     realmString: string,
     mainRealmList: string[],
     currentRealmBaseStatsMap: Record<string, RealmBaseStatDefinition>
-): Pick<PlayerStats, 'baseMaxSinhLuc' | 'baseMaxLinhLuc' | 'baseSucTanCong' | 'baseMaxKinhNghiem'> => {
+): Pick<PlayerStats, 'baseMaxSinhLuc' | 'baseMaxLinhLuc' | 'baseSucTanCong' | 'baseMaxKinhNghiem' | 'basePhongThu' | 'baseTocDo' | 'baseChinhXac' | 'baseNeTranh' | 'baseTiLeChiMang' | 'baseSatThuongChiMang'> => {
     
     if (typeof realmString !== 'string' || !realmString) {
         console.error(`[calculateRealmBaseStats] realmString is invalid: ${JSON.stringify(realmString)}. Using fallback.`); // Keep critical error
@@ -39,6 +40,12 @@ export const calculateRealmBaseStats = (
             baseMaxSinhLuc: DEFAULT_MORTAL_STATS.baseMaxSinhLuc,
             baseMaxLinhLuc: DEFAULT_MORTAL_STATS.baseMaxLinhLuc,
             baseSucTanCong: DEFAULT_MORTAL_STATS.baseSucTanCong,
+            basePhongThu: 5,
+            baseTocDo: 10,
+            baseChinhXac: 10,
+            baseNeTranh: 10,
+            baseTiLeChiMang: 5,
+            baseSatThuongChiMang: 1.5,
         };
     }
 
@@ -77,7 +84,7 @@ export const calculateRealmBaseStats = (
         }
     }
     
-    const fallbackTierDefinition = DEFAULT_TIERED_STATS[0] || { hpBase: 10, hpInc: 1, mpBase: 10, mpInc: 1, atkBase: 1, atkInc: 0, expBase: 10, expInc: 1 };
+    const fallbackTierDefinition = DEFAULT_TIERED_STATS[0] || { hpBase: 10, hpInc: 1, mpBase: 10, mpInc: 1, atkBase: 1, atkInc: 0, expBase: 10, expInc: 1, phongThuBase: 5, phongThuInc: 1, tocDoBase: 10, tocDoInc: 1, chinhXacBase: 10, chinhXacInc: 1, neTranhBase: 10, neTranhInc: 1, tiLeChiMangBase: 5, tiLeChiMangInc: 0, satThuongChiMangBase: 1.5, satThuongChiMangInc: 0 };
 
     if (!mainRealmName || !subRealmName) {
         if (realmString !== "Không rõ") {
@@ -88,6 +95,12 @@ export const calculateRealmBaseStats = (
             baseMaxSinhLuc: fallbackTierDefinition.hpBase,
             baseMaxLinhLuc: fallbackTierDefinition.mpBase,
             baseSucTanCong: fallbackTierDefinition.atkBase,
+            basePhongThu: fallbackTierDefinition.phongThuBase,
+            baseTocDo: fallbackTierDefinition.tocDoBase,
+            baseChinhXac: fallbackTierDefinition.chinhXacBase,
+            baseNeTranh: fallbackTierDefinition.neTranhBase,
+            baseTiLeChiMang: fallbackTierDefinition.tiLeChiMangBase,
+            baseSatThuongChiMang: fallbackTierDefinition.satThuongChiMangBase,
         };
     }
     
@@ -100,6 +113,12 @@ export const calculateRealmBaseStats = (
             baseMaxSinhLuc: tierDefinitionForError.hpBase,
             baseMaxLinhLuc: tierDefinitionForError.mpBase,
             baseSucTanCong: tierDefinitionForError.atkBase,
+            basePhongThu: tierDefinitionForError.phongThuBase,
+            baseTocDo: tierDefinitionForError.tocDoBase,
+            baseChinhXac: tierDefinitionForError.chinhXacBase,
+            baseNeTranh: tierDefinitionForError.neTranhBase,
+            baseTiLeChiMang: tierDefinitionForError.tiLeChiMangBase,
+            baseSatThuongChiMang: tierDefinitionForError.satThuongChiMangBase,
         };
     }
     
@@ -117,12 +136,24 @@ export const calculateRealmBaseStats = (
     const calculatedBaseMaxLinhLuc = tierDefinition.mpBase + (subRealmIndex * tierDefinition.mpInc);
     const calculatedBaseSucTanCong = tierDefinition.atkBase + (subRealmIndex * tierDefinition.atkInc);
     const calculatedBaseMaxKinhNghiem = tierDefinition.expBase + (subRealmIndex * tierDefinition.expInc);
+    const calculatedBasePhongThu = tierDefinition.phongThuBase + (subRealmIndex * tierDefinition.phongThuInc);
+    const calculatedBaseTocDo = tierDefinition.tocDoBase + (subRealmIndex * tierDefinition.tocDoInc);
+    const calculatedBaseChinhXac = tierDefinition.chinhXacBase + (subRealmIndex * tierDefinition.chinhXacInc);
+    const calculatedBaseNeTranh = tierDefinition.neTranhBase + (subRealmIndex * tierDefinition.neTranhInc);
+    const calculatedBaseTiLeChiMang = tierDefinition.tiLeChiMangBase + (subRealmIndex * tierDefinition.tiLeChiMangInc);
+    const calculatedBaseSatThuongChiMang = tierDefinition.satThuongChiMangBase + (subRealmIndex * tierDefinition.satThuongChiMangInc);
     
     const calculatedStats = {
         baseMaxKinhNghiem: Math.max(10, calculatedBaseMaxKinhNghiem),
         baseMaxSinhLuc: Math.max(10, calculatedBaseMaxSinhLuc),
         baseMaxLinhLuc: Math.max(0, calculatedBaseMaxLinhLuc),
         baseSucTanCong: Math.max(1, calculatedBaseSucTanCong),
+        basePhongThu: Math.max(0, calculatedBasePhongThu),
+        baseTocDo: Math.max(0, calculatedBaseTocDo),
+        baseChinhXac: Math.max(0, calculatedBaseChinhXac),
+        baseNeTranh: Math.max(0, calculatedBaseNeTranh),
+        baseTiLeChiMang: Math.max(0, calculatedBaseTiLeChiMang),
+        baseSatThuongChiMang: Math.max(1, calculatedBaseSatThuongChiMang),
     };
     
     return calculatedStats;
@@ -141,6 +172,13 @@ export const calculateEffectiveStats = (
         maxKinhNghiem: currentStats.baseMaxKinhNghiem,
         thoNguyen: currentStats.thoNguyen,
         maxThoNguyen: currentStats.maxThoNguyen,
+        // NEW STATS
+        phongThu: currentStats.basePhongThu ?? 0,
+        tocDo: currentStats.baseTocDo ?? 0,
+        chinhXac: currentStats.baseChinhXac ?? 0,
+        neTranh: currentStats.baseNeTranh ?? 0,
+        tiLeChiMang: currentStats.baseTiLeChiMang ?? 0,
+        satThuongChiMang: currentStats.baseSatThuongChiMang ?? 1.5,
     };
 
     for (const slotId in equippedItemIds) {
@@ -160,6 +198,12 @@ export const calculateEffectiveStats = (
                             else if (key === 'maxKinhNghiem') effectiveStats.maxKinhNghiem += bonusValue;
                             else if (key === 'thoNguyen') effectiveStats.thoNguyen += bonusValue;
                             else if (key === 'maxThoNguyen') effectiveStats.maxThoNguyen += bonusValue;
+                            else if (key === 'phongThu') effectiveStats.phongThu += bonusValue;
+                            else if (key === 'tocDo') effectiveStats.tocDo += bonusValue;
+                            else if (key === 'chinhXac') effectiveStats.chinhXac += bonusValue;
+                            else if (key === 'neTranh') effectiveStats.neTranh += bonusValue;
+                            else if (key === 'tiLeChiMang') effectiveStats.tiLeChiMang += bonusValue;
+                            else if (key === 'satThuongChiMang') effectiveStats.satThuongChiMang += bonusValue;
                         }
                     }
                 }
@@ -200,6 +244,12 @@ export const calculateEffectiveStats = (
     effectiveStats.maxKinhNghiem = Math.round(effectiveStats.maxKinhNghiem);
     effectiveStats.thoNguyen = Math.round(effectiveStats.thoNguyen);
     effectiveStats.maxThoNguyen = Math.round(effectiveStats.maxThoNguyen);
+    effectiveStats.phongThu = Math.round(effectiveStats.phongThu);
+    effectiveStats.tocDo = Math.round(effectiveStats.tocDo);
+    effectiveStats.chinhXac = Math.round(effectiveStats.chinhXac);
+    effectiveStats.neTranh = Math.round(effectiveStats.neTranh);
+    effectiveStats.tiLeChiMang = Math.round(effectiveStats.tiLeChiMang);
+    effectiveStats.satThuongChiMang = Number(effectiveStats.satThuongChiMang.toFixed(2));
 
 
     effectiveStats.sinhLuc = Math.max(0, Math.min(effectiveStats.sinhLuc, effectiveStats.maxSinhLuc));

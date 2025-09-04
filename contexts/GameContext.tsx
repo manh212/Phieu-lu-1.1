@@ -1,6 +1,7 @@
 import React, { createContext, ReactNode, useRef, useState, useCallback, useEffect } from 'react';
 import * as jsonpatch from 'fast-json-patch';
-import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, AvatarUploadHandlers, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction } from '../types';
+// FIX: Removed unused and non-existent `AvatarUploadHandlers` type import.
+import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction, CombatLogContent } from '../types';
 import { INITIAL_KNOWLEDGE_BASE, VIETNAMESE, APP_VERSION, MAX_AUTO_SAVE_SLOTS, TURNS_PER_PAGE, DEFAULT_TIERED_STATS, KEYFRAME_INTERVAL, EQUIPMENT_SLOTS_CONFIG } from '../constants';
 import { saveGameToIndexedDB, loadGamesFromIndexedDB, loadSpecificGameFromIndexedDB, deleteGameFromIndexedDB, importGameToIndexedDB, resetDBConnection as resetIndexedDBConnection } from '../services/indexedDBService';
 import * as GameTemplates from '../templates';
@@ -9,10 +10,12 @@ import { useGameNotifications, NotificationState } from '../hooks/useGameNotific
 import { useGameData } from '../hooks/useGameData';
 import { useGameplayModals } from '../hooks/useGameplayModals';
 import type { GameEntity, GameEntityType } from '../hooks/types';
-import { calculateRealmBaseStats, calculateEffectiveStats, getMessagesForPage, performTagProcessing, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, handleLocationEntryEvents, searchVectors, extractEntityContextsFromString, worldDateToTotalMinutes, convertNpcActionToTag } from '../utils/gameLogicUtils'; 
-import { getApiSettings as getGeminiApiSettings, countTokens, generateCraftedItemViaAI, generateDefeatConsequence, summarizeTurnHistory, generateWorldTickUpdate } from '../services/geminiService'; 
+// FIX: Removed incorrect `generateDefeatConsequence` import. It's handled correctly in the usePostCombatActions hook.
+import { getApiSettings as getGeminiApiSettings, countTokens, generateCraftedItemViaAI, summarizeTurnHistory, generateWorldTickUpdate } from '../services/geminiService'; 
 import { uploadImageToCloudinary } from '../services/cloudinaryService';
 import { isValidImageUrl } from '../utils/imageValidationUtils';
+// FIX: Add missing utility function imports.
+import { performTagProcessing, handleLevelUps, calculateEffectiveStats, addTurnHistoryEntryRaw, updateGameEventsStatus } from '../utils/gameLogicUtils';
 
 // Import action hooks
 import { useMainGameLoopActions } from '../hooks/actions/useMainGameLoopActions';
@@ -149,34 +152,56 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     let lastNarrationFromPreviousPage: string | undefined = undefined;
     if (lastPageNumberForPrompt > 0 && gameData.currentPageDisplay > lastPageNumberForPrompt) { 
         const messagesOfLastSummarizedPagePrompt = gameData.getMessagesForPage(lastPageNumberForPrompt);
-        lastNarrationFromPreviousPage = [...messagesOfLastSummarizedPagePrompt].reverse().find(msg => msg.type === 'narration')?.content;
+        // FIX: Added type guard to ensure content is a string before assigning to a string variable.
+        const lastNarrationMessage = [...messagesOfLastSummarizedPagePrompt].reverse().find(msg => msg.type === 'narration' && typeof msg.content === 'string');
+        if (lastNarrationMessage && typeof lastNarrationMessage.content === 'string') {
+            lastNarrationFromPreviousPage = lastNarrationMessage.content;
+        }
     }
 
     const messagesForCurrentPagePrompt = gameData.getMessagesForPage(gameData.currentPageDisplay);
     const currentPageMessagesLog = messagesForCurrentPagePrompt
         .map(msg => {
-            if (msg.type === 'player_action') {
-                const prefix = `${gameData.knowledgeBase.worldConfig?.playerName || 'Người chơi'} ${msg.isPlayerInput ? 'đã làm' : 'đã chọn'}: `;
-                return prefix + msg.content;
+            // FIX: Handle different message content types to prevent type errors.
+            // Specifically, ensure CombatLogContent is handled correctly by extracting its string message.
+            switch (msg.type) {
+                case 'player_action':
+                    if (typeof msg.content === 'string') {
+                        const prefix = `${gameData.knowledgeBase.worldConfig?.playerName || 'Người chơi'} ${msg.isPlayerInput ? 'đã làm' : 'đã chọn'}: `;
+                        return prefix + msg.content;
+                    }
+                    break;
+                case 'narration':
+                    if (typeof msg.content === 'string') {
+                        const prefix = "AI kể: ";
+                        return prefix + msg.content;
+                    }
+                    break;
+                case 'combat_log':
+                    if (msg.content && typeof msg.content === 'object' && 'message' in msg.content) {
+                        return `[Diễn biến chiến đấu] ${(msg.content as CombatLogContent).message}`;
+                    }
+                    break;
+                case 'system':
+                    if (typeof msg.content === 'string') {
+                        const contentLower = msg.content.toLowerCase();
+                        const isExcluded = 
+                            contentLower.includes("tóm tắt") || 
+                            contentLower.includes("trang") ||
+                            contentLower.startsWith("nhận được:") ||
+                            contentLower.startsWith("học được kỹ năng mới:") ||
+                            contentLower.startsWith("bạn đã gặp npc mới:");
+                        
+                        if (!isExcluded) {
+                            return `Hệ thống: ${msg.content}`;
+                        }
+                    }
+                    break;
+                // Other types are intentionally ignored for the prompt log
+                default:
+                    return null;
             }
-            if (msg.type === 'narration') {
-                const prefix = "AI kể: ";
-                return prefix + msg.content;
-            }
-            if (msg.type === 'system') {
-                const contentLower = msg.content.toLowerCase();
-                const isExcluded = 
-                    contentLower.includes("tóm tắt") || 
-                    contentLower.includes("trang") ||
-                    contentLower.startsWith("nhận được:") ||
-                    contentLower.startsWith("học được kỹ năng mới:") ||
-                    contentLower.startsWith("bạn đã gặp npc mới:");
-                
-                if (!isExcluded) {
-                    return `Hệ thống: ${msg.content}`;
-                }
-            }
-            return null;
+            return null; // Return null if content type is unexpected for a given message type
         })
         .filter(Boolean)
         .join("\n---\n");
@@ -204,14 +229,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const logNpcAvatarPromptCallback = useCallback((prompt: string) => {
         setSentNpcAvatarPromptsLog(prev => [prompt, ...prev].slice(0, 10));
     }, []);
-
-    const logSentPromptCallback = useCallback((prompt: string) => {
-        gameData.setSentPromptsLog(prev => [prompt, ...prev].slice(0, 10));
-        gameData.setLatestPromptTokenCount('Chưa kiểm tra');
-    }, [gameData.setSentPromptsLog, gameData.setLatestPromptTokenCount]);
     
-    // This function will need `allActions` which is defined later.
-    // We declare it here but its dependency on `allActions` means we must be careful with its usage.
     const handleProcessDebugTags = useCallback(async (narration: string, tags: string) => {
         setIsLoadingApi(true);
         try {
@@ -257,6 +275,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsLoadingApi(false);
         }
     }, [gameData, setIsLoadingApi, showNotification, logNpcAvatarPromptCallback]);
+    
+    const [isSummarizingNextPageTransition, setIsSummarizingNextPageTransition] = useState<boolean>(false);
 
     // *** COMPOSITION ROOT ***
     // 1. Create a base props object that ALL action hooks will need.
@@ -279,6 +299,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         previousPageSummaries: previousPageSummariesContent,
         lastNarrationFromPreviousPage,
         handleProcessDebugTags,
+        isSummarizingNextPageTransition,
+        setIsSummarizingNextPageTransition,
     };
     
     // 2. Instantiate hooks that are dependencies for other hooks.
@@ -312,137 +334,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     useEffect(() => {
-        return () => { if (apiErrorTimer.current) clearTimeout(apiErrorTimer.current); };
-    }, []);
-    
-    const handleSetupCompleteWrapper = useCallback(async (settingsFromGameSetup: WorldSettings, rawAvatarDataFromGameSetup?: string | null) => {
-        let finalWorldSettings = { ...settingsFromGameSetup };
-        let finalPlayerAvatarUrlForKbConfig: string | undefined = undefined;
-        let base64ToStoreInKb: string | undefined = undefined;
-        setIsUploadingAvatar(true);
-        if (rawAvatarDataFromGameSetup) {
-            if (rawAvatarDataFromGameSetup.startsWith('data:image')) {
-                base64ToStoreInKb = rawAvatarDataFromGameSetup;
-                try {
-                    const playerNameSlug = finalWorldSettings.playerName?.replace(/\s+/g, '_').toLowerCase() || `player_${Date.now()}`;
-                    const base64StringOnly = rawAvatarDataFromGameSetup.split(',')[1];
-                    const cloudinaryUrl = await uploadImageToCloudinary(base64StringOnly, 'player', `player_${playerNameSlug}`);
-                    finalPlayerAvatarUrlForKbConfig = cloudinaryUrl;
-                    base64ToStoreInKb = undefined;
-                } catch (uploadError) {
-                    console.error("Cloudinary upload failed during setup:", uploadError);
-                    showNotification(VIETNAMESE.avatarUploadError + (uploadError instanceof Error ? uploadError.message : ""), "warning");
-                }
-            } else if (rawAvatarDataFromGameSetup.startsWith('http')) {
-                const isValidDirectUrl = await isValidImageUrl(rawAvatarDataFromGameSetup);
-                if (isValidDirectUrl) {
-                    finalPlayerAvatarUrlForKbConfig = rawAvatarDataFromGameSetup;
-                } else {
-                    showNotification(VIETNAMESE.avatarUrlInvalid + " Ảnh đại diện sẽ bị xóa.", "warning");
-                }
-            }
-        } else if (finalWorldSettings.playerAvatarUrl && (finalWorldSettings.playerAvatarUrl.startsWith('http'))) {
-            const isValidDirectUrl = await isValidImageUrl(finalWorldSettings.playerAvatarUrl);
-            if (isValidDirectUrl) {
-                finalPlayerAvatarUrlForKbConfig = finalWorldSettings.playerAvatarUrl;
-            } else {
-                finalWorldSettings.playerAvatarUrl = undefined;
-            }
-        }
-        finalWorldSettings.playerAvatarUrl = finalPlayerAvatarUrlForKbConfig;
-        setIsUploadingAvatar(false);
-        justLoadedGame.current = true;
-        gameData.resetGameData();
-        await allActions.handleSetupComplete(finalWorldSettings, base64ToStoreInKb);
-    }, [allActions, showNotification, gameData]);
-
-    const handleUpdatePlayerAvatar = useCallback(async (newAvatarUrlOrData: string) => {
-        setIsUploadingAvatar(true);
-        let finalUrlToShow = newAvatarUrlOrData;
-        let base64ForKbIfUploadFails: string | undefined = undefined;
-        if (newAvatarUrlOrData.startsWith('data:image')) {
-            base64ForKbIfUploadFails = newAvatarUrlOrData;
-            try {
-                const playerNameSlug = gameData.knowledgeBase.worldConfig?.playerName?.replace(/\s+/g, '_').toLowerCase() || `player_${Date.now()}`;
-                const base64StringOnly = newAvatarUrlOrData.split(',')[1];
-                finalUrlToShow = await uploadImageToCloudinary(base64StringOnly, 'player', `player_${playerNameSlug}_ingame`);
-                base64ForKbIfUploadFails = undefined;
-            } catch (uploadError) {
-                console.error("Cloudinary upload failed for player avatar:", uploadError);
-                showNotification(VIETNAMESE.avatarUploadError + (uploadError instanceof Error ? uploadError.message : ""), "error");
-                setIsUploadingAvatar(false);
-                return;
-            }
-        } else if (newAvatarUrlOrData.startsWith('http')) {
-            const isValid = await isValidImageUrl(newAvatarUrlOrData);
-            if (!isValid) {
-                showNotification(VIETNAMESE.avatarUrlInvalid, "error");
-                setIsUploadingAvatar(false);
-                return;
-            }
-            finalUrlToShow = newAvatarUrlOrData;
-        } else if (newAvatarUrlOrData === '') {
-            finalUrlToShow = '';
-        } else {
-            showNotification("Định dạng avatar không hợp lệ.", "error");
-            setIsUploadingAvatar(false);
-            return;
-        }
-        gameData.setKnowledgeBase(prevKb => {
-            const updatedKb = JSON.parse(JSON.stringify(prevKb)) as KnowledgeBase;
-            updatedKb.playerAvatarData = base64ForKbIfUploadFails || (finalUrlToShow === '' ? undefined : finalUrlToShow);
-            if (updatedKb.worldConfig) {
-                updatedKb.worldConfig.playerAvatarUrl = updatedKb.playerAvatarData;
-            }
-            return updatedKb;
-        });
-        showNotification(finalUrlToShow === '' ? "Đã xóa ảnh đại diện." : VIETNAMESE.avatarUploadSuccess, 'success');
-        setIsUploadingAvatar(false);
-    }, [gameData.setKnowledgeBase, showNotification, gameData.knowledgeBase.worldConfig?.playerName]);
-
-    const handleUpdateNpcAvatar = useCallback(async (npcId: string, newAvatarUrlOrData: string) => {
-        setIsUploadingAvatar(true);
-        let finalUrlForNpc = newAvatarUrlOrData;
-        const npcData = gameData.knowledgeBase.discoveredNPCs.find(n => n.id === npcId);
-        if (newAvatarUrlOrData.startsWith('data:image') && npcData) {
-            try {
-                const base64StringOnly = newAvatarUrlOrData.split(',')[1];
-                let cloudinaryFolderType: 'npc_male' | 'npc_female' = 'npc_male';
-                if (npcData.gender === 'Nữ') cloudinaryFolderType = 'npc_female';
-                finalUrlForNpc = await uploadImageToCloudinary(base64StringOnly, cloudinaryFolderType, `npc_${npcId}_ingame`);
-            } catch (uploadError) {
-                console.error(`Cloudinary upload failed for NPC ${npcId}:`, uploadError);
-                showNotification(VIETNAMESE.avatarUploadError + (uploadError instanceof Error ? uploadError.message : ""), "error");
-                setIsUploadingAvatar(false);
-                return;
-            }
-        } else if (newAvatarUrlOrData.startsWith('http')) {
-            const isValid = await isValidImageUrl(newAvatarUrlOrData);
-            if (!isValid) {
-                showNotification(VIETNAMESE.avatarUrlInvalid, "error");
-                setIsUploadingAvatar(false);
-                return;
-            }
-            finalUrlForNpc = newAvatarUrlOrData;
-        } else if (newAvatarUrlOrData === '') {
-            finalUrlForNpc = '';
-        } else {
-            showNotification("Định dạng avatar không hợp lệ cho NPC.", "error");
-            setIsUploadingAvatar(false);
-            return;
-        }
-        gameData.setKnowledgeBase(prevKb => {
-            const updatedNPCs = prevKb.discoveredNPCs.map(npc => npc.id === npcId ? { ...npc, avatarUrl: finalUrlForNpc === '' ? undefined : finalUrlForNpc } : npc);
-            return { ...prevKb, discoveredNPCs: updatedNPCs };
-        });
-        const npcNameDisplay = npcData?.name || "NPC";
-        showNotification(finalUrlForNpc === '' ? `Đã xóa ảnh đại diện cho ${npcNameDisplay}.` : `${VIETNAMESE.avatarUploadSuccess} cho ${npcNameDisplay}.`, 'success');
-        setIsUploadingAvatar(false);
-    }, [gameData.knowledgeBase.discoveredNPCs, gameData.setKnowledgeBase, showNotification]);
-
-    useEffect(() => {
         let autoPlayTimeoutId: number | undefined;
-        if (isAutoPlaying && !isLoadingApi && !allActions.isSummarizingNextPageTransition && !isSummarizingOnLoad && currentScreen === GameScreen.Gameplay && gameData.currentPageDisplay === gameData.totalPages) {
+        if (isAutoPlaying && !isLoadingApi && !isSummarizingNextPageTransition && !isSummarizingOnLoad && currentScreen === GameScreen.Gameplay && gameData.currentPageDisplay === gameData.totalPages) {
             const latestMessageWithChoices = [...gameData.gameMessages].reverse().find((msg) => msg.type === 'narration' && msg.choices && msg.choices.length > 0);
             let actionToTake: string | null = null;
             let actionType: PlayerActionInputType = 'action';
@@ -455,14 +348,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             if (actionToTake) {
                 autoPlayTimeoutId = window.setTimeout(async () => {
-                    if (isAutoPlaying && !isLoadingApi && !allActions.isSummarizingNextPageTransition && !isSummarizingOnLoad && currentScreen === GameScreen.Gameplay && gameData.currentPageDisplay === gameData.totalPages) {
+                    if (isAutoPlaying && !isLoadingApi && !isSummarizingNextPageTransition && !isSummarizingOnLoad && currentScreen === GameScreen.Gameplay && gameData.currentPageDisplay === gameData.totalPages) {
                         await allActions.handlePlayerAction(actionToTake!, true, actionType, 'default', false);
                     }
                 }, 1000);
             }
         }
         return () => { if (autoPlayTimeoutId) clearTimeout(autoPlayTimeoutId); };
-    }, [isAutoPlaying, isLoadingApi, gameData.gameMessages, currentScreen, allActions, isSummarizingOnLoad, gameData.currentPageDisplay, gameData.totalPages]);
+    }, [isAutoPlaying, isLoadingApi, gameData.gameMessages, currentScreen, allActions, isSummarizingOnLoad, gameData.currentPageDisplay, gameData.totalPages, isSummarizingNextPageTransition]);
     
     const onSaveGame = async () => {
         setIsSavingGame(true);
@@ -514,7 +407,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
                 gameData.setGameMessages(gameDataToLoad.gameMessages);
                 loadedKb.manualSaveName = gameDataToLoad.name || loadedKb.manualSaveName || loadedKb.worldConfig?.saveGameName || "Không Tên";
-                loadedKb.manualSaveId = loadedKb.manualSaveId ?? gameDataToLoad.id ?? null;
+                // FIX: Convert potential number 'id' from save data to string for 'manualSaveId'
+                loadedKb.manualSaveId = loadedKb.manualSaveId ?? gameDataToLoad.id?.toString() ?? null;
                 gameData.setKnowledgeBase(loadedKb);
                 const loadedTotalPages = Math.max(1, loadedKb.currentPageHistory?.length || 1);
                 gameData.setCurrentPageDisplay(loadedTotalPages); 
@@ -540,10 +434,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const slotConfig = EQUIPMENT_SLOTS_CONFIG.find(s => s.id === slotId);
             const slotName = slotConfig ? (VIETNAMESE[slotConfig.labelKey] as string) : slotId;
             if (itemIdToEquip) {
-                const equippedItem = newKb.inventory.find(i => i.id === itemIdToEquip);
+                const equippedItem = newKb.inventory.find((i: ItemType) => i.id === itemIdToEquip);
                 if (equippedItem) showNotification(VIETNAMESE.itemEquipped(equippedItem.name, slotName), 'success');
             } else if (previousItemIdInSlot) {
-                const unequippedItem = newKb.inventory.find(i => i.id === previousItemIdInSlot);
+                const unequippedItem = newKb.inventory.find((i: ItemType) => i.id === previousItemIdInSlot);
                 if (unequippedItem) showNotification(VIETNAMESE.itemUnequipped(unequippedItem.name, slotName), 'info');
             }
             return newKb;
@@ -600,7 +494,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const handleBuyItem = useCallback((itemId: string, vendorId: string, quantity: number = 1) => {
         gameData.setKnowledgeBase(prevKb => {
             const newKb = JSON.parse(JSON.stringify(prevKb)) as KnowledgeBase;
-            const vendor = newKb.discoveredNPCs.find(n => n.id === vendorId);
+            const vendor = newKb.discoveredNPCs.find((n: NPC) => n.id === vendorId);
             if (!vendor || !vendor.shopInventory) return prevKb;
             const itemIndexInShop = vendor.shopInventory.findIndex(i => i.id === itemId);
             if (itemIndexInShop === -1) return prevKb;
@@ -707,7 +601,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const contextValue: GameContextType = {
         // State
         currentScreen, ...gameData, styleSettings, storageSettings, isInitialLoading, storageInitError, notification,
-        apiError, isLoadingApi, isSummarizingNextPageTransition: allActions.isSummarizingNextPageTransition, isAutoPlaying,
+        apiError, isLoadingApi, isSummarizingNextPageTransition, isAutoPlaying,
         isSavingGame, isAutoSaving, isSummarizingOnLoad, isCraftingItem, isUploadingAvatar, isCultivating,
         sentNpcAvatarPromptsLog, currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent,
         lastNarrationFromPreviousPage, selectedEntity, isStyleSettingsModalOpen, isAiContextModalOpen,
@@ -718,7 +612,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ...allActions,
         setCurrentScreen, 
         setStyleSettings, 
-        handleSetupComplete: handleSetupCompleteWrapper, 
         onQuit, 
         onSaveGame, 
         onLoadGame, 
@@ -739,8 +632,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             showNotification(VIETNAMESE.messageEditedSuccess, 'success');
         },
         onCancelEditMessage: () => gameData.setMessageIdBeingEdited(null),
-        onUpdatePlayerAvatar: handleUpdatePlayerAvatar, 
-        onUpdateNpcAvatar: handleUpdateNpcAvatar,
+        onUpdatePlayerAvatar: allActions.onUpdatePlayerAvatar, 
+        onUpdateNpcAvatar: allActions.onUpdateNpcAvatar,
         fetchSaveGamesForImportExport, 
         loadSpecificGameDataForExport, 
         handleImportGameData,

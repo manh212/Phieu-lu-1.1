@@ -1,7 +1,5 @@
-
-
-import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
-import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation } from './../types';
+import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect, useState } from 'react';
+import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase, AiChoice, PlayerActionInputType, ResponseLength } from './../types';
 import { VIETNAMESE } from './../constants';
 import * as GameTemplates from './../templates'; // Import GameTemplates
 
@@ -19,26 +17,47 @@ import DebugPanelDisplay from './gameplay/DebugPanelDisplay';
 import MiniInfoPopover from './ui/MiniInfoPopover';
 import { MainMenuPanel } from './gameplay/layout/MainMenuPanel';
 import AICopilotPanel from './gameplay/AICopilotPanel';
+import CombatStatusPanel from './gameplay/CombatStatusPanel'; // NEW: Import combat panel
+import DebugCombatSetupModal from './combat/DebugCombatSetupModal'; // NEW: Import modal
 
 // Import Custom Hooks
 import { useGameplayPanels } from '../hooks/useGameplayPanels';
 import { usePlayerInput } from '../hooks/usePlayerInput';
 import { usePopover } from '../hooks/usePopover';
+import { useGame } from '../hooks/useGame'; // Using useGame to get context
+import { useCombat } from '../hooks/useCombat'; // NEW: Import combat hook
 
 // Import Utilities
 import { parseAndHighlightText as parseAndHighlightTextUtil } from '../utils/textHighlighting';
-import { useGame } from '../hooks/useGame'; // Using useGame to get context
-import Button from './ui/Button'; // Import Button
 import Spinner from './ui/Spinner'; // Import Spinner
 
 export const GameplayScreen: React.FC = () => {
     const game = useGame(); // Get all props from context
+    const combat = useCombat(); // Get combat context
     const storyLogRef = useRef<HTMLDivElement>(null);
 
     // Use custom hooks for UI state not needed globally
     const { isReaderMode, setIsReaderMode, isCharPanelOpen, setIsCharPanelOpen, isQuestsPanelOpen, setIsQuestsPanelOpen, isWorldPanelOpen, setIsWorldPanelOpen, showDebugPanel, setShowDebugPanel, isMainMenuOpen, setIsMainMenuOpen, isCopilotOpen, setIsCopilotOpen } = useGameplayPanels();
     const { popover, handleKeywordClick, closePopover } = usePopover();
+    const [isCombatSetupModalOpen, setIsCombatSetupModalOpen] = useState(false); // NEW: State for debug combat modal
     
+    // NEW: Action Router to fix circular dependency
+    const handleActionRouter = useCallback((
+        action: AiChoice | string, 
+        isChoice: boolean, 
+        inputType: PlayerActionInputType, 
+        responseLength: ResponseLength,
+        isStrictMode: boolean
+    ) => {
+        if (combat.combatState.isInCombat) {
+            const actionTag = typeof action === 'object' ? action.actionTag : undefined;
+            combat.processPlayerAction(actionTag);
+        } else {
+            const actionText = typeof action === 'string' ? action : action.text;
+            game.handlePlayerAction(actionText, isChoice, inputType, responseLength, isStrictMode);
+        }
+    }, [combat, game.handlePlayerAction]);
+
     const {
         playerInput, setPlayerInput, currentActionType, setCurrentActionType,
         selectedResponseLength, setSelectedResponseLength,
@@ -46,7 +65,7 @@ export const GameplayScreen: React.FC = () => {
         responseLengthDropdownRef, handleChoiceClick, handleSubmit, handleRefresh,
         isStrictMode, setIsStrictMode
     } = usePlayerInput({
-        onPlayerAction: game.handlePlayerAction,
+        onPlayerAction: handleActionRouter, // Use the new router function
         onRefreshChoices: game.handleRefreshChoices,
         isLoading: game.isLoadingApi || game.isSummarizingNextPageTransition || game.knowledgeBase.isWorldTicking,
         isSummarizing: game.isSummarizingOnLoad || game.isSummarizingNextPageTransition,
@@ -56,6 +75,45 @@ export const GameplayScreen: React.FC = () => {
 
     const isLoadingUi = game.isLoadingApi || game.isUploadingAvatar || game.knowledgeBase.isWorldTicking;
     const isSummarizingUi = game.isSummarizingNextPageTransition || game.isSummarizingOnLoad;
+
+    // --- NEW: Effect to start combat ---
+    useEffect(() => {
+        if (game.knowledgeBase.pendingOpponentIdsForCombat) {
+            combat.startCombat(game.knowledgeBase.pendingOpponentIdsForCombat);
+            // Clear the pending state after starting combat to prevent re-triggering
+            game.setKnowledgeBase((prev: KnowledgeBase) => ({
+                ...prev,
+                pendingOpponentIdsForCombat: null
+            }));
+        }
+    }, [game.knowledgeBase.pendingOpponentIdsForCombat, combat.startCombat, game.setKnowledgeBase]);
+
+    // NEW: Handler for starting debug combat with selected opponents
+    const handleStartDebugCombatWithOpponents = useCallback((opponentIds: string[]) => {
+        const { showNotification, setKnowledgeBase, knowledgeBase } = game;
+        
+        if (opponentIds.length === 0) {
+            showNotification("Vui lòng chọn ít nhất một đối thủ.", 'warning');
+            return;
+        }
+
+        const allPotentialOpponents = [...knowledgeBase.discoveredNPCs, ...knowledgeBase.discoveredYeuThu];
+        const opponentNames = opponentIds.map(id => {
+            const opp = allPotentialOpponents.find(o => o.id === id);
+            return opp ? opp.name : 'Không rõ';
+        }).join(', ');
+    
+        showNotification(`Bắt đầu chiến đấu thử với: ${opponentNames}`, 'info');
+    
+        // Trigger combat via the knowledgeBase property
+        setKnowledgeBase((prev: KnowledgeBase) => ({
+            ...prev,
+            pendingOpponentIdsForCombat: opponentIds
+        }));
+        
+        setIsCombatSetupModalOpen(false); // Close modal after starting
+    }, [game]);
+
 
     // Scroll management
     useLayoutEffect(() => {
@@ -202,7 +260,7 @@ export const GameplayScreen: React.FC = () => {
                     knowledgeBase={game.knowledgeBase}
                     setIsMainMenuOpen={setIsMainMenuOpen}
                     onRollbackTurn={game.onRollbackTurn}
-                    isStopButtonDisabled={isStopButtonDisabled || !!game.knowledgeBase.pendingCombat}
+                    isStopButtonDisabled={isStopButtonDisabled}
                     isLoading={isLoadingUi}
                     onSaveGame={game.onSaveGame}
                     isSaveDisabled={isSaveDisabled}
@@ -214,6 +272,7 @@ export const GameplayScreen: React.FC = () => {
             )}
             
             <div className="flex-grow flex flex-col bg-gray-850 shadow-xl rounded-lg overflow-hidden relative min-h-0">
+                <CombatStatusPanel />
                 {game.knowledgeBase.isWorldTicking && (
                     <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20" aria-live="polite" aria-busy="true">
                         <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm shadow-lg border border-sky-500/50">
@@ -246,47 +305,32 @@ export const GameplayScreen: React.FC = () => {
                 />
                  {!isReaderMode && (
                     <div className="flex-shrink-0">
-                        {game.knowledgeBase.pendingCombat ? (
-                            <div className="p-4 bg-red-900/50 border-t-2 border-red-500 flex flex-col items-center justify-center gap-4">
-                                <p className="text-lg font-bold text-red-300 animate-pulse">Một trận chiến sắp bắt đầu!</p>
-                                <Button 
-                                    variant="danger" 
-                                    size="lg"
-                                    onClick={() => game.setCurrentScreen(GameScreen.Combat)}
-                                >
-                                    {VIETNAMESE.startCombatButton || "Bắt Đầu Chiến Đấu"}
-                                </Button>
-                            </div>
-                        ) : (
-                            <>
-                                <PlayerInputArea 
-                                    latestMessageWithChoices={[...game.getMessagesForPage(game.currentPageDisplay)].reverse().find(msg => msg.type === 'narration' && msg.choices && msg.choices.length > 0)}
-                                    showAiSuggestions={showAiSuggestions} setShowAiSuggestions={setShowAiSuggestions}
-                                    playerInput={playerInput} setPlayerInput={setPlayerInput}
-                                    currentActionType={currentActionType} setCurrentActionType={setCurrentActionType}
-                                    selectedResponseLength={selectedResponseLength} setSelectedResponseLength={setSelectedResponseLength}
-                                    isResponseLengthDropdownOpen={isResponseLengthDropdownOpen} setIsResponseLengthDropdownOpen={setIsResponseLengthDropdownOpen}
-                                    responseLengthDropdownRef={responseLengthDropdownRef}
-                                    isLoadingUi={isLoadingUi}
-                                    isSummarizingUi={isSummarizingUi}
-                                    isCurrentlyActivePage={game.isCurrentlyActivePage}
-                                    messageIdBeingEdited={game.messageIdBeingEdited}
-                                    handleChoiceClick={handleChoiceClick}
-                                    handleSubmit={handleSubmit}
-                                    handleRefresh={handleRefresh}
-                                    choiceButtonStyles={getChoiceButtonStyles()}
-                                    currentPage={game.currentPageDisplay}
-                                    totalPages={game.totalPages}
-                                    onPrev={game.onGoToPrevPage}
-                                    onNext={game.onGoToNextPage}
-                                    onJump={game.onJumpToPage}
-                                    economySubLocations={economySubLocations}
-                                    onEconomyLocationClick={handleEconomyLocationClick}
-                                    isStrictMode={isStrictMode}
-                                    setIsStrictMode={setIsStrictMode}
-                                />
-                            </>
-                        )}
+                        <PlayerInputArea 
+                            latestMessageWithChoices={[...game.getMessagesForPage(game.currentPageDisplay)].reverse().find(msg => msg.type === 'narration' && msg.choices && msg.choices.length > 0)}
+                            showAiSuggestions={showAiSuggestions} setShowAiSuggestions={setShowAiSuggestions}
+                            playerInput={playerInput} setPlayerInput={setPlayerInput}
+                            currentActionType={currentActionType} setCurrentActionType={setCurrentActionType}
+                            selectedResponseLength={selectedResponseLength} setSelectedResponseLength={setSelectedResponseLength}
+                            isResponseLengthDropdownOpen={isResponseLengthDropdownOpen} setIsResponseLengthDropdownOpen={setIsResponseLengthDropdownOpen}
+                            responseLengthDropdownRef={responseLengthDropdownRef}
+                            isLoadingUi={isLoadingUi}
+                            isSummarizingUi={isSummarizingUi}
+                            isCurrentlyActivePage={game.isCurrentlyActivePage}
+                            messageIdBeingEdited={game.messageIdBeingEdited}
+                            handleChoiceClick={handleChoiceClick}
+                            handleSubmit={handleSubmit}
+                            handleRefresh={handleRefresh}
+                            choiceButtonStyles={getChoiceButtonStyles()}
+                            currentPage={game.currentPageDisplay}
+                            totalPages={game.totalPages}
+                            onPrev={game.onGoToPrevPage}
+                            onNext={game.onGoToNextPage}
+                            onJump={game.onJumpToPage}
+                            economySubLocations={economySubLocations}
+                            onEconomyLocationClick={handleEconomyLocationClick}
+                            isStrictMode={isStrictMode}
+                            setIsStrictMode={setIsStrictMode}
+                        />
                     </div>
                  )}
             </div>
@@ -345,7 +389,8 @@ export const GameplayScreen: React.FC = () => {
                 totalPages={game.totalPages} 
                 isAutoPlaying={game.isAutoPlaying} 
                 onToggleAutoPlay={game.onToggleAutoPlay} 
-                onStartDebugCombat={()=>{}} 
+                // FIX: Renamed prop to onStartDebugCombat to match what DebugPanelDisplay expects.
+                onStartDebugCombat={() => setIsCombatSetupModalOpen(true)}
                 onProcessDebugTags={game.handleProcessDebugTags} 
                 isLoading={isLoadingUi} 
                 onCheckTokenCount={game.handleCheckTokenCount}
@@ -358,6 +403,14 @@ export const GameplayScreen: React.FC = () => {
                 lastScoredNpcsForTick={game.lastScoredNpcsForTick}
                 onManualTick={game.handleManualTick}
             />}
+            {isCombatSetupModalOpen && (
+                <DebugCombatSetupModal
+                    isOpen={isCombatSetupModalOpen}
+                    onClose={() => setIsCombatSetupModalOpen(false)}
+                    knowledgeBase={game.knowledgeBase}
+                    onStartCombat={handleStartDebugCombatWithOpponents}
+                />
+            )}
         </div>
     );
 };

@@ -16,6 +16,7 @@ export * from './constants/npc';
 
 export * from './constants/economy';
 export * from './constants/auction'; // NEW
+export * from './constants/combat'; // NEW
 
 // Re-export prompt templates
 // Assuming 'prompts' directory is directly under 'src', so './prompts/index' from 'src/constants.ts'

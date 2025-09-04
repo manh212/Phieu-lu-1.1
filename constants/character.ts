@@ -1,3 +1,4 @@
+
 import { PlayerStats, RealmBaseStatDefinition, ProficiencyTier, PROFICIENCY_TIERS, TuChatTier } from '../types';
 
 export const SUB_REALM_NAMES = ["Nhất Trọng", "Nhị Trọng", "Tam Trọng", "Tứ Trọng", "Ngũ Trọng", "Lục Trọng", "Thất Trọng", "Bát Trọng", "Cửu Trọng", "Đỉnh Phong"];
@@ -28,26 +29,59 @@ const generateTieredStats = (): RealmBaseStatDefinition[] => {
     mpBase: 50, mpInc: 10,
     atkBase: 10, atkInc: 2,
     expBase: 100, expInc: 20,
+    // NEW
+    phongThuBase: 5, phongThuInc: 1,
+    tocDoBase: 10, tocDoInc: 2,
+    chinhXacBase: 10, chinhXacInc: 1,
+    neTranhBase: 10, neTranhInc: 1,
+    tiLeChiMangBase: 5, tiLeChiMangInc: 0,
+    satThuongChiMangBase: 1.5, satThuongChiMangInc: 0,
   });
   tiers.push({
     hpBase: 1000, hpInc: 200,
     mpBase: 500, mpInc: 100,
     atkBase: 100, atkInc: 20,
     expBase: 1000, expInc: 200,
+    // NEW
+    phongThuBase: 9, phongThuInc: 2, // ~1.8x
+    tocDoBase: 30, tocDoInc: 6, // ~3.0x
+    chinhXacBase: 20, chinhXacInc: 2, // ~2.0x
+    neTranhBase: 20, neTranhInc: 2, // ~2.0x
+    tiLeChiMangBase: 5, tiLeChiMangInc: 0, // Linear/No Growth
+    satThuongChiMangBase: 1.5, satThuongChiMangInc: 0, // Linear/No Growth
   });
-  const baseMultiplier = 5.0;
-  const incMultiplier = 2.0;
+
+  const hpMpAtkExpBaseMultiplier = 5.0;
+  const hpMpAtkExpIncMultiplier = 2.0;
+
+  const phongThuMultiplier = 1.8;
+  const tocDoMultiplier = 3.0;
+  const chinhXacNeTranhMultiplier = 2.0;
+  
   for (let i = 2; i < 30; i++) {
     const prevTier = tiers[i - 1];
     tiers.push({
-      hpBase: Math.floor(prevTier.hpBase * baseMultiplier),
-      hpInc: Math.floor(prevTier.hpInc * incMultiplier),
-      mpBase: Math.floor(prevTier.mpBase * baseMultiplier),
-      mpInc: Math.floor(prevTier.mpInc * incMultiplier),
-      atkBase: Math.floor(prevTier.atkBase * baseMultiplier),
-      atkInc: Math.floor(prevTier.atkInc * incMultiplier),
-      expBase: Math.floor(prevTier.expBase * baseMultiplier),
-      expInc: Math.floor(prevTier.expInc * incMultiplier),
+      hpBase: Math.floor(prevTier.hpBase * hpMpAtkExpBaseMultiplier),
+      hpInc: Math.floor(prevTier.hpInc * hpMpAtkExpIncMultiplier),
+      mpBase: Math.floor(prevTier.mpBase * hpMpAtkExpBaseMultiplier),
+      mpInc: Math.floor(prevTier.mpInc * hpMpAtkExpIncMultiplier),
+      atkBase: Math.floor(prevTier.atkBase * hpMpAtkExpBaseMultiplier),
+      atkInc: Math.floor(prevTier.atkInc * hpMpAtkExpIncMultiplier),
+      expBase: Math.floor(prevTier.expBase * hpMpAtkExpBaseMultiplier),
+      expInc: Math.floor(prevTier.expInc * hpMpAtkExpIncMultiplier),
+      // NEW
+      phongThuBase: Math.floor(prevTier.phongThuBase * phongThuMultiplier),
+      phongThuInc: Math.max(1, Math.floor(prevTier.phongThuInc * phongThuMultiplier)),
+      tocDoBase: Math.floor(prevTier.tocDoBase * tocDoMultiplier),
+      tocDoInc: Math.max(1, Math.floor(prevTier.tocDoInc * tocDoMultiplier)),
+      chinhXacBase: Math.floor(prevTier.chinhXacBase * chinhXacNeTranhMultiplier),
+      chinhXacInc: Math.max(1, Math.floor(prevTier.chinhXacInc * chinhXacNeTranhMultiplier)),
+      neTranhBase: Math.floor(prevTier.neTranhBase * chinhXacNeTranhMultiplier),
+      neTranhInc: Math.max(1, Math.floor(prevTier.neTranhInc * chinhXacNeTranhMultiplier)),
+      tiLeChiMangBase: 5,
+      tiLeChiMangInc: 0,
+      satThuongChiMangBase: 1.5,
+      satThuongChiMangInc: 0,
     });
   }
   return tiers;
@@ -67,6 +101,20 @@ export const DEFAULT_PLAYER_STATS: PlayerStats = {
   sucTanCong: 10,
   kinhNghiem: 0,
   maxKinhNghiem: 100,
+  // NEW STATS
+  basePhongThu: 5,
+  phongThu: 5,
+  baseTocDo: 10,
+  tocDo: 10,
+  baseChinhXac: 10,
+  chinhXac: 10,
+  baseNeTranh: 10,
+  neTranh: 10,
+  baseTiLeChiMang: 5,
+  tiLeChiMang: 5,
+  baseSatThuongChiMang: 1.5,
+  satThuongChiMang: 1.5,
+  // END NEW STATS
   realm: "Phàm Nhân Nhất Trọng",
   currency: 0,
   isInCombat: false,

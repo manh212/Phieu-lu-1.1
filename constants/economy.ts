@@ -29,8 +29,14 @@ export const REALM_MULTIPLIER_MIN = 3.0; // Was 4.0
 // Based on user example: +1 Sức Tấn Công = 50 Linh Thạch, +10 Sinh Lực Tối Đa = 10 Linh Thạch.
 export const STAT_POINT_VALUES: Record<string, number> = {
     sucTanCong: 50,
-    maxSinhLuc: 1, // Value per 1 point, so 10 points = 10 currency
-    maxLinhLuc: 2, // Value per 1 point
+    maxSinhLuc: 1,
+    maxLinhLuc: 2,
+    phongThu: 40,
+    tocDo: 45,
+    chinhXac: 35,
+    neTranh: 35,
+    tiLeChiMang: 80, // For +1%
+    satThuongChiMang: 40, // For +0.01 (which is 1% crit damage)
 };
 
 // Rarity multipliers remain crucial for valuation.
