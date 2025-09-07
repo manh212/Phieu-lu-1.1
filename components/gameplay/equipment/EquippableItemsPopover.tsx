@@ -1,9 +1,8 @@
-
 import React, { useEffect, useRef, useState } from 'react';
-import { Item, EquipmentSlotId } from '../../../types';
+import { Item, EquipmentSlotId } from '../../../types/index';
 import { VIETNAMESE } from '../../../constants';
 import Button from '../../ui/Button';
-import * as GameTemplates from '../../../templates';
+import * as GameTemplates from '../../../types/index';
 
 interface EquippableItemsPopoverProps {
   slotId: EquipmentSlotId;

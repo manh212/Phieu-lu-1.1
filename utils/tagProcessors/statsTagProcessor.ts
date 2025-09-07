@@ -1,5 +1,4 @@
-
-import { KnowledgeBase, PlayerStats, GameMessage, RealmBaseStatDefinition, PlayerSpecialStatus, Master, PersonBase, VectorMetadata } from '../../types';
+import { KnowledgeBase, PlayerStats, GameMessage, RealmBaseStatDefinition, PlayerSpecialStatus, Master, PersonBase, VectorMetadata } from '../../types/index';
 import { DEFAULT_PLAYER_STATS, VIETNAMESE, SUB_REALM_NAMES } from '../../constants';
 import { calculateRealmBaseStats, calculateEffectiveStats } from '../statsCalculationUtils';
 import { formatPersonForEmbedding } from '../ragUtils';

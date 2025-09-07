@@ -1,5 +1,5 @@
 // src/utils/tagProcessors/npcItemProcessor.ts
-import { KnowledgeBase, GameMessage, NPC, Item } from '../../types';
+import { KnowledgeBase, GameMessage, NPC, Item } from '../../types/index';
 import { createItemFromParams } from './itemTagProcessor';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
 

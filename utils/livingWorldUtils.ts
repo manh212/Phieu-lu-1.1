@@ -1,5 +1,6 @@
 // src/utils/livingWorldUtils.ts
-import { KnowledgeBase, NPC, WorldTickUpdate, NpcAction, NpcActionPlan, ActivityLogEntry } from '../types';
+// FIX: Correct import path for types
+import { KnowledgeBase, NPC, WorldTickUpdate, NpcAction, NpcActionPlan, ActivityLogEntry, ActionParameters } from '@/types/index';
 
 const TICK_CANDIDATE_COUNT = 25;
 
@@ -70,7 +71,9 @@ export const scheduleWorldTick = (kb: KnowledgeBase): NPC[] => {
     });
 
     // Sort by score descending
-    scoredNpcs.sort((a, b) => b.tickPriorityScore - a.tickPriorityScore);
+    // FIX: Add type guard (`|| 0`) to ensure tickPriorityScore is a number before comparison.
+    scoredNpcs.sort((a, b) => (b.tickPriorityScore || 0) - (a.tickPriorityScore || 0));
+
 
     // Return the top candidates
     return scoredNpcs.slice(0, TICK_CANDIDATE_COUNT);
@@ -93,109 +96,78 @@ export const parseAndValidateResponse = (jsonString: string, kb: KnowledgeBase):
         
         // Shim to make ActionParameters a valid discriminated union
         if (parsedObject.npcUpdates) {
-            parsedObject.npcUpdates.forEach((plan: NpcActionPlan) => {
-                if (plan.actions) {
-                    plan.actions.forEach((action: NpcAction) => {
-                        if (action.type && action.parameters && !(action.parameters as any).type) {
-                            (action.parameters as any).type = action.type;
+            for (const update of parsedObject.npcUpdates) {
+                if (update.actions && Array.isArray(update.actions)) {
+                    for (const action of update.actions) {
+                        if (action.parameters && typeof action.type === 'string') {
+                            action.parameters.type = action.type;
                         }
-                    });
+                    }
                 }
-            });
+            }
         }
+
+        // TODO: Add more robust validation here if needed, e.g., using a schema validation library like Zod.
+        // For now, we assume the AI respects the schema passed in the prompt.
         
         return parsedObject as WorldTickUpdate;
 
     } catch (error) {
-        console.error("Error parsing or validating World Tick JSON response:", error, "Raw JSON:", jsonString);
+        console.error("[Living World] Failed to parse or validate JSON response:", error, "Raw JSON:", jsonString);
         return null;
     }
 };
 
 /**
- * Converts an NpcAction into a corresponding system tag string (or strings) that the game engine can process.
- * This is the core logic that translates AI decisions into game state changes.
- * @param action The NpcAction object from the AI.
+ * Converts an NpcAction object into a system tag string that can be processed by the game engine.
+ * @param action The NpcAction object.
  * @param npc The NPC performing the action.
- * @returns A system tag string (e.g., "[TAG: ...]") or an array of strings, or null if no tag equivalent.
+ * @returns A string representing the tag, or null if no tag is needed.
  */
 export const convertNpcActionToTag = (action: NpcAction, npc: NPC): string | string[] | null => {
-    const params = action.parameters;
-    
-    // Add a defensive check for reason, even if schema requires it.
-    const createLogReason = (actionDescription: string): string => {
-        return `Hành động: ${actionDescription}. Lý do: ${(action.reason ?? '').replace(/"/g, '\\"')}`;
-    };
-    
+    const params = action.parameters as ActionParameters & { type: NpcAction['type'] }; // Add type to parameters for discriminated union
     switch (params.type) {
         case 'MOVE':
-            if (!params.destinationLocationId) return null;
-            return `[LOCATION_CHANGE: characterName="${(npc.name ?? '').replace(/"/g, '\\"')}", destination="${params.destinationLocationId}"]`;
-        
+            return `[LOCATION_CHANGE: characterName="${npc.name}", destination="${params.destinationLocationId}"]`;
+        case 'INTERACT_NPC': {
+            let affinityChange = 0;
+            switch (params.intent) {
+                case 'friendly': affinityChange = 5; break;
+                case 'hostile': affinityChange = -15; break;
+            }
+            return `[RELATIONSHIP_EVENT: source="${npc.name}", target="${params.targetNpcId}", reason="${action.reason}", affinity_change=${affinityChange}]`;
+        }
         case 'UPDATE_GOAL': {
-            if (!params.newShortTermGoal) return null;
-            let goalTag = `[NPC_UPDATE: name="${(npc.name ?? '').replace(/"/g, '\\"')}", shortTermGoal="${(params.newShortTermGoal ?? '').replace(/"/g, '\\"')}"`;
-            if (params.newLongTermGoal) {
-                goalTag += `, longTermGoal="${(params.newLongTermGoal ?? '').replace(/"/g, '\\"')}"`;
-            }
-            goalTag += ']';
-            return goalTag;
+            const parts = [`name="${npc.name}"`];
+            if (params.newShortTermGoal) parts.push(`shortTermGoal="${params.newShortTermGoal.replace(/"/g, '\\"')}"`);
+            if (params.newLongTermGoal) parts.push(`longTermGoal="${params.newLongTermGoal.replace(/"/g, '\\"')}"`);
+            return `[NPC_UPDATE: ${parts.join(', ')}]`;
         }
-
-        case 'UPDATE_PLAN': {
-            if (!params.newPlanSteps || params.newPlanSteps.length === 0) return null;
-            const planString = params.newPlanSteps.join('; ');
-            return `[NPC_UPDATE: name="${(npc.name ?? '').replace(/"/g, '\\"')}", currentPlan="${(planString ?? '').replace(/"/g, '\\"')}" ]`;
-        }
-
-        case 'BUILD_RELATIONSHIP': {
-            if (!params.targetNpcId) return null;
-            const affinityChange = params.relationshipType === 'rivalry' ? -10 : 10;
-            const reasonText = `chủ động xây dựng mối quan hệ ${params.relationshipType}`.replace(/"/g, '\\"');
-            return `[RELATIONSHIP_EVENT: source="${(npc.name ?? '').replace(/"/g, '\\"')}", target="${params.targetNpcId}", reason="${reasonText}", affinity_change=${affinityChange}]`;
-        }
-        
-        case 'INFLUENCE_FACTION': {
-            if (!params.factionId) return null;
-            const repChange = params.influenceType === 'positive' ? params.magnitude : -params.magnitude;
-            return `[FACTION_UPDATE: name="${(params.factionId ?? '').replace(/"/g, '\\"')}", npcIdForReputationUpdate="${npc.id}", reputationChange=${repChange}]`;
-        }
-
-        case 'PRODUCE_ITEM': {
-            if (!params.itemName) return null;
-            return `[NPC_PRODUCE_ITEM: npcId="${npc.id}", itemName="${(params.itemName ?? '').replace(/"/g, '\\"')}", quantity=${params.quantity}]`;
-        }
-
-        case 'OFFER_SERVICE': {
-            if (!params.targetNpcId) return null;
-            const serviceReceiverTag = `[NPC_UPDATE: name="${(params.targetNpcId ?? '').replace(/"/g, '\\"')}", currency=-=${params.price}]`;
-            const serviceProviderTag = `[NPC_UPDATE: name="${(npc.name ?? '').replace(/"/g, '\\"')}", currency=+=${params.price}]`;
-            return [serviceReceiverTag, serviceProviderTag];
-        }
-        
-        case 'COMMIT_CRIME': {
-            if (params.crimeType === 'theft') {
-                if (!params.targetNpcId || !params.itemName) return null;
-                return `[NPC_INVENTORY_TRANSFER: fromNpcId="${params.targetNpcId}", toNpcId="${npc.id}", itemName="${(params.itemName ?? '').replace(/"/g, '\\"')}", quantity=${params.quantity}]`;
-            } else {
-                 if (!params.target) return null;
-                 const logReason = createLogReason(`Phạm tội ${params.crimeType} nhắm vào ${params.target}`);
-                 return `[NPC_ACTION_LOG: npcName="${(npc.name ?? '').replace(/"/g, '\\"')}", reason="${logReason}"]`;
-            }
-        }
-
-        // Actions that are purely narrative and don't change state are logged.
-        case 'RESEARCH_TOPIC':
-        case 'PATROL_AREA':
-        case 'INTERACT_NPC':
-        case 'IDLE':
+        case 'UPDATE_PLAN':
+            return `[NPC_UPDATE: name="${npc.name}", currentPlan="${params.newPlanSteps.join('; ')}"]`;
         case 'ACQUIRE_ITEM':
+            // This is complex. For now, we'll log it. A more robust implementation would
+            // require the AI to specify WHERE the item comes from (looting, buying, finding).
+            // The NPC_INVENTORY_TRANSFER is a better pattern for this.
+            return `[NPC_ACTION_LOG: npcName="${npc.name}", reason="${action.reason}"]`;
+        case 'PRODUCE_ITEM':
+             return `[NPC_PRODUCE_ITEM: npcId="${npc.id}", name="${params.itemName}", quantity=${params.quantity || 1}, category="Material", rarity="Phổ Thông", description="Sản phẩm do ${npc.name} tạo ra."]`;
         case 'PRACTICE_SKILL':
         case 'USE_SKILL':
         case 'INTERACT_OBJECT':
         case 'CONVERSE':
+        case 'BUILD_RELATIONSHIP':
+        case 'FORM_GROUP':
+        case 'INFLUENCE_FACTION':
+        case 'OFFER_SERVICE':
+        case 'RESEARCH_TOPIC':
+        case 'PATROL_AREA':
+        case 'COMMIT_CRIME':
+        case 'IDLE':
+            // For now, these actions are only reflected in the activity log and don't generate a direct tag.
+            // This can be expanded later.
+            return `[NPC_ACTION_LOG: npcName="${npc.name}", reason="${action.reason}"]`;
         default:
-             const simpleLogReason = createLogReason(`Thực hiện hành động '${action.type}'`);
-             return `[NPC_ACTION_LOG: npcName="${(npc.name ?? '').replace(/"/g, '\\"')}", reason="${simpleLogReason}"]`;
+            return null;
     }
 };

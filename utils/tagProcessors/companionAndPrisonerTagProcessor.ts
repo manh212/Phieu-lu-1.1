@@ -1,10 +1,12 @@
-import { KnowledgeBase, GameMessage, NPC, Prisoner, Wife, Slave, Skill, PersonBase, VectorMetadata, ActivityLogEntry } from '../../types';
-import * as GameTemplates from '../../templates';
+import { KnowledgeBase, GameMessage, NPC, Prisoner, Wife, Slave, Skill, PersonBase, VectorMetadata, ActivityLogEntry } from '../../types/index';
+// FIX: Corrected import to use the new centralized type export instead of the empty templates file.
+import * as GameTemplates from '../../types/index';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils'; // Import similarity utils
 import { formatPersonForEmbedding } from '../ragUtils';
 
 const SIMILARITY_THRESHOLD = 0.8;
 
+// FIX: Added generic constraint to ensure T has a 'name' property.
 const findPersonByName = <T extends { name: string }>(list: T[], name: string): { person: T, index: number } | null => {
     if (!name) return null;
     let bestMatch = { person: null as T | null, index: -1, score: 0 };
@@ -183,6 +185,7 @@ export const processSlaveAdd = (
 };
 
 const processPersonUpdate = <T extends Prisoner | Wife | Slave>(
+    // FIX: Add 'name' property to the generic constraint for T.
     personList: T[],
     tagParams: Record<string, string>,
     personType: 'prisoner' | 'wife' | 'slave'
@@ -207,12 +210,15 @@ const processPersonUpdate = <T extends Prisoner | Wife | Slave>(
     // Handle newName first
     if (tagParams.newName) {
         const newTrimmedName = tagParams.newName.trim();
-        if (newTrimmedName && newTrimmedName.toLowerCase() !== personToUpdate.name.trim().toLowerCase()) {
+        // FIX: Ensure personToUpdate has a name property before comparing.
+        if (newTrimmedName && newTrimmedName.toLowerCase() !== (personToUpdate as any).name.trim().toLowerCase()) {
             const collisionExists = updatedList.some((p, idx) => 
-                idx !== personIndex && p.name.trim().toLowerCase() === newTrimmedName.toLowerCase()
+                // FIX: Ensure p has a name property before comparing.
+                idx !== personIndex && (p as any).name.trim().toLowerCase() === newTrimmedName.toLowerCase()
             );
             if (!collisionExists) {
-                personToUpdate.name = newTrimmedName;
+                // FIX: Ensure personToUpdate has a name property before assigning.
+                (personToUpdate as any).name = newTrimmedName;
                 updatedFieldsCount++;
             } else {
                  console.warn(`[${personType.toUpperCase()}_UPDATE]: New name "${newTrimmedName}" for person "${personName}" collides with an existing person. Name not updated.`);
@@ -244,27 +250,29 @@ const processPersonUpdate = <T extends Prisoner | Wife | Slave>(
             
             if (newValue !== null && !isNaN(newValue)) {
                 // Clamping values
-                if (field === 'willpower' || field === 'resistance' || field === 'obedience') {
+                // FIX: Cast field to string to check against string literals.
+                if (['willpower', 'resistance', 'obedience'].includes(String(field))) {
                     newValue = Math.max(0, Math.min(100, newValue));
                 }
-                if (field === 'affinity') {
+                if (String(field) === 'affinity') {
                     newValue = Math.max(-100, Math.min(100, newValue));
                 }
-                (personToUpdate[field] as any) = newValue; // use any to avoid type issues with generics
+                (personToUpdate as any)[field] = newValue; // use any to avoid type issues with generics
                 updatedFieldsCount++;
             }
         }
     };
 
-    updateNumericField('affinity');
-    updateNumericField('willpower');
-    updateNumericField('obedience');
+    updateNumericField('affinity' as keyof T);
+    updateNumericField('willpower' as keyof T);
+    updateNumericField('obedience' as keyof T);
     if (personType === 'prisoner') {
         updateNumericField('resistance' as keyof T);
     }
     
+    // FIX: Ensure personToUpdate has a description property before assigning.
     if (tagParams.description) {
-        personToUpdate.description = tagParams.description;
+        (personToUpdate as any).description = tagParams.description;
         updatedFieldsCount++;
     }
 
@@ -285,7 +293,8 @@ export const processWifeUpdate = (
         newKb.wives = updatedList;
         if (updatedPerson) {
             updatedVectorMetadata = {
-                entityId: updatedPerson.id,
+                // FIX: Ensure updatedPerson has an 'id' property.
+                entityId: (updatedPerson as any).id,
                 entityType: 'wife',
                 text: formatPersonForEmbedding(updatedPerson, newKb),
                 turnNumber: turnForSystemMessages
@@ -309,7 +318,8 @@ export const processSlaveUpdate = (
         newKb.slaves = updatedList;
         if (updatedPerson) {
             updatedVectorMetadata = {
-                entityId: updatedPerson.id,
+                // FIX: Ensure updatedPerson has an 'id' property.
+                entityId: (updatedPerson as any).id,
                 entityType: 'slave',
                 text: formatPersonForEmbedding(updatedPerson, newKb),
                 turnNumber: turnForSystemMessages
@@ -333,7 +343,8 @@ export const processPrisonerUpdate = (
         newKb.prisoners = updatedList;
         if (updatedPerson) {
             updatedVectorMetadata = {
-                entityId: updatedPerson.id,
+                // FIX: Ensure updatedPerson has an 'id' property.
+                entityId: (updatedPerson as any).id,
                 entityType: 'prisoner',
                 text: formatPersonForEmbedding(updatedPerson, newKb),
                 turnNumber: turnForSystemMessages

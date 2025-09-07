@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect, useState } from 'react';
-import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase, AiChoice, PlayerActionInputType, ResponseLength } from './../types';
+import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase, AiChoice, PlayerActionInputType, ResponseLength } from './../types/index';
 import { VIETNAMESE } from './../constants';
-import * as GameTemplates from './../templates'; // Import GameTemplates
+import * as GameTemplates from './../types/index'; // Import GameTemplates
 
 // Import Layout Components
 import GameHeader from './gameplay/layout/GameHeader';
@@ -389,7 +389,6 @@ export const GameplayScreen: React.FC = () => {
                 totalPages={game.totalPages} 
                 isAutoPlaying={game.isAutoPlaying} 
                 onToggleAutoPlay={game.onToggleAutoPlay} 
-                // FIX: Renamed prop to onStartDebugCombat to match what DebugPanelDisplay expects.
                 onStartDebugCombat={() => setIsCombatSetupModalOpen(true)}
                 onProcessDebugTags={game.handleProcessDebugTags} 
                 isLoading={isLoadingUi} 

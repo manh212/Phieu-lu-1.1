@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { KnowledgeBase, NPC, GameLocation, WorldLoreEntry, Faction, Companion, YeuThu } from '../../types';
-import { VIETNAMESE, MALE_AVATAR_PLACEHOLDER_URL, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX } from '../../constants';
-import WorldInfoList from '../ui/WorldInfoList';
+import { KnowledgeBase, NPC, GameLocation, WorldLoreEntry, Faction, Companion, YeuThu } from '@/types/index';
+import { VIETNAMESE, MALE_AVATAR_PLACEHOLDER_URL, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX } from '@/constants';
+import WorldInfoList from '@/components/ui/WorldInfoList';
+import { getDeterministicAvatarSrc } from '@/utils/avatarUtils';
 
 interface WorldSidePanelProps {
   knowledgeBase: KnowledgeBase;
@@ -23,18 +24,6 @@ const WorldSidePanel: React.FC<WorldSidePanelProps> = React.memo(({
   onFactionClick, 
   onCompanionClick,
 }) => {
-  const getAvatarSrc = (person: { avatarUrl?: string, gender?: string }) => {
-    if (person.avatarUrl && (person.avatarUrl.startsWith('http://') || person.avatarUrl.startsWith('https://'))) {
-      return person.avatarUrl; // Use stored Cloudinary/web URL
-    }
-    // Fallback to random/placeholder if no valid URL
-    if (person.gender === 'Nữ') {
-      const randomIndex = Math.floor(Math.random() * MAX_FEMALE_AVATAR_INDEX) + 1;
-      return `${FEMALE_AVATAR_BASE_URL}${randomIndex}.png`;
-    }
-    return MALE_AVATAR_PLACEHOLDER_URL; 
-  };
-
   return (
     <div className="flex flex-col h-full space-y-3 sm:space-y-4">
         <div>
@@ -46,7 +35,7 @@ const WorldSidePanel: React.FC<WorldSidePanelProps> = React.memo(({
                 getItemDisplay={(npc: NPC) => (
                     <div className="flex items-center w-full">
                         <img 
-                            src={getAvatarSrc(npc)} 
+                            src={getDeterministicAvatarSrc(npc)} 
                             alt={npc.name} 
                             className="w-8 h-8 rounded-full mr-2 object-cover flex-shrink-0 border border-gray-600" 
                         />
@@ -70,12 +59,12 @@ const WorldSidePanel: React.FC<WorldSidePanelProps> = React.memo(({
                 getItemDisplay={(yt: YeuThu) => (
                      <div className="flex items-center w-full">
                         <img 
-                            src={getAvatarSrc({avatarUrl: yt.avatarUrl, gender: 'Khác'})} 
+                            src={getDeterministicAvatarSrc(yt)} 
                             alt={yt.name} 
                             className="w-8 h-8 rounded-full mr-2 object-cover flex-shrink-0 border border-gray-600" 
                         />
                         <span className="truncate">
-                            {yt.name} ({yt.species}) {yt.realm ? `[${yt.realm}]` : ''}
+                            {yt.name} (${yt.species}) {yt.realm ? `[${yt.realm}]` : ''}
                         </span>
                     </div>
                 )}

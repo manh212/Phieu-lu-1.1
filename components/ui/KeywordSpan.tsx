@@ -1,7 +1,7 @@
 
 import React from 'react';
 // Corrected to import the broader types
-import { GameEntity, GameEntityType } from '../../hooks/types';
+import { GameEntity, GameEntityType } from '@/hooks/types';
 
 interface KeywordSpanProps {
   keyword: string;

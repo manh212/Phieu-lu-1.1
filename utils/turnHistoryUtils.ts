@@ -1,4 +1,4 @@
-import { KnowledgeBase, GameMessage, TurnHistoryEntry } from '../types';
+import { KnowledgeBase, GameMessage, TurnHistoryEntry } from '../types/index';
 import { Operation } from 'fast-json-patch';
 import { MAX_TURN_HISTORY_LENGTH, KEYFRAME_INTERVAL } from '../constants';
 import * as jsonpatch from "https://esm.sh/fast-json-patch@3.1.1";

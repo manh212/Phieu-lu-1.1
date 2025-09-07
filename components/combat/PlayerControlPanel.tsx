@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Combatant, Skill, Item } from '../../types';
+import { Combatant, Skill, Item } from '../../types/index';
 import CombatantCard from './CombatantCard';
 import Button from '../ui/Button';
 import Tooltip from '../ui/Tooltip'; // NEW: Import Tooltip component
 import { useCombat } from '../../hooks/useCombat';
 import { VIETNAMESE } from '../../constants';
-import * as GameTemplates from '../../templates';
+import * as GameTemplates from '../../types/index';
 
 export type ActionSelection = {
     type: 'skill' | 'item';

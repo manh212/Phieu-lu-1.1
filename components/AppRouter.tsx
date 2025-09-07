@@ -1,6 +1,6 @@
-
 import React from 'react';
-import { GameScreen } from '../types';
+// FIX: Correct import path for types
+import { GameScreen } from '@/types/index';
 import { useGame } from '../hooks/useGame';
 
 // Import all screen components
@@ -13,7 +13,8 @@ import ApiSettingsScreen from './ApiSettingsScreen';
 import LoadGameScreen from './LoadGameScreen';
 import StorageSettingsScreen from './StorageSettingsScreen';
 import ImportExportScreen from './ImportExportScreen';
-import MapPanel from './gameplay/map/MapPanel';
+// FIX: Changed to named import for MapPanel
+import { MapPanel } from './gameplay/map/MapPanel';
 import AuctionScreen from './AuctionScreen';
 import CultivationScreen from './CultivationScreen';
 import CompanionManagementScreen from './CompanionManagementScreen';
@@ -24,6 +25,7 @@ import PromptsScreen from './PromptsScreen';
 import EventsScreen from './EventsScreen';
 import CombatScreen from './screens/CombatScreen'; // NEW: Import CombatScreen
 import { VIETNAMESE } from '../constants';
+import ApiUsageScreen from './ApiUsageScreen';
 
 const AppRouter: React.FC = () => {
     const game = useGame();
@@ -51,6 +53,8 @@ const AppRouter: React.FC = () => {
                 knowledgeBase={game.knowledgeBase}
                 setCurrentScreen={game.setCurrentScreen}
                 onUpdateEquipment={game.handleUpdateEquipment}
+                onUpdatePlayerAvatar={game.onUpdatePlayerAvatar}
+                isUploadingAvatar={game.isUploadingAvatar}
             />;
         case GameScreen.CompanionEquipment:
             return <CompanionEquipmentScreen />;
@@ -134,6 +138,9 @@ const AppRouter: React.FC = () => {
             />;
         case GameScreen.Prompts:
             return <PromptsScreen />;
+        // FIX: Add missing ApiUsage screen case to the router.
+        case GameScreen.ApiUsage:
+            return <ApiUsageScreen />;
         default:
             return <InitialScreen 
                 setCurrentScreen={game.setCurrentScreen}

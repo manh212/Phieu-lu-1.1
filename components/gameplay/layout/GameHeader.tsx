@@ -1,7 +1,7 @@
 import React from 'react';
 import Button from '../../ui/Button';
 import { VIETNAMESE } from '../../../constants';
-import { KnowledgeBase } from '../../../types';
+import { KnowledgeBase } from '../../../types/index';
 import { formatWorldDateToString } from '../../../utils/dateUtils';
 
 interface GameHeaderProps {

@@ -1,444 +1,217 @@
-
-
-import React, { ChangeEvent, useRef, useState, useEffect } from 'react';
-import { WorldSettings, GenreType, NsfwDescriptionStyle, ViolenceLevel, StoryTone } from '../../../types';
+import React, { ChangeEvent, useRef, useState } from 'react';
+import { useGameSetup } from '../../../contexts/GameSetupContext';
+import { useAIAssist } from '../../../hooks/useAIAssist';
 import Button from '../../ui/Button';
 import InputField from '../../ui/InputField';
 import Spinner from '../../ui/Spinner';
-import { VIETNAMESE, MAX_TOKENS_FANFIC, CUSTOM_GENRE_VALUE, NSFW_DESCRIPTION_STYLES, VIOLENCE_LEVELS, STORY_TONES, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE } from '../../../constants';
-
-// --- START: Reusable NSFW Settings Component ---
-const NsfwSettingsBlock: React.FC<{
-    settings: WorldSettings;
-    handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-}> = ({ settings, handleChange }) => {
-    // The values in these arrays are now the display labels and the stored values.
-    const nsfwStyleOptions = NSFW_DESCRIPTION_STYLES;
-    const violenceLevelOptions = VIOLENCE_LEVELS;
-    const storyToneOptions = STORY_TONES;
-
-    return (
-        <>
-            <InputField
-                label={VIETNAMESE.nsfwModeLabel}
-                id="nsfwModeGlobal" // One global ID is enough now
-                name="nsfwMode"
-                type="checkbox"
-                checked={settings.nsfwMode || false}
-                onChange={handleChange}
-            />
-            {settings.nsfwMode && (
-                <div className="pl-4 mt-2 space-y-3 border-l-2 border-red-500/50">
-                    <InputField
-                        label={VIETNAMESE.nsfwDescriptionStyleLabel}
-                        id="nsfwDescriptionStyleGlobal"
-                        name="nsfwDescriptionStyle"
-                        type="select"
-                        options={nsfwStyleOptions}
-                        value={settings.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE}
-                        onChange={handleChange}
-                    />
-
-                    {/* Conditional Textarea for "Phòng Tối AI" */}
-                    {settings.nsfwDescriptionStyle === 'Tùy Chỉnh (Phòng Tối AI)' && (
-                        <div className="pl-4 mt-2 border-l-2 border-yellow-500/50">
-                            <InputField
-                                label={VIETNAMESE.customNsfwPromptLabel}
-                                id="customNsfwPromptGlobal"
-                                name="customNsfwPrompt"
-                                value={settings.customNsfwPrompt || ''}
-                                onChange={handleChange}
-                                textarea
-                                rows={6}
-                                placeholder="" // Plan specified no placeholder
-                            />
-                            <p className="text-xs text-gray-400 -mt-2 ml-1">{VIETNAMESE.customNsfwPromptNote}</p>
-                        </div>
-                    )}
-                    
-                    <InputField
-                        label={VIETNAMESE.violenceLevelLabel}
-                        id="violenceLevelGlobal"
-                        name="violenceLevel"
-                        type="select"
-                        options={violenceLevelOptions}
-                        value={settings.violenceLevel || DEFAULT_VIOLENCE_LEVEL}
-                        onChange={handleChange}
-                    />
-                    <InputField
-                        label={VIETNAMESE.storyToneLabel}
-                        id="storyToneGlobal"
-                        name="storyTone"
-                        type="select"
-                        options={storyToneOptions}
-                        value={settings.storyTone || DEFAULT_STORY_TONE}
-                        onChange={handleChange}
-                    />
-                </div>
-            )}
-        </>
-    );
-};
-// --- END: Reusable NSFW Settings Component ---
+import Modal from '../../ui/Modal';
+import { VIETNAMESE, MAX_TOKENS_FANFIC } from '../../../constants';
+import { WorldSettings } from '../../../types/index';
 
 
 interface AIAssistTabProps {
-  settings: WorldSettings; 
-  handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  storyIdea: string;
-  setStoryIdea: (value: string) => void;
-  handleGenerateFromStoryIdea: () => void;
-  isGeneratingDetails: boolean;
-  handleGenerateCompletion: () => void;
-  isGeneratingCompletion: boolean;
-
-  fanficSourceType: 'name' | 'file';
-  setFanficSourceType: (value: 'name' | 'file') => void;
-  fanficStoryName: string;
-  setFanficStoryName: (value: string) => void;
-  fanficFile: File | null;
-  handleFanficFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  fanficTokenCount: number | null;
-  isLoadingTokens: boolean;
-  fanficPlayerDescription: string;
-  setFanficPlayerDescription: (value: string) => void;
-  handleGenerateFromFanfic: () => void;
-  isGeneratingFanficDetails: boolean;
-
-  originalStorySummary: string;
-  handleOriginalStorySummaryChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
-  showOriginalStorySummaryInput: boolean;
-  setShowOriginalStorySummaryInput: (value: boolean) => void;
-  fanficFileInputRef: React.RefObject<HTMLInputElement>;
-  
-  handleAnalyzeWritingStyle: () => void;
-  isAnalyzingStyle: boolean;
-  analysisResult: string | null;
-  analysisError: string | null;
-  setIsArchitectModalOpen: (isOpen: boolean) => void; // New prop
+  setIsArchitectModalOpen: (isOpen: boolean) => void;
 }
 
-const AIAssistTab: React.FC<AIAssistTabProps> = ({
-  settings,
-  handleChange,
-  storyIdea, setStoryIdea,
-  handleGenerateFromStoryIdea, isGeneratingDetails,
-  handleGenerateCompletion, isGeneratingCompletion,
-  fanficSourceType, setFanficSourceType,
-  fanficStoryName, setFanficStoryName,
-  fanficFile, handleFanficFileChange,
-  fanficTokenCount, isLoadingTokens,
-  fanficPlayerDescription, setFanficPlayerDescription,
-  handleGenerateFromFanfic, isGeneratingFanficDetails,
-  originalStorySummary, handleOriginalStorySummaryChange,
-  showOriginalStorySummaryInput, setShowOriginalStorySummaryInput,
-  fanficFileInputRef,
-  handleAnalyzeWritingStyle,
-  isAnalyzingStyle,
-  analysisResult,
-  analysisError,
-  setIsArchitectModalOpen, // New prop
-}) => {
+const AIAssistTab: React.FC<AIAssistTabProps> = ({ setIsArchitectModalOpen }) => {
+  const { state, dispatch } = useGameSetup();
+  const { settings } = state;
+  const { 
+    generateFromStoryIdea, 
+    generateFromFanfic, 
+    generateCompletion, 
+    analyzeWritingStyle,
+    loadingStates, 
+    error: assistError, 
+    generatorMessage,
+    countFileTokens,
+    rawApiResponseText,
+    sentWorldGenPrompt
+  } = useAIAssist();
 
-  const [writingStyleFile, setWritingStyleFile] = useState<File | null>(null);
+  // Local state for form inputs
+  const [storyIdea, setStoryIdea] = useState('');
+  const [fanficSourceType, setFanficSourceType] = useState<'name' | 'file'>('name');
+  const [fanficStoryName, setFanficStoryName] = useState('');
+  const [fanficFile, setFanficFile] = useState<File | null>(null);
+  const [fanficTokenCount, setFanficTokenCount] = useState<number | null>(null);
+  const [fanficPlayerDescription, setFanficPlayerDescription] = useState('');
+  const [showOriginalStorySummary, setShowOriginalStorySummary] = useState(false);
+  
+  const [writingStyleSource, setWritingStyleSource] = useState<'file' | 'text'>('text');
+  const [analysisResult, setAnalysisResult] = useState<{ analysis: string; summary: string } | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  const [showRawResponseModal, setShowRawResponseModal] = useState(false);
+  const [showSentPromptModal, setShowSentPromptModal] = useState(false);
+
+  const fanficFileInputRef = useRef<HTMLInputElement>(null);
   const writingStyleFileInputRef = useRef<HTMLInputElement>(null);
-  const [writingStyleSource, setWritingStyleSource] = useState<'file' | 'text'>('file');
-
-  useEffect(() => {
-    // When settings are imported, if a writingStyleGuide exists,
-    // switch the view to the text area to make it visible for editing.
-    if (settings.writingStyleGuide && writingStyleSource === 'file') {
-      setWritingStyleSource('text');
+  
+  const handleFanficFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFanficFile(file);
+      const tokens = await countFileTokens(file);
+      setFanficTokenCount(tokens);
     }
-  }, [settings.writingStyleGuide, writingStyleSource]);
+  };
 
   const handleWritingStyleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setWritingStyleFile(file);
       try {
         const content = await file.text();
-        handleChange({ target: { name: 'writingStyleGuide', value: content } } as any);
+        dispatch({ type: 'UPDATE_FIELD', payload: { field: 'writingStyleGuide', value: content }});
       } catch (err) {
-        console.error("Error reading writing style file:", err);
-        // Optionally, show an error message to the user
+        dispatch({type: 'SET_ERROR', payload: "Lỗi khi đọc file."})
       }
     }
   };
 
-  const handleRemoveWritingStyleFile = () => {
-    setWritingStyleFile(null);
-    handleChange({ target: { name: 'writingStyleGuide', value: '' } } as any);
-    if (writingStyleFileInputRef.current) {
-        writingStyleFileInputRef.current.value = "";
+  const handleGenFanfic = async () => {
+    let source = fanficStoryName;
+    let isContent = false;
+    if (fanficSourceType === 'file' && fanficFile) {
+        source = await fanficFile.text();
+        isContent = true;
     }
+    generateFromFanfic(source, isContent, fanficPlayerDescription, settings);
   };
   
-  const handleStyleSourceChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const newSource = e.target.value as 'file' | 'text';
-    setWritingStyleSource(newSource);
-    
-    // Clear the other source's data to avoid confusion and ensure only one is used
-    if (newSource === 'text') {
-        // Switching to text input, clear file data
-        handleRemoveWritingStyleFile();
-    } else { // newSource is 'file'
-        // Switching to file upload, clear text data from the main settings state
-        handleChange({ target: { name: 'writingStyleGuide', value: '' } } as any);
+  const handleAnalyzeStyle = async () => {
+    setAnalysisResult(null);
+    setAnalysisError(null);
+    const result = await analyzeWritingStyle(settings.writingStyleGuide || '');
+    if (result) {
+        const analysisMatch = result.match(/\[ANALYSIS_START\]([\s\S]*?)\[ANALYSIS_END\]/);
+        const summaryMatch = result.match(/\[SUMMARY_PROMPT_START\]([\s\S]*?)\[SUMMARY_PROMPT_END\]/);
+        if (analysisMatch && summaryMatch) {
+            setAnalysisResult({ analysis: analysisMatch[1].trim(), summary: summaryMatch[1].trim() });
+        } else {
+            setAnalysisError("AI trả về kết quả không đúng định dạng. Vui lòng thử lại.");
+        }
+    } else {
+        setAnalysisError("Không nhận được phản hồi từ AI.");
     }
   };
-  
-  const parseAnalysisResult = (result: string | null): { analysis: string; summaryPrompt: string } => {
-    if (!result) return { analysis: '', summaryPrompt: '' };
 
-    const analysisMatch = result.match(/\[ANALYSIS_START\]([\s\S]*?)\[ANALYSIS_END\]/);
-    const summaryPromptMatch = result.match(/\[SUMMARY_PROMPT_START\]([\s\S]*?)\[SUMMARY_PROMPT_END\]/);
-
-    return {
-        analysis: analysisMatch ? analysisMatch[1].trim() : 'Không thể trích xuất phần phân tích từ phản hồi của AI.',
-        summaryPrompt: summaryPromptMatch ? summaryPromptMatch[1].trim() : '',
-    };
+  const handleApplyStyle = () => {
+    if (analysisResult?.summary) {
+        dispatch({ type: 'UPDATE_FIELD', payload: { field: 'writingStyleGuide', value: analysisResult.summary }});
+        showNotification('Đã áp dụng văn phong tóm tắt!', 'success');
+    }
   };
 
-  const { analysis, summaryPrompt } = parseAnalysisResult(analysisResult);
-
+  const showNotification = (message: string, type: 'success' | 'info') => {
+      // A simple alert, or replace with a proper toast notification system if available
+      alert(message);
+  };
 
   return (
     <div className="space-y-6">
-       {/* AI Architect Button */}
-      <fieldset className="border border-purple-700 p-4 rounded-md bg-purple-900/10">
-        <legend className="text-lg font-semibold text-purple-300 px-2">Kiến Trúc Sư AI</legend>
-        <p className="text-sm text-gray-400 mb-3">
-          Sử dụng ngôn ngữ tự nhiên để thay đổi bất kỳ thiết lập nào trên màn hình này. Bạn có thể yêu cầu AI thêm, sửa, xóa các yếu tố khởi đầu hoặc thay đổi các cài đặt của thế giới.
-        </p>
-        <Button
-            onClick={() => setIsArchitectModalOpen(true)}
-            variant="primary"
-            className="w-full sm:w-auto mt-3 bg-purple-600 hover:bg-purple-700 focus:ring-purple-500"
-        >
-          Trò chuyện với Kiến trúc sư AI
-        </Button>
-      </fieldset>
+      {(generatorMessage || assistError || state.error) && (
+          <div className={`p-3 rounded-md text-sm ${ assistError || state.error ? 'bg-red-600/80 text-white' : 'bg-blue-600/80 text-white' }`}>
+            {generatorMessage || assistError || state.error}
+          </div>
+      )}
 
-      <fieldset className="border border-green-700 p-4 rounded-md bg-green-900/10">
-          <legend className="text-lg font-semibold text-green-300 px-2">Hoàn Thiện Tự Động</legend>
-          <p className="text-sm text-gray-400 mb-3">
-              Bạn đã điền một vài thông tin? Nhấn nút này để AI tự động điền nốt các trường còn lại dựa trên bối cảnh bạn đã cung cấp.
-          </p>
-          <Button
-              onClick={handleGenerateCompletion}
-              isLoading={isGeneratingCompletion}
-              disabled={isGeneratingDetails || isGeneratingFanficDetails || isGeneratingCompletion}
-              variant="primary"
-              className="w-full sm:w-auto mt-3 bg-green-600 hover:bg-green-700 focus:ring-green-500"
-              loadingText="AI đang hoàn thiện..."
-          >
-              AI Hoàn Thiện Các Trường Trống
-          </Button>
-      </fieldset>
+      {/* Debug Buttons */}
+      {(rawApiResponseText || sentWorldGenPrompt) && (
+          <div className="flex gap-4 p-2 bg-gray-800 rounded-md">
+            {rawApiResponseText && <Button variant="ghost" size="sm" onClick={() => setShowRawResponseModal(true)}>Xem Phản Hồi Thô</Button>}
+            {sentWorldGenPrompt && <Button variant="ghost" size="sm" onClick={() => setShowSentPromptModal(true)}>Xem Prompt Đã Gửi</Button>}
+          </div>
+      )}
       
-      <fieldset className="border border-orange-600 p-4 rounded-md bg-orange-900/10">
-        <legend className="text-lg font-semibold text-orange-300 px-2">AI Phản Hồi & Phân Tích Văn Phong</legend>
-        <p className="text-sm text-gray-400 mb-3">
-            Cung cấp một đoạn văn mẫu để AI bắt chước văn phong, hoặc nhấn "Phân Tích" để AI đưa ra nhận xét và tạo một đoạn tóm tắt văn phong cho bạn.
-        </p>
-        <div className="flex items-center space-x-6 mb-3">
-            <label className="flex items-center space-x-2 cursor-pointer">
-                <input type="radio" name="writingStyleSource" value="file" checked={writingStyleSource === 'file'} onChange={handleStyleSourceChange} className="h-4 w-4 text-indigo-600 border-gray-500 focus:ring-indigo-500" />
-                <span className="text-sm text-gray-200">Tải Lên File (.txt)</span>
-            </label>
-            <label className="flex items-center space-x-2 cursor-pointer">
-                <input type="radio" name="writingStyleSource" value="text" checked={writingStyleSource === 'text'} onChange={handleStyleSourceChange} className="h-4 w-4 text-indigo-600 border-gray-500 focus:ring-indigo-500" />
-                <span className="text-sm text-gray-200">Nhập Trực Tiếp</span>
-            </label>
-        </div>
-        
-        {writingStyleSource === 'file' ? (
-            <div>
-                <input
-                    type="file"
-                    id="writingStyleFile"
-                    accept=".txt,text/plain"
-                    onChange={handleWritingStyleFileChange}
-                    ref={writingStyleFileInputRef}
-                    className="hidden"
-                />
-                {!writingStyleFile ? (
-                    <Button
-                        onClick={() => writingStyleFileInputRef.current?.click()}
-                        variant="secondary"
-                        className="w-full"
-                    >
-                        Chọn File Văn Phong (.txt)
-                    </Button>
-                ) : (
-                    <div className="flex items-center justify-between p-2 bg-gray-700/50 rounded-md">
-                        <span className="text-sm text-gray-200 truncate">Đã tải: <strong className="font-medium text-orange-300">{writingStyleFile.name}</strong></span>
-                        <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={handleRemoveWritingStyleFile}
-                            className="!p-1.5"
-                        >
-                        Xóa File
-                        </Button>
-                    </div>
-                )}
-            </div>
-        ) : (
-            <textarea
-                id="writingStyleGuideText"
-                name="writingStyleGuide"
-                value={settings.writingStyleGuide || ''}
-                onChange={handleChange}
-                rows={8}
-                placeholder="Dán hoặc viết văn bản mẫu của bạn vào đây... File nên dưới 100KB để có hiệu quả tốt nhất."
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-100 transition-colors duration-150"
-            />
-        )}
-         <Button
-            onClick={handleAnalyzeWritingStyle}
-            isLoading={isAnalyzingStyle}
-            disabled={!settings.writingStyleGuide?.trim() || isGeneratingDetails || isGeneratingFanficDetails || isGeneratingCompletion || isAnalyzingStyle}
-            variant="secondary"
-            className="w-full mt-2 border-dashed border-orange-400 text-orange-300 hover:bg-orange-700/60"
-            loadingText="Đang phân tích..."
-        >
-            Phân Tích
+      {/* AI Architect */}
+      <div className="border border-purple-500 p-4 rounded-lg bg-gray-800/30">
+        <h3 className="text-xl font-semibold text-purple-400 mb-2">Kiến Trúc Sư AI</h3>
+        <p className="text-sm text-gray-300 mb-3">Sử dụng ngôn ngữ tự nhiên để thay đổi bất kỳ thiết lập nào trên màn hình này. Bạn có thể yêu cầu AI thêm, sửa, xóa các yếu tố khởi đầu hoặc thay đổi các cài đặt của thế giới.</p>
+        <Button onClick={() => setIsArchitectModalOpen(true)} variant="primary" className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 focus:ring-purple-500">
+          Trò chuyện với Kiến Trúc sư AI
         </Button>
-         {isAnalyzingStyle && <Spinner text="AI đang phân tích văn phong..." className="mt-4" />}
-          {analysisError && <p className="text-red-400 mt-2 text-sm bg-red-900/30 p-2 rounded-md">{analysisError}</p>}
+      </div>
+
+      {/* Autocomplete */}
+      <div className="border border-green-500 p-4 rounded-lg bg-gray-800/30">
+        <h3 className="text-xl font-semibold text-green-400 mb-2">Hoàn Thiện Tự Động</h3>
+        <p className="text-sm text-gray-300 mb-3">Bạn đã điền một vài thông tin? Nhấn nút này để AI tự động điền nốt các trường còn lại dựa trên bối cảnh bạn đã cung cấp.</p>
+        <Button onClick={() => generateCompletion(settings)} isLoading={loadingStates.completion} disabled={Object.values(loadingStates).some(s => s)} variant="primary" className="w-full sm:w-auto bg-green-600 hover:bg-green-700 focus:ring-green-500" loadingText="AI đang hoàn thiện...">
+          AI Hoàn Thiện Các Trường Trống
+        </Button>
+      </div>
+      
+      {/* Style Analysis */}
+      <div className="border border-orange-500 p-4 rounded-lg bg-gray-800/30">
+          <h3 className="text-xl font-semibold text-orange-400 mb-2">AI Phản Hồi & Phân Tích Văn Phong</h3>
+          <p className="text-sm text-gray-300 mb-3">Cung cấp một đoạn văn mẫu để AI bắt chước văn phong, hoặc nhấn "Phân Tích" để AI đưa ra nhận xét và tạo một đoạn tóm tắt văn phong cho bạn.</p>
+          <div className="flex gap-4 mb-3">
+              <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="style-source" checked={writingStyleSource === 'file'} onChange={() => setWritingStyleSource('file')} className="h-4 w-4 text-indigo-600 border-gray-500 focus:ring-indigo-500"/> Tải Lên File (.txt)</label>
+              <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="style-source" checked={writingStyleSource === 'text'} onChange={() => setWritingStyleSource('text')} className="h-4 w-4 text-indigo-600 border-gray-500 focus:ring-indigo-500"/> Nhập Trực Tiếp</label>
+          </div>
+          {writingStyleSource === 'text' && (
+              <InputField label="" id="writingStyleGuide" name="writingStyleGuide" value={settings.writingStyleGuide || ''} onChange={(e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'writingStyleGuide', value: e.target.value }})} textarea rows={8} />
+          )}
+          {writingStyleSource === 'file' && (
+              <Button onClick={() => writingStyleFileInputRef.current?.click()} variant='secondary' className='w-full'>Chọn File Văn Phong (.txt)</Button>
+          )}
+           <input type="file" ref={writingStyleFileInputRef} onChange={handleWritingStyleFileChange} className="hidden" accept=".txt" />
+          <Button onClick={handleAnalyzeStyle} isLoading={loadingStates.styleAnalysis} disabled={Object.values(loadingStates).some(s => s)} variant="secondary" className="w-full sm:w-auto mt-3" loadingText="Đang phân tích...">
+              Phân Tích
+          </Button>
           {analysisResult && (
-            <div className="mt-4 p-4 border border-gray-700 rounded-md bg-gray-800/50 space-y-4">
-                <div className="whitespace-pre-wrap text-sm text-gray-300" dangerouslySetInnerHTML={{ __html: analysis.replace(/\*   /g, '• ').replace(/\*\*/g, '') }}></div>
-                {summaryPrompt && (
-                    <div className="pt-4 border-t border-gray-600">
-                        <h5 className="text-md font-semibold text-teal-300 mb-2">Gợi ý prompt cho AI:</h5>
-                        <p className="p-3 bg-gray-900/50 rounded-md text-sm italic text-teal-200">{summaryPrompt}</p>
-                        <Button
-                            onClick={() => handleChange({ target: { name: 'writingStyleGuide', value: summaryPrompt } } as any)}
-                            variant="primary"
-                            size="sm"
-                            className="w-full mt-3 bg-teal-600 hover:bg-teal-700 focus:ring-teal-500"
-                        >
-                            Sử dụng gợi ý này làm văn phong
-                        </Button>
-                    </div>
-                )}
-            </div>
-        )}
-      </fieldset>
-      
-      {/* --- REFACTORED: SHARED NSFW SETTINGS --- */}
-      <fieldset className="border border-red-700 p-4 rounded-md bg-red-900/10">
-        <legend className="text-lg font-semibold text-red-300 px-2">Cài Đặt Nội Dung Người Lớn (18+)</legend>
-        <NsfwSettingsBlock settings={settings} handleChange={handleChange} />
-      </fieldset>
-      
-      <fieldset className="border border-indigo-700 p-4 rounded-md bg-indigo-900/10">
-        <legend className="text-lg font-semibold text-indigo-300 px-2">{VIETNAMESE.storyIdeaGeneratorSection}</legend>
+              <div className="mt-4 space-y-3 p-3 bg-gray-800/50 rounded-md border border-gray-700">
+                  <h4 className="font-semibold text-gray-200">Kết quả Phân Tích:</h4>
+                  <div className="whitespace-pre-wrap text-sm text-gray-300 p-2 bg-gray-900/50 rounded">{analysisResult.analysis}</div>
+                  <Button onClick={handleApplyStyle} variant="secondary" size="sm" className="w-full">Áp Dụng Văn Phong này cho AI</Button>
+              </div>
+          )}
+      </div>
+
+      {/* NSFW Toggle */}
+      <div className="border border-red-500 p-4 rounded-lg bg-gray-800/30">
+        <h3 className="text-xl font-semibold text-red-400 mb-2">Cài Đặt Nội Dung Người Lớn (18+)</h3>
         <InputField
-          label={VIETNAMESE.storyIdeaDescriptionLabel}
-          id="storyIdea"
-          name="storyIdea"
-          value={storyIdea}
-          onChange={(e) => setStoryIdea(e.target.value)}
-          textarea
-          rows={4}
-          placeholder={VIETNAMESE.storyIdeaDescriptionPlaceholder}
+            label={VIETNAMESE.nsfwModeLabel}
+            id="nsfwMode-master"
+            name="nsfwMode"
+            type="checkbox"
+            checked={settings.nsfwMode || false}
+            onChange={(e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'nsfwMode', value: (e.target as HTMLInputElement).checked }})}
         />
-        <Button
-          onClick={handleGenerateFromStoryIdea}
-          isLoading={isGeneratingDetails}
-          disabled={isGeneratingDetails || isGeneratingFanficDetails || isGeneratingCompletion}
-          variant="primary"
-          className="w-full sm:w-auto mt-3"
-          loadingText={VIETNAMESE.generatingWorldDetails}
-        >
+      </div>
+
+      {/* Story Idea */}
+      <div className="border border-blue-500 p-4 rounded-lg bg-gray-800/30">
+        <h3 className="text-xl font-semibold text-blue-400 mb-2">{VIETNAMESE.storyIdeaGeneratorSection}</h3>
+        <InputField label="" id="storyIdea" name="storyIdea" value={storyIdea} onChange={(e) => setStoryIdea(e.target.value)} textarea rows={4} placeholder={VIETNAMESE.storyIdeaDescriptionPlaceholder} />
+        <Button onClick={() => generateFromStoryIdea(storyIdea, settings)} isLoading={loadingStates.fromStory} disabled={Object.values(loadingStates).some(s => s)} variant="primary" className="w-full sm:w-auto mt-3 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500" loadingText={VIETNAMESE.generatingWorldDetails}>
           {VIETNAMESE.generateDetailsFromStoryButton}
         </Button>
-      </fieldset>
+      </div>
+      
+      {/* Fanfiction Section */}
+      <div className="border border-teal-500 p-4 rounded-lg bg-gray-800/30">
+          <h3 className="text-xl font-semibold text-teal-400 mb-2">{VIETNAMESE.fanficStoryGeneratorSection}</h3>
+          <InputField label={VIETNAMESE.fanficStoryNameLabel} id="fanficStoryName" value={fanficStoryName} onChange={(e) => setFanficStoryName(e.target.value)} placeholder={VIETNAMESE.fanficStoryNamePlaceholder} />
+          <InputField label={VIETNAMESE.fanficPlayerDescriptionLabel} id="fanficPlayerDescription" value={fanficPlayerDescription} onChange={(e) => setFanficPlayerDescription(e.target.value)} textarea rows={3} placeholder={VIETNAMESE.fanficPlayerDescriptionPlaceholder} />
+          <Button onClick={handleGenFanfic} isLoading={loadingStates.fromFanfic} disabled={Object.values(loadingStates).some(s => s)} variant="primary" className="w-full sm:w-auto mt-3 bg-teal-600 hover:bg-teal-700 focus:ring-teal-500" loadingText={VIETNAMESE.generatingFanficDetails}>
+              Phân Tích & Tạo Đồng Nhân
+          </Button>
 
-      <fieldset className="border border-teal-700 p-4 rounded-md bg-teal-900/10">
-        <legend className="text-lg font-semibold text-teal-300 px-2">{VIETNAMESE.fanficStoryGeneratorSection}</legend>
-        <InputField
-          label={VIETNAMESE.fanficSourceTypeLabel}
-          id="fanficSourceType"
-          type="select"
-          options={[VIETNAMESE.fanficSourceTypeName, VIETNAMESE.fanficSourceTypeFile]}
-          value={fanficSourceType === 'name' ? VIETNAMESE.fanficSourceTypeName : VIETNAMESE.fanficSourceTypeFile}
-          onChange={(e) => setFanficSourceType(e.target.value === VIETNAMESE.fanficSourceTypeName ? 'name' : 'file')}
-        />
-        {fanficSourceType === 'name' ? (
-          <InputField
-            label={VIETNAMESE.fanficStoryNameLabel}
-            id="fanficStoryName"
-            value={fanficStoryName}
-            onChange={(e) => setFanficStoryName(e.target.value)}
-            placeholder={VIETNAMESE.fanficStoryNamePlaceholder}
-          />
-        ) : (
-          <div>
-            <label htmlFor="fanficFile" className="block text-sm font-medium text-gray-300 mb-1">{VIETNAMESE.fanficFileUploadLabel}</label>
-            <input
-              type="file"
-              id="fanficFile"
-              accept=".txt,text/plain"
-              onChange={handleFanficFileChange}
-              ref={fanficFileInputRef}
-              className="w-full p-2 text-sm text-gray-300 bg-gray-700 border border-gray-600 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-teal-500 file:text-white hover:file:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            />
-            {(isLoadingTokens || fanficTokenCount !== null) && (
-              <p className="mt-1 text-xs text-gray-400">
-                {isLoadingTokens ? VIETNAMESE.tokenCountCalculating :
-                 fanficTokenCount !== null ? `${VIETNAMESE.tokenCountLabel} ${fanficTokenCount.toLocaleString()}` : ''}
-              </p>
+          <div className="mt-4 border-t border-gray-700 pt-4">
+            <Button variant="ghost" size='sm' onClick={() => setShowOriginalStorySummary(!showOriginalStorySummary)}>
+              {showOriginalStorySummary ? '−' : '+'} Thêm/Sửa Tóm Tắt Cốt Truyện Nguyên Tác
+            </Button>
+            {showOriginalStorySummary && (
+               <InputField label="" id="originalStorySummary" name="originalStorySummary" value={settings.originalStorySummary || ''} onChange={(e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'originalStorySummary', value: e.target.value }})} textarea rows={8} placeholder={VIETNAMESE.originalStorySummaryPlaceholder} />
             )}
           </div>
-        )}
-        <InputField
-          label={VIETNAMESE.fanficPlayerDescriptionLabel}
-          id="fanficPlayerDescription"
-          value={fanficPlayerDescription}
-          onChange={(e) => setFanficPlayerDescription(e.target.value)}
-          textarea
-          rows={2}
-          placeholder={VIETNAMESE.fanficPlayerDescriptionPlaceholder}
-        />
-        <Button
-          onClick={handleGenerateFromFanfic}
-          isLoading={isGeneratingFanficDetails}
-          disabled={isGeneratingDetails || isGeneratingFanficDetails || isLoadingTokens || (fanficSourceType === 'file' && (!fanficFile || (fanficTokenCount !== null && fanficTokenCount > MAX_TOKENS_FANFIC))) || isGeneratingCompletion}
-          variant="primary"
-          className="w-full sm:w-auto mt-3 bg-teal-600 hover:bg-teal-700 focus:ring-teal-500"
-          loadingText={VIETNAMESE.generatingFanficDetails}
-        >
-          {VIETNAMESE.generateFanficButton}
-        </Button>
-      </fieldset>
-
-      <div className="mt-4">
-        <Button
-          onClick={() => setShowOriginalStorySummaryInput(!showOriginalStorySummaryInput)}
-          variant="ghost"
-          className="text-sm text-gray-400 hover:text-gray-200 mb-2"
-        >
-          {showOriginalStorySummaryInput ? `Ẩn ${VIETNAMESE.originalStorySummaryLabel}` : VIETNAMESE.addOriginalStorySummaryButton}
-        </Button>
-        {showOriginalStorySummaryInput && (
-          <InputField
-            label={`${VIETNAMESE.originalStorySummaryLabel}${isGeneratingFanficDetails && !originalStorySummary ? " (AI đang tạo...)" : ""}`}
-            id="originalStorySummary"
-            name="originalStorySummary"
-            value={originalStorySummary}
-            onChange={handleOriginalStorySummaryChange}
-            textarea
-            rows={8}
-            placeholder={VIETNAMESE.originalStorySummaryPlaceholder}
-            disabled={isGeneratingFanficDetails && !originalStorySummary}
-          />
-        )}
       </div>
+      
+      {showRawResponseModal && rawApiResponseText && ( <Modal isOpen={showRawResponseModal} onClose={() => setShowRawResponseModal(false)} title={VIETNAMESE.rawAiResponseModalTitle}> <pre className="whitespace-pre-wrap break-all bg-gray-700 p-3 rounded-md text-xs text-gray-200 max-h-[60vh] overflow-y-auto custom-scrollbar"> {rawApiResponseText} </pre> </Modal> )}
+      {showSentPromptModal && sentWorldGenPrompt && ( <Modal isOpen={showSentPromptModal} onClose={() => setShowSentPromptModal(false)} title={VIETNAMESE.sentPromptModalTitle}> <pre className="whitespace-pre-wrap break-all bg-gray-700 p-3 rounded-md text-xs text-gray-200 max-h-[60vh] overflow-y-auto custom-scrollbar"> {sentWorldGenPrompt} </pre> </Modal> )}
     </div>
   );
 };

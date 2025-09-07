@@ -1,8 +1,11 @@
 
 
-import { KnowledgeBase, GameMessage, Faction, VectorMetadata } from '../../types';
+
+// FIX: Corrected import path for types
+import { KnowledgeBase, GameMessage, Faction, VectorMetadata } from '@/types/index';
 import { ALL_FACTION_ALIGNMENTS } from '../../constants';
-import * as GameTemplates from '../../templates';
+// FIX: Corrected import path for templates
+import * as GameTemplates from '@/types/index';
 import { formatFactionForEmbedding } from '../ragUtils';
 
 export const processFactionDiscovered = (

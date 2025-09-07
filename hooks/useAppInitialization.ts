@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { StorageSettings, StyleSettings } from '../types';
+import { StorageSettings, StyleSettings } from '@/types/index';
 import { DEFAULT_STORAGE_SETTINGS, STORAGE_SETTINGS_STORAGE_KEY, DEFAULT_STYLE_SETTINGS, STYLE_SETTINGS_STORAGE_KEY } from '../constants';
 // Firebase imports removed
 

@@ -1,166 +1,131 @@
-
-
 import React from 'react';
-import { WorldSettings, StartingNPC, StartingLore, StartingLocation, StartingFaction, StartingYeuThu } from './../../../types';
-import * as GameTemplates from './../../../templates';
-
-// Import the new section components
+import { useGameSetup } from '../../../contexts/GameSetupContext';
+import * as GameTemplates from '../../../types/index';
 import CollapsibleSection from '../../ui/CollapsibleSection';
 import SkillsSection from './startingElements/SkillsSection';
 import ItemsSection from './startingElements/ItemsSection';
 import NpcsSection from './startingElements/NpcsSection';
-import YeuThuSection from './startingElements/YeuThuSection'; // New
+import YeuThuSection from './startingElements/YeuThuSection';
 import LoreSection from './startingElements/LoreSection';
 import LocationsSection from './startingElements/LocationsSection';
 import FactionsSection from './startingElements/FactionsSection';
-import { VIETNAMESE } from './../../../constants';
+import { VIETNAMESE } from '../../../constants';
+// FIX: Import the WorldSettings type to resolve multiple 'Cannot find name' errors.
+import { WorldSettings } from '../../../types/index';
 
 interface StartingElementsTabProps {
-  settings: WorldSettings;
-  isSkillsSectionOpen: boolean;
-  setIsSkillsSectionOpen: (isOpen: boolean) => void;
-  handleStartingSkillChange: (index: number, field: string, value: any) => void;
-  addStartingSkill: (type: GameTemplates.SkillTypeValues) => void;
-  removeStartingSkill: (index: number) => void;
-  isItemsSectionOpen: boolean;
-  setIsItemsSectionOpen: (isOpen: boolean) => void;
-  handleStartingItemChange: (index: number, field: any, value: any) => void;
-  addStartingItem: () => void;
-  removeStartingItem: (index: number) => void;
-  isNpcsSectionOpen: boolean;
-  setIsNpcsSectionOpen: (isOpen: boolean) => void;
-  handleStartingNPCChange: (index: number, field: keyof StartingNPC, value: string | number | undefined) => void;
-  addStartingNPC: () => void;
-  removeStartingNPC: (index: number) => void;
-  isYeuThuSectionOpen: boolean; // New
-  setIsYeuThuSectionOpen: (isOpen: boolean) => void; // New
-  handleStartingYeuThuChange: (index: number, field: keyof StartingYeuThu, value: string | boolean) => void; // New
-  addStartingYeuThu: () => void; // New
-  removeStartingYeuThu: (index: number) => void; // New
-  isLoreSectionOpen: boolean;
-  setIsLoreSectionOpen: (isOpen: boolean) => void;
-  handleStartingLoreChange: (index: number, field: keyof StartingLore, value: string) => void;
-  addStartingLore: () => void;
-  removeStartingLore: (index: number) => void;
-  isLocationsSectionOpen: boolean;
-  setIsLocationsSectionOpen: (isOpen: boolean) => void;
-  handleStartingLocationChange: (index: number, field: keyof StartingLocation, value: string | boolean) => void;
-  addStartingLocation: () => void;
-  removeStartingLocation: (index: number) => void;
-  isFactionsSectionOpen: boolean;
-  setIsFactionsSectionOpen: (isOpen: boolean) => void;
-  handleStartingFactionChange: (index: number, field: keyof StartingFaction, value: string | number) => void;
-  addStartingFaction: () => void;
-  removeStartingFaction: (index: number) => void;
+    openSections: {
+        skills: boolean; items: boolean; npcs: boolean; yeuThu: boolean;
+        lore: boolean; locations: boolean; factions: boolean;
+    };
+    toggleSection: (section: keyof StartingElementsTabProps['openSections']) => void;
 }
 
-const StartingElementsTab: React.FC<StartingElementsTabProps> = ({
-  settings,
-  isSkillsSectionOpen, setIsSkillsSectionOpen, handleStartingSkillChange, addStartingSkill, removeStartingSkill,
-  isItemsSectionOpen, setIsItemsSectionOpen, handleStartingItemChange, addStartingItem, removeStartingItem,
-  isNpcsSectionOpen, setIsNpcsSectionOpen, handleStartingNPCChange, addStartingNPC, removeStartingNPC,
-  isYeuThuSectionOpen, setIsYeuThuSectionOpen, handleStartingYeuThuChange, addStartingYeuThu, removeStartingYeuThu,
-  isLoreSectionOpen, setIsLoreSectionOpen, handleStartingLoreChange, addStartingLore, removeStartingLore,
-  isLocationsSectionOpen, setIsLocationsSectionOpen, handleStartingLocationChange, addStartingLocation, removeStartingLocation,
-  isFactionsSectionOpen, setIsFactionsSectionOpen, handleStartingFactionChange, addStartingFaction, removeStartingFaction
-}) => {
+const StartingElementsTab: React.FC<StartingElementsTabProps> = ({ openSections, toggleSection }) => {
+  const { state, dispatch } = useGameSetup();
+  const { settings } = state;
+  
+  // FIX: This component will now create the necessary handlers itself to pass down,
+  // resolving the prop and signature mismatches with the child components.
+  // This avoids using the `useStartingElements` hook which had incompatible handler signatures.
+
+  const createChangeHandler = (listKey: keyof WorldSettings) => (index: number, field: string, value: any) => {
+      const list = (state.settings as any)[listKey] as any[];
+      const updatedList = [...list];
+      const itemToUpdate = { ...updatedList[index] };
+      const fieldParts = field.split('.');
+      if (fieldParts.length > 1) {
+          if (!itemToUpdate[fieldParts[0]]) (itemToUpdate as any)[fieldParts[0]] = {};
+          (itemToUpdate as any)[fieldParts[0]][fieldParts[1]] = value;
+      } else {
+          (itemToUpdate as any)[field] = value;
+      }
+      updatedList[index] = itemToUpdate;
+      dispatch({ type: 'UPDATE_FIELD', payload: { field: listKey, value: updatedList } });
+  };
+  
+  const createAddHandler = (listKey: keyof WorldSettings, newElement: object) => () => {
+      const currentList = (state.settings as any)[listKey] as any[] || [];
+      // FIX: Explicitly convert listKey to a string to prevent potential runtime errors with symbols.
+      const updatedList = [...currentList, { ...newElement, id: `${String(listKey)}-${Date.now()}-${Math.random()}` }];
+      dispatch({ type: 'UPDATE_FIELD', payload: { field: listKey, value: updatedList } });
+  };
+  
+  const createRemoveHandler = (listKey: keyof WorldSettings) => (index: number) => {
+      const currentList = (state.settings as any)[listKey] as any[] || [];
+      const updatedList = currentList.filter((_, i) => i !== index);
+      dispatch({ type: 'UPDATE_FIELD', payload: { field: listKey, value: updatedList } });
+  };
+
   return (
     <div className="space-y-2">
-      <CollapsibleSection
-        title={VIETNAMESE.startingSkillsSection}
-        isOpen={isSkillsSectionOpen}
-        onToggle={() => setIsSkillsSectionOpen(!isSkillsSectionOpen)}
-        itemCount={(settings.startingSkills || []).length}
-      >
+      <CollapsibleSection title={VIETNAMESE.startingSkillsSection} isOpen={openSections.skills} onToggle={() => toggleSection('skills')} itemCount={(settings.startingSkills || []).length}>
+        {/* FIX: Pass props that match SkillsSectionProps */}
         <SkillsSection 
           settings={settings}
-          handleStartingSkillChange={handleStartingSkillChange}
-          addStartingSkill={addStartingSkill}
-          removeStartingSkill={removeStartingSkill}
+          handleStartingSkillChange={createChangeHandler('startingSkills')}
+          addStartingSkill={(type) => dispatch({ type: 'ADD_ELEMENT', payload: { list: 'startingSkills', element: { name: '', description: '', skillType: type } } })}
+          removeStartingSkill={createRemoveHandler('startingSkills')}
         />
       </CollapsibleSection>
 
-      <CollapsibleSection
-        title={VIETNAMESE.startingItemsSection}
-        isOpen={isItemsSectionOpen}
-        onToggle={() => setIsItemsSectionOpen(!isItemsSectionOpen)}
-        itemCount={(settings.startingItems || []).length}
-      >
+      <CollapsibleSection title={VIETNAMESE.startingItemsSection} isOpen={openSections.items} onToggle={() => toggleSection('items')} itemCount={(settings.startingItems || []).length}>
+        {/* FIX: Pass props that match ItemsSectionProps */}
         <ItemsSection 
           settings={settings}
-          handleStartingItemChange={handleStartingItemChange}
-          addStartingItem={addStartingItem}
-          removeStartingItem={removeStartingItem}
+          handleStartingItemChange={createChangeHandler('startingItems')}
+          addStartingItem={createAddHandler('startingItems', { name: '', description: '', quantity: 1, category: GameTemplates.ItemCategory.MISCELLANEOUS })}
+          removeStartingItem={createRemoveHandler('startingItems')}
         />
       </CollapsibleSection>
       
-      <CollapsibleSection
-        title={VIETNAMESE.startingNPCsSection}
-        isOpen={isNpcsSectionOpen}
-        onToggle={() => setIsNpcsSectionOpen(!isNpcsSectionOpen)}
-        itemCount={(settings.startingNPCs || []).length}
-      >
+      <CollapsibleSection title={VIETNAMESE.startingNPCsSection} isOpen={openSections.npcs} onToggle={() => toggleSection('npcs')} itemCount={(settings.startingNPCs || []).length}>
+        {/* FIX: Pass props that match NpcsSectionProps */}
         <NpcsSection 
           settings={settings}
-          handleStartingNPCChange={handleStartingNPCChange}
-          addStartingNPC={addStartingNPC}
-          removeStartingNPC={removeStartingNPC}
+          handleStartingNPCChange={createChangeHandler('startingNPCs')}
+          addStartingNPC={createAddHandler('startingNPCs', { name: '', personality: '', initialAffinity: 0, details: '' })}
+          removeStartingNPC={createRemoveHandler('startingNPCs')}
         />
       </CollapsibleSection>
 
-      <CollapsibleSection
-        title={"Yêu Thú Khởi Đầu"}
-        isOpen={isYeuThuSectionOpen}
-        onToggle={() => setIsYeuThuSectionOpen(!isYeuThuSectionOpen)}
-        itemCount={(settings.startingYeuThu || []).length}
-      >
+      <CollapsibleSection title={"Yêu Thú Khởi Đầu"} isOpen={openSections.yeuThu} onToggle={() => toggleSection('yeuThu')} itemCount={(settings.startingYeuThu || []).length}>
+        {/* FIX: Pass props that match YeuThuSectionProps */}
         <YeuThuSection 
           settings={settings}
-          handleStartingYeuThuChange={handleStartingYeuThuChange}
-          addStartingYeuThu={addStartingYeuThu}
-          removeStartingYeuThu={removeStartingYeuThu}
+          handleStartingYeuThuChange={createChangeHandler('startingYeuThu')}
+          addStartingYeuThu={createAddHandler('startingYeuThu', { name: '', species: '', description: '', isHostile: true })}
+          removeStartingYeuThu={createRemoveHandler('startingYeuThu')}
         />
       </CollapsibleSection>
 
-      <CollapsibleSection
-        title={VIETNAMESE.startingLoreSection}
-        isOpen={isLoreSectionOpen}
-        onToggle={() => setIsLoreSectionOpen(!isLoreSectionOpen)}
-        itemCount={(settings.startingLore || []).length}
-      >
+      <CollapsibleSection title={VIETNAMESE.startingLoreSection} isOpen={openSections.lore} onToggle={() => toggleSection('lore')} itemCount={(settings.startingLore || []).length}>
+        {/* FIX: Pass props that match LoreSectionProps */}
         <LoreSection
           startingLore={settings.startingLore}
-          handleStartingLoreChange={handleStartingLoreChange}
-          addStartingLore={addStartingLore}
-          removeStartingLore={removeStartingLore}
+          handleStartingLoreChange={createChangeHandler('startingLore')}
+          addStartingLore={createAddHandler('startingLore', { title: '', content: '' })}
+          removeStartingLore={createRemoveHandler('startingLore')}
         />
       </CollapsibleSection>
 
-      <CollapsibleSection
-        title={VIETNAMESE.startingLocationsSection}
-        isOpen={isLocationsSectionOpen}
-        onToggle={() => setIsLocationsSectionOpen(!isLocationsSectionOpen)}
-        itemCount={(settings.startingLocations || []).length}
-      >
+      <CollapsibleSection title={VIETNAMESE.startingLocationsSection} isOpen={openSections.locations} onToggle={() => toggleSection('locations')} itemCount={(settings.startingLocations || []).length}>
+        {/* FIX: Pass props that match LocationsSectionProps */}
         <LocationsSection
           startingLocations={settings.startingLocations}
-          handleStartingLocationChange={handleStartingLocationChange}
-          addStartingLocation={addStartingLocation}
-          removeStartingLocation={removeStartingLocation}
+          handleStartingLocationChange={createChangeHandler('startingLocations')}
+          addStartingLocation={createAddHandler('startingLocations', { name: '', description: '' })}
+          removeStartingLocation={createRemoveHandler('startingLocations')}
         />
       </CollapsibleSection>
       
-      <CollapsibleSection
-        title={VIETNAMESE.startingFactionsSection}
-        isOpen={isFactionsSectionOpen}
-        onToggle={() => setIsFactionsSectionOpen(!isFactionsSectionOpen)}
-        itemCount={(settings.startingFactions || []).length}
-      >
+      <CollapsibleSection title={VIETNAMESE.startingFactionsSection} isOpen={openSections.factions} onToggle={() => toggleSection('factions')} itemCount={(settings.startingFactions || []).length}>
+        {/* FIX: Pass props that match FactionsSectionProps */}
         <FactionsSection
           startingFactions={settings.startingFactions}
-          handleStartingFactionChange={handleStartingFactionChange}
-          addStartingFaction={addStartingFaction}
-          removeStartingFaction={removeStartingFaction}
+          handleStartingFactionChange={createChangeHandler('startingFactions')}
+          addStartingFaction={createAddHandler('startingFactions', { name: '', description: '', alignment: GameTemplates.FactionAlignment.TRUNG_LAP, initialPlayerReputation: 0 })}
+          removeStartingFaction={createRemoveHandler('startingFactions')}
         />
       </CollapsibleSection>
     </div>

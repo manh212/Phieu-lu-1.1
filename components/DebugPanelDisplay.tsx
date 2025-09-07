@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { KnowledgeBase } from '../../types';
-import { VIETNAMESE } from '../../constants';
-import Button from './ui/Button';
+import { KnowledgeBase, NPC } from '../../types/index';
+import { VIETNAMESE } from '../../constants/index';
+import Button from '../ui/Button';
 
 interface DebugPanelDisplayProps {
   kb: KnowledgeBase;
@@ -15,19 +15,27 @@ interface DebugPanelDisplayProps {
   summarizationResponsesLog: string[];
   sentCraftingPromptsLog: string[]; 
   receivedCraftingResponsesLog: string[];
-  sentNpcAvatarPromptsLog: string[]; // New prop
+  sentNpcAvatarPromptsLog: string[];
+  retrievedRagContextLog: string[]; // NEW
   currentPageDisplay: number;
   totalPages: number;
   isAutoPlaying: boolean;
   onToggleAutoPlay: () => void;
-  onStartDebugCombat: () => void; // New prop for starting debug combat
+  // FIX: Renamed prop to match what is being passed from GameplayScreen, resolving the error.
+  onStartDebugCombat: () => void;
   onProcessDebugTags: (narration: string, tags: string) => Promise<void>;
   isLoading: boolean;
+  onCheckTokenCount: () => void; // NEW
   // New props for post-combat logs
   sentCombatSummaryPromptsLog: string[];
   receivedCombatSummaryResponsesLog: string[];
   sentVictoryConsequencePromptsLog: string[];
   receivedVictoryConsequenceResponsesLog: string[];
+  // NEW Props for Living World (Phase 4)
+  sentLivingWorldPromptsLog: string[];
+  rawLivingWorldResponsesLog: string[];
+  lastScoredNpcsForTick: { npc: NPC, score: number }[];
+  onManualTick: () => void;
 }
 
 const MIN_WIDTH = 320; // px
@@ -67,6 +75,7 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
     sentCraftingPromptsLog, 
     receivedCraftingResponsesLog, 
     sentNpcAvatarPromptsLog,
+    retrievedRagContextLog, // NEW
     currentPageDisplay,
     totalPages,
     isAutoPlaying,
@@ -74,10 +83,15 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
     onStartDebugCombat,
     onProcessDebugTags,
     isLoading,
+    onCheckTokenCount, // NEW
     sentCombatSummaryPromptsLog,
     receivedCombatSummaryResponsesLog,
     sentVictoryConsequencePromptsLog,
     receivedVictoryConsequenceResponsesLog,
+    sentLivingWorldPromptsLog,
+    rawLivingWorldResponsesLog,
+    lastScoredNpcsForTick,
+    onManualTick,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -184,10 +198,9 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
     if (isDragging || isResizing) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
-    } else {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
     }
+    // The cleanup function for the effect.
+    // This runs before the next effect execution or on unmount.
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -196,7 +209,7 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
   const displayTokenInfo = () => {
-    if (latestPromptTokenCount === null && sentPromptsLog.length === 0) return 'N/A';
+    if (latestPromptTokenCount === null) return 'N/A';
     if (typeof latestPromptTokenCount === 'string') return latestPromptTokenCount;
     if (typeof latestPromptTokenCount === 'number') return latestPromptTokenCount.toString();
     return 'N/A'; 
@@ -235,7 +248,21 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
           Lịch sử trang (bắt đầu từ lượt): {JSON.stringify(kb.currentPageHistory)}<br/>
           Tóm tắt có sẵn cho trang: {kb.pageSummaries ? Object.keys(kb.pageSummaries).join(', ') : 'Không có'}<br/>
           Lịch sử lùi lượt: {kb.turnHistory ? kb.turnHistory.length : 0} mục<br/>
-          Token Prompt Gần Nhất: <span className={getTokenDisplayClass()}>{displayTokenInfo()}</span>
+          <div className="flex justify-between items-center mt-1">
+            <span>Token Prompt Gần Nhất: <span className={getTokenDisplayClass()}>{displayTokenInfo()}</span></span>
+            <Button
+                size="sm"
+                variant="ghost"
+                onClick={onCheckTokenCount}
+                disabled={isLoading || sentPromptsLog.length === 0 || typeof latestPromptTokenCount === 'number'}
+                isLoading={latestPromptTokenCount === 'Đang tính...'}
+                loadingText="Tính..."
+                className="!py-1 !px-2 text-xs border-cyan-500 text-cyan-300 hover:bg-cyan-700/60"
+                title={sentPromptsLog.length === 0 ? "Chưa có prompt để kiểm tra" : "Kiểm tra số token của prompt gần nhất"}
+            >
+                Kiểm tra Token
+            </Button>
+          </div>
         </div>
 
         <Button
@@ -255,6 +282,22 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
         >
             Bắt đầu Chiến đấu Thử
         </Button>
+        
+        {/* Living World Manual Trigger */}
+        <div className="mb-4 pt-4 border-t border-yellow-700">
+            <h5 className="text-md font-semibold text-teal-300 mb-2">Hệ Thống Thế Giới Sống</h5>
+            <Button
+                variant="secondary"
+                size="sm"
+                onClick={onManualTick}
+                className="w-full border-teal-500 text-teal-200 hover:bg-teal-700 hover:text-white"
+                disabled={isLoading}
+                isLoading={kb.isWorldTicking}
+                loadingText="Thế giới đang vận động..."
+            >
+                Kích Hoạt Tick Thủ Công
+            </Button>
+        </div>
 
         <div className="mb-4 pt-4 border-t border-yellow-700">
           <h5 className="text-md font-semibold text-yellow-300 mb-1">Xử lý Tags Thủ Công</h5>
@@ -284,6 +327,30 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
           >
             Xử lý Tags
           </Button>
+        </div>
+        
+        {/* Living World Debug Logs */}
+        <div className="mb-4 text-teal-300">
+          <h5 className="text-md font-semibold mb-1">Nhật Ký "Thế Giới Sống"</h5>
+          <LogSection title="Prompt Thế Giới Sống" logs={sentLivingWorldPromptsLog} />
+          <LogSection title="Phản Hồi JSON Thô" logs={rawLivingWorldResponsesLog} />
+          {lastScoredNpcsForTick.length > 0 && (
+            <details className="bg-gray-800 rounded group text-xs">
+                <summary className="p-1.5 cursor-pointer text-[11px] group-open:font-semibold">
+                    NPC Được Chọn Lượt Tick Trước (Nhấn để xem)
+                </summary>
+                <div className="p-1.5 bg-gray-850 whitespace-pre-wrap break-all text-[10px] leading-relaxed max-h-80 overflow-y-auto custom-scrollbar">
+                    {lastScoredNpcsForTick.map(({ npc, score }) => (
+                        <div key={npc.id}>{npc.name}: {score.toFixed(2)}</div>
+                    ))}
+                </div>
+            </details>
+          )}
+        </div>
+        
+        <div className="mb-4 text-orange-300">
+          <h5 className="text-md font-semibold mb-1">Nhật Ký Truy Xuất RAG ({retrievedRagContextLog.length} gần nhất)</h5>
+          <LogSection title="Context Truy Xuất" logs={retrievedRagContextLog} />
         </div>
 
         <div className="mb-4">
@@ -374,38 +441,3 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
 
         {/* Crafting Responses Log */}
         <div className="mb-4">
-          <h5 className="text-md font-semibold text-teal-300 mb-1">Nhật Ký Phản Hồi Luyện Chế Từ AI ({receivedCraftingResponsesLog.length} gần nhất)</h5>
-          {receivedCraftingResponsesLog.length === 0 ? (
-            <p className="text-xs italic text-gray-500">Chưa có phản hồi luyện chế nào từ AI.</p>
-          ) : (
-            <LogSection title="Phản hồi Luyện Chế" logs={receivedCraftingResponsesLog} />
-          )}
-        </div>
-
-        {/* NPC Avatar Prompts Log */}
-        <div>
-          <h5 className="text-md font-semibold text-pink-300 mb-1">Nhật Ký Prompt Tạo Ảnh NPC ({sentNpcAvatarPromptsLog.length} gần nhất)</h5>
-          {sentNpcAvatarPromptsLog.length === 0 ? (
-            <p className="text-xs italic text-gray-500">Chưa có prompt tạo ảnh NPC nào được ghi lại.</p>
-          ) : (
-            <LogSection title="Prompt Ảnh NPC" logs={sentNpcAvatarPromptsLog} />
-          )}
-        </div>
-
-      </div>
-      <div 
-        className="absolute bg-yellow-600 opacity-50 hover:opacity-100"
-        style={{
-            width: `${HANDLE_SIZE}px`,
-            height: `${HANDLE_SIZE}px`,
-            bottom: '0px',
-            right: '0px',
-            cursor: 'nwse-resize',
-        }}
-        onMouseDown={handleMouseDownResize}
-      />
-    </div>
-  );
-};
-
-export default DebugPanelDisplay;

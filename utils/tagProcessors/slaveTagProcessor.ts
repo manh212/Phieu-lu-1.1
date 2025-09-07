@@ -1,4 +1,5 @@
-import { KnowledgeBase, GameMessage, NPC, Slave, AuctionSlave, PlayerStats } from '../../types';
+// FIX: Corrected import path for types.
+import { KnowledgeBase, GameMessage, NPC, Slave, AuctionSlave, PlayerStats } from '@/types/index';
 import { TU_CHAT_TIERS } from '../../constants';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
 import { calculateRealmBaseStats, calculateSlaveValue } from '../statsCalculationUtils';

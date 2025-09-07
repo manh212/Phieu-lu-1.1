@@ -1,5 +1,8 @@
 
-import { KnowledgeBase, GameMessage, WorldLoreEntry, VectorMetadata } from '../../types';
+
+
+// FIX: Corrected import path for types
+import { KnowledgeBase, GameMessage, WorldLoreEntry, VectorMetadata } from '@/types/index';
 import { formatLoreForEmbedding } from '../ragUtils';
 
 export const processWorldLoreAdd = (

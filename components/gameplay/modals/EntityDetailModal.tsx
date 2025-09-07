@@ -1,10 +1,13 @@
 
+
 import React, { useState } from 'react';
 import { GameEntity, GameEntityType } from '../../../hooks/types';
-import { KnowledgeBase, PlayerStats, Item, Skill, Quest, NPC, GameLocation, WorldLoreEntry, Companion, Faction, YeuThu, Wife, Slave, Prisoner, ActivityLogEntry } from '../../../types';
-import * as GameTemplates from '../../../templates';
+// FIX: Corrected import path for types.
+import { KnowledgeBase, PlayerStats, Item, Skill, Quest, NPC, GameLocation, WorldLoreEntry, Companion, Faction, YeuThu, Wife, Slave, Prisoner, ActivityLogEntry } from '../../../types/index';
+// FIX: Corrected import path for templates.
+import * as GameTemplates from '../../../types/index';
 import Modal from '../../ui/Modal';
-import { VIETNAMESE, PROFICIENCY_DMG_HEAL_MULTIPLIERS, PROFICIENCY_COST_COOLDOWN_MULTIPLIERS } from '../../../constants';
+import { VIETNAMESE, PROFICIENCY_DMG_HEAL_MULTIPLIERS, PROFICIENCY_COST_COOLDOWN_MULTIPLIERS } from '../../../constants/index';
 import { getDeterministicAvatarSrc } from '../../../utils/avatarUtils';
 
 interface EntityDetailModalProps {

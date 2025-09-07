@@ -1,7 +1,10 @@
 
+
+
 import React, { useState } from 'react';
 import { useGame } from '../hooks/useGame';
-import { Prisoner, GameScreen } from '../types';
+// FIX: Corrected import path for types.
+import { Prisoner, GameScreen } from '@/types/index';
 import { VIETNAMESE } from '../constants';
 import Button from './ui/Button';
 import InputField from './ui/InputField';

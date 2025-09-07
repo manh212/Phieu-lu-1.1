@@ -1,5 +1,7 @@
+
+
 import React from 'react';
-import { KnowledgeBase, NPC, GameLocation, WorldLoreEntry, Faction, Companion, YeuThu } from '../../types';
+import { KnowledgeBase, NPC, GameLocation, WorldLoreEntry, Faction, Companion, YeuThu } from '../../types/index';
 import { VIETNAMESE, MALE_AVATAR_PLACEHOLDER_URL, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX } from '../../constants';
 import WorldInfoList from '../ui/WorldInfoList';
 import { getDeterministicAvatarSrc } from '../../utils/avatarUtils';
@@ -14,7 +16,7 @@ interface WorldSidePanelProps {
   onCompanionClick: (companion: Companion) => void;
 }
 
-const WorldSidePanel: React.FC<WorldSidePanelProps> = ({
+const WorldSidePanel: React.FC<WorldSidePanelProps> = React.memo(({
   knowledgeBase,
   onNpcClick,
   onYeuThuClick, // New
@@ -112,6 +114,6 @@ const WorldSidePanel: React.FC<WorldSidePanelProps> = ({
         </div>
     </div>
   );
-};
+});
 
 export default WorldSidePanel;

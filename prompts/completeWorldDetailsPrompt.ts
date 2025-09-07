@@ -1,7 +1,8 @@
-import { WorldSettings, StartingSkill, StartingItem, StartingNPC, StartingLore, StartingLocation, StartingFaction, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, StartingYeuThu } from '../types';
+// FIX: Correct import path for types
+import { WorldSettings, StartingSkill, StartingItem, StartingNPC, StartingLore, StartingLocation, StartingFaction, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, StartingYeuThu, CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '@/types/index';
 import { SUB_REALM_NAMES, ALL_FACTION_ALIGNMENTS, AVAILABLE_GENRES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, VIOLENCE_LEVELS, STORY_TONES, DEFAULT_NSFW_DESCRIPTION_STYLE, NSFW_DESCRIPTION_STYLES, WEAPON_TYPES_FOR_VO_Y, STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS, TU_CHAT_TIERS } from '../constants';
-import * as GameTemplates from '../templates';
-import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../templates';
+// FIX: Correct import path for types
+import * as GameTemplates from '@/types/index';
 import { getNsfwGuidance } from './promptUtils';
 
 // Helper to determine if a field is empty or at its default state.
@@ -147,35 +148,10 @@ Tuổi thọ tối đa (\`maxThoNguyen\`) tăng mạnh theo từng đại cảnh
                 - \`effectsList\`: BẮT BUỘC. Danh sách hiệu ứng, cách nhau bởi ';'. Ví dụ: "Hồi 50 HP;Tăng 10 công trong 3 lượt".
             - (Các loại khác giữ nguyên hướng dẫn cũ)
     *   **Tạo NPC:**
-        - **Hướng Dẫn Tạo Mục Tiêu Cho NPC (CỰC KỲ QUAN TRỌNG):** Khi tạo một NPC (hoặc bổ sung thông tin cho NPC đã có), bạn PHẢI suy nghĩ và tạo ra hai mục tiêu cho họ:
-            - **longTermGoal**: Một tham vọng, ước mơ lớn lao, định hướng cho cả cuộc đời NPC.
-            - **shortTermGoal**: Một mục tiêu nhỏ, cụ thể, có thể hoàn thành trong thời gian ngắn và thường là một bước để tiến tới mục tiêu dài hạn.
-        - **QUY TẮC MỚI VỀ VỊ TRÍ NPC (LOGIC ƯU TIÊN THÔNG MINH):**
-            
-            **1. Ưu Tiên Gán Ghép (Prioritize Matching):**
-            Đầu tiên, hãy quét qua tất cả các địa điểm lớn mà người dùng đã cung cấp hoặc bạn đang tạo bằng tag \`[GENERATED_LOCATION: ...]\`. Cố gắng tìm một địa điểm phù hợp nhất với vai trò, mô tả và mục tiêu của NPC.
-              *   *Ví dụ: Nếu người dùng đã cung cấp địa điểm "Thiên Linh Tông" và bạn đang tạo NPC "Lý Trưởng Môn", hãy gán \`locationName="Thiên Linh Tông"\` cho NPC đó.*
-
-            **2. Sáng Tạo Có Điều Kiện (Conditional Creation):**
-            **CHỈ KHI** không có địa điểm nào trong danh sách trên thực sự phù hợp, bạn MỚI được phép tự do sáng tạo ra một địa điểm mới cho NPC đó.
-              *   *Ví dụ: Nếu bạn tạo NPC "Hắc Ma Tôn" nhưng chưa có địa điểm nào thuộc Ma giáo, bạn có thể tự tạo một địa điểm mới cho ông ta.*
-            
-            **3. RÀNG BUỘC SỐNG CÒN KHI SÁNG TẠO (CRITICAL CONSTRAINT ON CREATION):**
-            Khi bạn tự tạo một địa điểm mới, giá trị của \`locationName\` **TUYỆT ĐỐI PHẢI** là tên của một **khu vực lớn** (ví dụ: một tông môn, một thành phố, một khu rừng, một sơn cốc).
-            
-            **TUYỆT ĐỐI CẤM** tạo ra các địa điểm phụ, nhỏ lẻ bên trong một khu vực khác (ví dụ: 'Phòng của Trưởng môn', 'Quán trọ Phước Lai', 'Lò rèn của Lý Thiết Tượng'). Các địa điểm nhỏ này sẽ được tạo ra sau trong quá trình chơi game.
-            
-            **VÍ DỤ VỀ LUỒNG LÀM VIỆC ĐÚNG:**
-            *   **(Gán ghép):**
-                1.  (Người dùng đã cung cấp địa điểm "Thanh Vân Môn")
-                2.  Gán cho NPC: \`[GENERATED_NPC: name="Đạo Huyền Chân Nhân", ..., locationName="Thanh Vân Môn"]\`
-            *   **(Sáng tạo mới):**
-                1.  (Không có địa điểm ma đạo nào được cung cấp trước đó)
-                2.  Tạo NPC Ma Tôn: \`[GENERATED_NPC: name="Hắc Ma Tôn", ..., locationName="Vạn Ma Quật"]\` (AI tự tạo ra "Vạn Ma Quật" vì nó là một khu vực lớn).
-
-            **VÍ DỤ VỀ LUỒNG LÀM VIỆC SAI (CẤM):**
-            *   \`[GENERATED_NPC: ..., locationName="Nghĩa Trang trong Khu Rừng Âm U"]\`
-            *   \`[GENERATED_NPC: ..., locationName="Phòng Trưởng Môn"]\`
+        - **Hướng Dẫn Tạo Mục Tiêu & Vị Trí (CỰC KỲ QUAN TRỌNG):** Khi tạo một NPC (hoặc bổ sung thông tin cho NPC đã có), bạn PHẢI suy nghĩ và tạo ra:
+            - **longTermGoal**: Tham vọng lớn lao.
+            - **shortTermGoal**: Mục tiêu nhỏ, cụ thể.
+            - **locationName**: Tên một khu vực lớn (thành phố, tông môn, khu rừng). TUYỆT ĐỐI KHÔNG tạo địa điểm nhỏ (quán trọ, phòng riêng).
         - **Định dạng Tag:** [GENERATED_NPC: name="Tên NPC (BẮT BUỘC)", gender="Nam/Nữ/Khác/Không rõ (BẮT BUỘC)", race="Chủng tộc (BẮT BUỘC, CHỈ ĐƯỢC TẠO RA NHỮNG CHỦNG TỘC CÓ HỆ THỐNG CẢNH GIỚI Ở TRÊN, TUYỆT ĐỐI KHÔNG CHỌN CHỦNG TỘC YÊU THÚ, ví dụ: Nhân Tộc, Yêu Tộc)", personality="Tính cách nổi bật (BẮT BUỘC)", longTermGoal="Mục tiêu dài hạn của NPC (BẮT BUỘC)", shortTermGoal="Mục tiêu ngắn hạn của NPC (BẮT BUỘC)", initialAffinity=0 (SỐ NGUYÊN từ -100 đến 100), details="Vai trò, tiểu sử ngắn hoặc mối liên hệ với người chơi (BẮT BUỘC), phù hợp với thể loại '${effectiveGenreDisplay}'"${npcRealmInstruction}, relationshipToPlayer="Mối quan hệ (ví dụ: 'Mẹ Con', 'Sư phụ', 'Bằng hữu', 'Chủ nhân - nô lệ', 'Vợ chồng', 'Đạo lữ', 'Đối thủ', 'Bạn thời thơ ấu', 'Người bảo hộ', 'Chủ nợ'...)" (BẮT BUỘC nhưng khi npc và người chơi không có quan hệ gì thì để là 'Người xa lạ'), locationName="Tên địa điểm do AI tạo (BẮT BUỘC)"]. NPC chỉ áp dụng cho người hoặc những loài có hình dạng tương tự người như tiên tộc, yêu tộc đã hóa hình,...
     *   **Tạo Yêu Thú:** [GENERATED_YEUTHU: name="Tên", species="Loài", description="Mô tả", isHostile=true/false, realm="Cảnh giới (nếu có)"]
     *   **Tạo Tri Thức:** [GENERATED_LORE: title="Tiêu đề", content="Nội dung"]

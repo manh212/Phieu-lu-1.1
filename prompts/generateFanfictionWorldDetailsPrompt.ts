@@ -1,7 +1,7 @@
 import { SUB_REALM_NAMES, ALL_FACTION_ALIGNMENTS, AVAILABLE_GENRES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, VIOLENCE_LEVELS, STORY_TONES, DEFAULT_NSFW_DESCRIPTION_STYLE, NSFW_DESCRIPTION_STYLES, TU_CHAT_TIERS, WEAPON_TYPES_FOR_VO_Y, STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS } from '../constants';
-import * as GameTemplates from '../templates';
-import { GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, WorldSettings } from '../types';
-import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../templates';
+import * as GameTemplates from '@/types/index';
+import type { GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, WorldSettings } from '@/types/index';
+import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '@/types/index';
 import { getNsfwGuidance } from './promptUtils';
 
 export const generateFanfictionWorldDetailsPrompt = (
@@ -111,7 +111,7 @@ ${nsfwGuidanceForWorldGen}
             ${customGenreNameForTag ? `[GENERATED_CUSTOM_GENRE_NAME: text="${customGenreNameForTag}"]` : ''}
             [GENERATED_IS_CULTIVATION_ENABLED: value=${cultivationActuallyEnabled}]
         ${cultivationSystemInstructions}
-    *   **Tóm Tắt Cốt Truyện Nguyên Tác (QUAN TRỌNG):** Dựa trên Nguồn Cảm Hứng Đồng Nhân, hãy **tóm tắt cốt truyện của truyện gốc (nguyên tác)**, dài khoảng 1000-1500 từ. Phần tóm tắt này nên được chia thành các giai đoạn hoặc các chương chính, mô tả các sự kiện quan trọng, xung đột và hướng phát triển của các nhân vật chính trong nguyên tác. Sử dụng tag: \\\`[GENERATED_ORIGINAL_STORY_SUMMARY: text="Giai đoạn 1 của nguyên tác: Mô tả chi tiết giai đoạn 1 của nguyên tác...\n\nGiai đoạn 2 của nguyên tác: Mô tả chi tiết giai đoạn 2 của nguyên tác...\n\n... (Tiếp tục cho đến khi đủ 1000-1500 từ và bao quát cốt truyện nguyên tác)"]\\\`
+    *   **Tóm Tắt Cốt Truyện Nguyên Tác (QUAN TRỌNG):** Dựa trên Nguồn Cảm Hứng Đồng Nhân, hãy **tóm tắt cốt truyện của truyện gốc (nguyên tác)**, dài khoảng 1000-1500 từ. Phần tóm tắt này nên được chia thành các giai đoạn hoặc các chương chính, mô tả các sự kiện quan trọng, xung đột và hướng phát triển của các nhân vật chính trong nguyên tác. Sử dụng tag: \`[GENERATED_ORIGINAL_STORY_SUMMARY: text="Giai đoạn 1 của nguyên tác: Mô tả chi tiết giai đoạn 1 của nguyên tác...\n\nGiai đoạn 2 của nguyên tác: Mô tả chi tiết giai đoạn 2 của nguyên tác...\n\n... (Tiếp tục cho đến khi đủ 1000-1500 từ và bao quát cốt truyện nguyên tác)"]\`
     *   **Yếu Tố Khởi Đầu Khác (Đồng Nhân - Đảm bảo cung cấp đầy đủ các tham số được yêu cầu cho mỗi tag):**
         *   **Kỹ Năng Khởi Đầu (5-6 kỹ năng):** Phù hợp với nhân vật, thế giới đồng nhân và thể loại "${effectiveGenreDisplay}". **HƯỚN DẪN CHI TIẾT CHO TAG \`[GENERATED_SKILL: ...]\`:**
             - **Thuộc tính chung (BẮT BUỘC cho mọi loại):** \`name\`, \`description\`, \`skillType="CHỌN MỘT TRONG: ${Object.values(GameTemplates.SkillType).join(' | ')}"\`, \`otherEffects="Hiệu ứng đặc biệt của kĩ năng, bắt buộc phải có"\`.
@@ -172,10 +172,6 @@ ${nsfwGuidanceForWorldGen}
             - **Bối cảnh/Vai trò (details):** Một "Luyện Khí Sư" sẽ có mục tiêu rèn đúc pháp bảo. Một "Vệ binh thành" sẽ có mục tiêu giữ gìn trật tự.
             - **Chủng tộc (race):** Mục tiêu của một "Ma tu" sẽ khác một "Yêu tu".
             - **Cảnh giới (realm):** Một tu sĩ Luyện Khí Kỳ chỉ muốn đột phá Trúc Cơ. Một Đại Năng Hóa Thần có thể có mục tiêu tìm hiểu bí mật phi thăng.
-            **Ví dụ cụ thể để AI học theo:**
-            - Một trưởng lão tông môn (details="Trưởng lão Hộ pháp của Thanh Vân Tông") có thể có: longTermGoal="Đột phá cảnh giới Hóa Thần", shortTermGoal="Tìm kiếm một đệ tử có tư chất tốt để truyền lại y bát".
-            - Một tiểu thương (details="Chủ một sạp hàng nhỏ ở chợ Nam") có thể có: longTermGoal="Trở thành phú hộ giàu nhất thành", shortTermGoal="Bán hết lô hàng vừa nhập về".
-            - Một Luyện Khí Sư (details="Thợ rèn vũ khí trong thành") có thể có: longTermGoal="Rèn ra một thanh pháp bảo Địa phẩm", shortTermGoal="Tìm kiếm khoáng thạch Hắc Thiết".
             **QUY TẮC MỚI VỀ VỊ TRÍ NPC (LOGIC ƯU TIÊN THÔNG MINH):**
             
             **1. Ưu Tiên Gán Ghép (Prioritize Matching):**
@@ -190,40 +186,23 @@ ${nsfwGuidanceForWorldGen}
             Khi bạn tự tạo một địa điểm mới, giá trị của \`locationName\` **TUYỆT ĐỐI PHẢI** là tên của một **khu vực lớn** (ví dụ: một tông môn, một thành phố, một khu rừng, một sơn cốc).
             
             **TUYỆT ĐỐI CẤM** tạo ra các địa điểm phụ, nhỏ lẻ bên trong một khu vực khác (ví dụ: 'Phòng của Trưởng môn', 'Quán trọ Phước Lai', 'Lò rèn của Lý Thiết Tượng'). Các địa điểm nhỏ này sẽ được tạo ra sau trong quá trình chơi game.
-            
-            **VÍ DỤ VỀ LUỒNG LÀM VIỆC ĐÚNG:**
-            *   **(Gán ghép):**
-                1.  Tạo địa điểm: \`[GENERATED_LOCATION: name="Thanh Vân Môn", ...]\`
-                2.  Gán cho NPC: \`[GENERATED_NPC: name="Đạo Huyền Chân Nhân", ..., locationName="Thanh Vân Môn"]\`
-            *   **(Sáng tạo mới):**
-                1.  (Không có địa điểm ma đạo nào được tạo trước đó)
-                2.  Tạo NPC Ma Tôn: \`[GENERATED_NPC: name="Hắc Ma Tôn", ..., locationName="Vạn Ma Quật"]\` (AI tự tạo ra "Vạn Ma Quật" vì nó là một khu vực lớn).
 
-            **VÍ DỤ VỀ LUỒNG LÀM VIỆC SAI (CẤM):**
-            *   \`[GENERATED_NPC: ..., locationName="Nghĩa Trang trong Khu Rừng Âm U"]\`
-            *   \`[GENERATED_NPC: ..., locationName="Phòng Trưởng Môn"]\`
-
-            [GENERATED_NPC: name="Tên NPC (BẮT BUỘC)", gender="Nam/Nữ/Khác/Không rõ (BẮT BUỘC)", race="Chủng tộc (BẮT BUỘC, CHỈ ĐƯỢC TẠO RA NHỮNG CHỦNG TỘC CÓ HỆ THỐNG CẢNH GIỚI Ở TRÊN, TUYỆT ĐỐI KHÔNG CHỌN CHỦNG TỘC YÊU THÚ)", personality="Tính cách (BẮT BUỘC)", longTermGoal="Mục tiêu dài hạn của NPC (BẮT BUỘC)", shortTermGoal="Mục tiêu ngắn hạn của NPC (BẮT BUỘC)", initialAffinity=0 (SỐ NGUYÊN), details="Chi tiết (BẮT BUỘC)"${npcRealmInstructionFanfic}, relationshipToPlayer="Mối quan hệ (suy luận từ truyện gốc hoặc tạo mới, ví dụ: 'Đồng Môn', 'Kẻ Thù không đội trời chung', 'Người Yêu Tiền Kiếp'...)" (BẮT BUỘC nhưng khi npc và người chơi không có quan hệ gì thì để là 'Người xa lạ'), locationName="Tên địa điểm do AI tạo (BẮT BUỘC)"]. NPC chỉ áp dụng cho người hoặc những loài có hình dạng tương tự người như tiên tộc, yêu tộc đã hóa hình,...
-        *   **Yêu Thú Khởi Đầu (KHÔNG GIỚI HẠN SỐ LƯỢNG):** Tạo ra các Yêu Thú từ truyện gốc hoặc mới, phù hợp với bối cảnh.
+            **VÍ DỤ ĐỊNH DẠNG TAG MỚI CHO NPC:**
+            [GENERATED_NPC: name="Tên NPC (BẮT BUỘC)", gender="Nam/Nữ/Khác/Không rõ (BẮT BUỘC)", race="Chủng tộc (BẮT BUỘC, CHỈ ĐƯỢC TẠO RA NHỮNG CHỦNG TỘC CÓ HỆ THỐNG CẢNH GIỚI Ở TRÊN, TUYỆT ĐỐI KHÔNG CHỌN CHỦNG TỘC YÊU THÚ, ví dụ: Nhân Tộc, Yêu Tộc)", personality="Tính cách nổi bật (BẮT BUỘC)", longTermGoal="Mục tiêu dài hạn của NPC (BẮT BUỘC)", shortTermGoal="Mục tiêu ngắn hạn của NPC (BẮT BUỘC)", initialAffinity=0 (SỐ NGUYÊN từ -100 đến 100), details="Vai trò, tiểu sử ngắn hoặc mối liên hệ với người chơi (BẮT BUỘC), phù hợp với thể loại '${effectiveGenreDisplay}'"${npcRealmInstructionFanfic}, relationshipToPlayer="Mối quan hệ (ví dụ: 'Mẹ Con', 'Sư phụ', 'Bằng hữu', 'Chủ nhân - nô lệ', 'Vợ chồng', 'Đạo lữ', 'Đối thủ', 'Bạn thời thơ ấu', 'Người bảo hộ', 'Chủ nợ'...)" (BẮT BUỘC nhưng khi npc và người chơi không có quan hệ gì thì để là 'Người xa lạ'), locationName="Tên địa điểm do AI tạo (BẮT BUỘC)"]. NPC chỉ áp dụng cho người hoặc những loài có hình dạng tương tự người như tiên tộc, yêu tộc đã hóa hình,...
+        *   **Yêu Thú Khởi Đầu (5-6 Yêu thú):**
             [GENERATED_YEUTHU: name="Tên Yêu Thú (BẮT BUỘC)", species="Loài (BẮT BUỘC)", description="Mô tả (BẮT BUỘC, CHỈ ĐƯỢC TẠO RA NHỮNG CHỦNG TỘC CÓ HỆ THỐNG CẢNH GIỚI Ở TRÊN)", realm="Cảnh giới Yêu Thú (BẮT BUỘC nếu có tu luyện)", isHostile=true (true/false)]
-        *   **Tri Thức Thế Giới Khởi Đầu (KHÔNG GIỚI HẠN SỐ LƯỢNG):** Tạo ra BẤT KỲ khái niệm, lịch sử, địa danh, hoặc quy tắc nào (từ truyện gốc hoặc mới) để làm rõ bối cảnh đồng nhân (Tầm 10 Tri Thức Thế Giới Khởi Đầu trở lên), phù hợp với thể loại "${effectiveGenreDisplay}".
+        *   **Tri Thức Thế Giới Khởi Đầu (7-8 tri thức):** Phù hợp với thế giới đồng nhân và thể loại "${effectiveGenreDisplay}".
             [GENERATED_LORE: title="Tiêu đề Tri Thức (BẮT BUỘC)", content="Nội dung chi tiết (BẮT BUỘC)"]
-        *   **Địa Điểm Khởi Đầu (KHÔNG GIỚI HẠN SỐ LƯỢNG):** Tạo ra các Địa Điểm Khởi Đầu **chính** (từ truyện gốc hoặc mới) phù hợp với bối cảnh đồng nhân và thể loại "${effectiveGenreDisplay}". **Địa điểm đầu tiên trong danh sách sẽ được coi là vị trí khởi đầu của người chơi.** Hãy đảm bảo địa điểm này có tên phù hợp với bối cảnh truyện gốc (ví dụ: 'Thôn Thảo Miếu', 'Thất Huyền Môn').
+        *   **Địa Điểm Khởi Đầu (7-8 địa điểm):** **Địa điểm đầu tiên trong danh sách sẽ là vị trí khởi đầu của người chơi.**
             **Định dạng:** [GENERATED_LOCATION: name="Tên (BẮT BUỘC)", description="Mô tả (BẮT BUỘC)", locationType="CHỌN MỘT TRONG: ${Object.values(GameTemplates.LocationType).join(' | ')}" (BẮT BUỘC), isSafeZone=false (true/false), regionId="Tên Vùng", mapX=100 (BẮT BUỘC, 0-800), mapY=100 (BẮT BUỘC, 0-600)]
-            **LƯU Ý QUAN TRỌNG:** Tất cả các địa điểm được tạo ở đây phải là các địa điểm chính, độc lập (ví dụ: làng, thành phố, tông môn). **KHÔNG** tạo ra các địa điểm phụ nằm bên trong một địa điểm khác (ví dụ: một "Dược Phòng" bên trong "Thất Huyền Môn"). Các địa điểm phụ sẽ được tạo ra sau trong game.
-            **Ví dụ:** [GENERATED_LOCATION: name="Thất Huyền Môn", description="Một trong những tông môn lớn của Việt Quốc.", locationType="${GameTemplates.LocationType.SECT_CLAN}", isSafeZone=true, mapX=400, mapY=150]
+            **LƯU Ý QUAN TRỌNG:** Tất cả các địa điểm được tạo ở đây phải là các địa điểm chính, độc lập. **KHÔNG** tạo ra các địa điểm phụ nằm bên trong một địa điểm khác.
         *   **Phe Phái Khởi Đầu (9-10 phe phái, nếu phù hợp):**
             [GENERATED_FACTION: name="Tên Phe Phái (BẮT BUỘC)", description="Mô tả phe phái (BẮT BUỘC)", alignment="CHỌN MỘT TRONG: ${ALL_FACTION_ALIGNMENTS.join(' | ')}" (BẮT BUỘC), initialPlayerReputation=0 (SỐ NGUYÊN)]
 
-2.  **Nếu truyện gốc là truyện 18+ thì các yếu tố được tạo ra sẽ ưu tiên mang hướng 18+ nhiều hơn, bao gồm cả tóm tắt cốt truyện nguyên tác. Nếu tùy chọn "Yêu cầu nội dung 18+" ở trên được BẬT, hãy áp dụng mức độ 18+ cao hơn nữa.**
-
-**QUAN TRỌNG:**
-- **Tóm Tắt Cốt Truyện Nguyên Tác phải chi tiết và có cấu trúc giai đoạn rõ ràng.**
-- **Không giới hạn số lượng NPC, Tri Thức Thế Giới (Lore) và Địa Điểm Khởi Đầu được tạo ra.** Hãy sáng tạo thật nhiều để làm giàu thế giới đồng nhân!
-- Chỉ sử dụng các tag ĐÚNG ĐỊNH DẠNG đã cho ở trên. Mỗi tag trên một dòng riêng.
-- Giá trị của các thuộc tính trong tag (name, description, text, ...) phải được đặt trong dấu ngoặc kép.
-- Cung cấp thông tin bằng tiếng Việt.
-- Đảm bảo các yếu tố này phù hợp và nhất quán với nguồn cảm hứng đồng nhân được cung cấp và thể loại "${effectiveGenreDisplay}".
-- Không thêm bất kỳ lời dẫn, giải thích, hay văn bản nào khác ngoài các tag được yêu cầu.
+2.  **Chỉ sử dụng các tag ĐÚNG ĐỊNH DẠNG đã cho ở trên.** Mỗi tag trên một dòng riêng.
+3.  Giá trị của các thuộc tính trong tag phải được đặt trong dấu ngoặc kép.
+4.  Cung cấp thông tin bằng tiếng Việt.
+5.  Đảm bảo các yếu tố này phù hợp và nhất quán với Nguồn Cảm Hứng Đồng Nhân.
+6.  Không thêm bất kỳ lời dẫn, giải thích, hay văn bản nào khác ngoài các tag được yêu cầu.
 `;
 };

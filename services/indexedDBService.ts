@@ -1,5 +1,6 @@
-import { SaveGameData, SaveGameMeta, KnowledgeBase, GameMessage, TurnHistoryEntry } from '../types';
-import { APP_VERSION, VIETNAMESE, MAX_AUTO_SAVE_SLOTS } from '../constants';
+// services/indexedDBService.ts
+import { SaveGameData, SaveGameMeta, KnowledgeBase, GameMessage, TurnHistoryEntry } from '@/types/index';
+import { APP_VERSION, VIETNAMESE, MAX_AUTO_SAVE_SLOTS } from '@/constants';
 
 const DB_NAME = 'DaoDoAIDB';
 const DB_VERSION = 2; 

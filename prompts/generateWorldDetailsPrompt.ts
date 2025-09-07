@@ -1,7 +1,8 @@
 import { SUB_REALM_NAMES, ALL_FACTION_ALIGNMENTS, AVAILABLE_GENRES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, VIOLENCE_LEVELS, STORY_TONES, DEFAULT_NSFW_DESCRIPTION_STYLE, NSFW_DESCRIPTION_STYLES, WEAPON_TYPES_FOR_VO_Y, STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS } from '../constants';
-import * as GameTemplates from '../templates';
-import { GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, TU_CHAT_TIERS, WorldSettings } from '../types';
-import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../templates';
+import * as GameTemplates from '@/types/index';
+import type { GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, WorldSettings } from '@/types/index';
+import { TU_CHAT_TIERS } from '@/types/index';
+import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '@/types/index';
 import { getNsfwGuidance } from './promptUtils';
 
 export const generateWorldDetailsPrompt = (
@@ -164,7 +165,7 @@ ${lifespanInstruction}
             - **CHI TIẾT THUỘC TÍNH:**
                 - \`category\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.ItemCategory).join(' | ')}\`.
                 - \`rarity\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.ItemRarity).join(' | ')}\`.
-                - **\`itemRealm\`: BẮT BUỘC. Đây là cảnh giới/cấp độ của vật phẩm, quyết định sức mạnh và giá trị cơ bản của nó. **PHẢI** là một trong các cảnh giới lớn trong tag \`[GENERATED_RACE_SYSTEM: race="Nhân Tộc", ...]\` mà bạn đã tạo. Ví dụ, nếu bạn tạo hệ thống cho Nhân Tộc là \`system="Luyện Khí - Trúc Cơ"\`, thì \`itemRealm\` chỉ có thể là "Luyện Khí" hoặc "Trúc Cơ".**
+                - **\`itemRealm\`: BẮT BUỘC. Đây là cảnh giới/cấp độ của vật phẩm, quyết định sức mạnh và giá trị cơ bản của nó. **PHẢI** là một trong các cảnh giới lớn trong tag \`[GENERATED_RACE_SYSTEM: race="Nhân Tộc", ...]\` mà bạn đã tạo.**
             - **THUỘC TÍNH BỔ SUNG TÙY THEO \`category\`:**
                 - Nếu \`category="${GameTemplates.ItemCategory.EQUIPMENT}"\`:
                     - \`equipmentType\`: BẮT BUỘC. Phải là một trong: \`${Object.values(GameTemplates.EquipmentType).join(' | ')}\`.

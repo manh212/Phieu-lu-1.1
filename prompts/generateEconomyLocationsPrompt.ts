@@ -1,5 +1,5 @@
-import { KnowledgeBase, GameLocation } from '../types';
-import * as GameTemplates from '../templates';
+import { KnowledgeBase, GameLocation } from '../types/index';
+import * as GameTemplates from '../types/index';
 import { TU_CHAT_TIERS, SUB_REALM_NAMES } from '../constants';
 
 export const generateEconomyLocationsPrompt = (city: GameLocation, kb: KnowledgeBase): string => {
@@ -116,4 +116,5 @@ ${worldConfig?.nsfwMode ? `[SLAVE_FOR_SALE: parentId="Mụ Tú Bà", name="Tiể
 
 **LƯU Ý QUAN TRỌNG:**
 - Chỉ trả về các tag, không có lời dẫn hay giải thích gì thêm.
-`};
+`;
+};

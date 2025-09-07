@@ -1,5 +1,5 @@
 // src/utils/eventUtils.ts
-import { KnowledgeBase, GameMessage, WorldDate, GameEvent } from '../types';
+import { KnowledgeBase, GameMessage, WorldDate, GameEvent } from '../types/index';
 
 const worldDateToTotalDays = (date: WorldDate): number => {
     return (date.year * 360) + ((date.month - 1) * 30) + date.day;

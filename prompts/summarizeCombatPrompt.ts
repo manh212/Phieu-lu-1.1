@@ -1,7 +1,7 @@
-import { KnowledgeBase, CombatEndPayload, NPC, YeuThu, ItemCategoryValues, TU_CHAT_TIERS, GameMessage } from '../types';
-import * as GameTemplates from '../templates';
+import { KnowledgeBase, CombatEndPayload, NPC, YeuThu, ItemCategoryValues, TU_CHAT_TIERS, GameMessage } from '../types/index';
+import * as GameTemplates from '../types/index';
 import { STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
-import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../templates';
+import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../types/index';
 import { getNsfwGuidance } from './promptUtils';
 
 // A local type to safely add entityType

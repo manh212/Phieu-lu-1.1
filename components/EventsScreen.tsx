@@ -1,6 +1,7 @@
 // src/components/EventsScreen.tsx
 import React, { useState, useMemo } from 'react';
-import { GameScreen, GameEvent } from '../types';
+// FIX: Correct import path for types
+import { GameScreen, GameEvent } from '../types/index';
 import { useGame } from '../hooks/useGame';
 import Button from './ui/Button';
 import { VIETNAMESE } from '../constants';

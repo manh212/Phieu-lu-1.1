@@ -1,8 +1,9 @@
 
 
+
 import React from 'react';
-import { Item } from '../../types';
-import { VIETNAMESE } from '../../constants';
+import { Item } from '@/types/index';
+import { VIETNAMESE } from '@/constants';
 
 interface InventoryPanelProps {
   items: Item[];

@@ -1,4 +1,5 @@
-import { TuChatTier } from '../types';
+// FIX: Correct import path for types
+import { TuChatTier } from '@/types/index';
 
 // Exported for use in UI dropdowns and logic
 export const TU_CHAT_TIERS: readonly TuChatTier[] = ["Phế Phẩm", "Hạ Đẳng", "Trung Đẳng", "Thượng Đẳng", "Cực Phẩm", "Tiên Phẩm", "Thần Phẩm"];

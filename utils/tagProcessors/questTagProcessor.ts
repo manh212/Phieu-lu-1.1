@@ -1,5 +1,5 @@
 import { VIETNAMESE } from '../../constants'; // VIETNAMESE might be needed for quest related strings in the future
-import { KnowledgeBase, GameMessage, QuestObjective, Quest, VectorMetadata, ActivityLogEntry, NPC, Wife, Slave, Prisoner } from '../../types';
+import { KnowledgeBase, GameMessage, QuestObjective, Quest, VectorMetadata, ActivityLogEntry, NPC, Wife, Slave, Prisoner } from '../../types/index';
 import { formatQuestForEmbedding } from '../ragUtils';
 import { diceCoefficient, normalizeStringForComparison, formatObjectiveForSystemMessage } from '../questUtils';
 

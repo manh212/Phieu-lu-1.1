@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { WorldSettings, StartingItem, Item } from '../../../../types';
-import * as GameTemplates from '../../../../templates';
+import { WorldSettings, StartingItem, Item } from '../../../../types/index';
+import * as GameTemplates from '../../../../types/index';
 import { VIETNAMESE, STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS } from '../../../../constants';
 import { calculateItemValue } from '../../../../utils/statsCalculationUtils';
 import InputField from '../../../ui/InputField';

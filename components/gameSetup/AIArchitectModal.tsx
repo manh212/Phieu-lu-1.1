@@ -1,18 +1,18 @@
-
 // src/components/gameSetup/AIArchitectModal.tsx
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { WorldSettings } from '../../types';
+// FIX: Correct import path for types
+import { WorldSettings } from '../../types/index';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Spinner from '../ui/Spinner';
-import { generateArchitectResponse } from '../../services/geminiService';
+import { generateArchitectResponse } from '../../services';
 import { processSetupTags } from '../../utils/setupTagProcessor';
 
 interface AIArchitectModalProps {
     isOpen: boolean;
     onClose: () => void;
     currentSettings: WorldSettings;
-    onApplyChanges: React.Dispatch<React.SetStateAction<WorldSettings>>;
+    onApplyChanges: (newSettings: WorldSettings) => void;
 }
 
 type ArchitectChatMessage = {

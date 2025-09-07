@@ -2,7 +2,7 @@
 import React from 'react';
 
 // Common props for all icons to control size and styling from the parent
-interface IconProps {
+export interface IconProps {
   width?: number | string;
   height?: number | string;
   className?: string;

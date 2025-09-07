@@ -1,14 +1,14 @@
 
 import React, { useState, ChangeEvent, useRef } from 'react'; 
-import { PlayerStats, Item, EquipmentSlotId, KnowledgeBase, StatusEffect, WorldDate, TuChatTier } from '../../../types';
-import { VIETNAMESE, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL } from '../../../constants';
-import * as GameTemplates from '../../../templates';
-import Modal from '../../ui/Modal'; 
-import Button from '../../ui/Button'; 
-import InputField from '../../ui/InputField'; // Added InputField
-import Spinner from '../../ui/Spinner'; // Added Spinner
-import { isValidImageUrl } from '../../../utils/imageValidationUtils'; // Added image validation
-import { getDeterministicAvatarSrc } from '../../../utils/avatarUtils';
+import { PlayerStats, Item, EquipmentSlotId, KnowledgeBase, StatusEffect, WorldDate, TuChatTier } from '@/types/index';
+import { VIETNAMESE, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL } from '@/constants';
+import * as GameTemplates from '@/types/index';
+import Modal from '@/components/ui/Modal'; 
+import Button from '@/components/ui/Button'; 
+import InputField from '@/components/ui/InputField'; // Added InputField
+import Spinner from '@/components/ui/Spinner'; // Added Spinner
+import { isValidImageUrl } from '@/utils/imageValidationUtils'; // Added image validation
+import { getDeterministicAvatarSrc } from '@/utils/avatarUtils';
 
 interface PlayerStatsWithEquipmentProps {
   playerStats: PlayerStats; 
@@ -27,10 +27,10 @@ interface PlayerStatsWithEquipmentProps {
   isUploadingPlayerAvatar?: boolean; 
   currentLocationName?: string;
   tuChat?: TuChatTier;
-  personId?: string; // NEW: Unique ID for the person (player or NPC)
+  personId: string;
 }
 
-const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = React.memo(({
+export const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = React.memo(({
   playerStats,
   equippedItems,
   inventory,
@@ -208,7 +208,7 @@ const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = React.
     <div className="bg-gray-800 p-3 sm:p-4 rounded-lg shadow-md border border-gray-700">
       <div className="flex items-start mb-3 border-b border-gray-700 pb-2">
         <img 
-            src={getDeterministicAvatarSrc({ id: personId || (isPlayerContext ? 'player' : 'unknown-char'), avatarUrl: playerAvatarData || playerAvatarUrl, gender: playerGender })}
+            src={getDeterministicAvatarSrc({ id: personId, avatarUrl: playerAvatarData || playerAvatarUrl, gender: playerGender })}
             alt={VIETNAMESE.playerAvatarLabel} 
             className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-indigo-500 shadow-md mr-3 sm:mr-4"
         />
@@ -451,5 +451,3 @@ const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = React.
     </>
   );
 });
-
-export default PlayerStatsWithEquipment;

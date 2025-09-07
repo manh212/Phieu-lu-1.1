@@ -1,5 +1,6 @@
-import { KnowledgeBase, FindLocationParams } from '../types';
-import * as GameTemplates from '../templates';
+// FIX: Corrected import paths for types.
+import { KnowledgeBase, FindLocationParams } from '../types/index';
+import * as GameTemplates from '../types/index';
 
 export const generateFindLocationPrompt = (
     kb: KnowledgeBase,

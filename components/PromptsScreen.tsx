@@ -1,7 +1,8 @@
 
+
 import React, { useState } from 'react';
 import { useGame } from '../hooks/useGame';
-import { GameScreen } from '../types';
+import { GameScreen } from '../types/index';
 import Button from './ui/Button';
 import InputField from './ui/InputField';
 import { VIETNAMESE } from '../constants';

@@ -1,6 +1,5 @@
-
-import { KnowledgeBase, AuctionItem } from '../types';
-import * as GameTemplates from '../templates';
+import { KnowledgeBase, AuctionItem } from '../types/index';
+import * as GameTemplates from '../types/index';
 import { AUCTION_NPC_CURRENCY_BY_REALM_TIER, TU_CHAT_TIERS, SUB_REALM_NAMES } from '../constants';
 
 export const generateSlaveAuctionDataPrompt = (kb: KnowledgeBase): string => {
@@ -73,4 +72,4 @@ ${cultivationSystemContext}
 
 - Chỉ trả về các tag, không có lời dẫn hay giải thích gì thêm.
 `;
-}
+};

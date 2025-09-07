@@ -1,5 +1,4 @@
-
-import { KnowledgeBase, GameMessage, StatusEffect, PlayerStats } from '../../types';
+import { KnowledgeBase, GameMessage, StatusEffect, PlayerStats } from '../../types/index';
 import { VIETNAMESE } from '../../constants';
 import { calculateEffectiveStats } from '../statsCalculationUtils';
 

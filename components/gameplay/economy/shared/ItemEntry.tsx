@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Item as ItemType } from '../../../../types';
+import { Item as ItemType } from '../../../../types/index';
 import Button from '../../../ui/Button';
 
 interface ItemEntryProps {

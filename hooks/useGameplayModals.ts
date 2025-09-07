@@ -1,6 +1,6 @@
-
 import { useState, useCallback } from 'react';
-import { Item, Skill, Quest, NPC, GameLocation, WorldLoreEntry, Faction, Companion, YeuThu as YeuThuTemplate, Wife, Slave, Prisoner } from '../types';
+// FIX: Correct import path for types
+import { Item, Skill, Quest, NPC, GameLocation, WorldLoreEntry, Faction, Companion, YeuThu as YeuThuTemplate, Wife, Slave, Prisoner } from '../types/index';
 import { GameEntity, GameEntityType } from './types';
 
 export const useGameplayModals = () => {

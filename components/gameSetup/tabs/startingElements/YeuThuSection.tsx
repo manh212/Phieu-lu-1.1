@@ -1,6 +1,8 @@
 
+
 import React from 'react';
-import { WorldSettings, StartingYeuThu } from '../../../../types';
+// FIX: Corrected import path for types.
+import { WorldSettings, StartingYeuThu } from '@/types/index';
 import { VIETNAMESE } from '../../../../constants';
 import InputField from '../../../ui/InputField';
 import Button from '../../../ui/Button';

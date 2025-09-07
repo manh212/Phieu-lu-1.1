@@ -1,7 +1,8 @@
 
 
 
-import { AIContextConfig } from '../types';
+
+import { AIContextConfig } from '../types/index';
 
 // NEW: AI Context Settings Logic
 export const DEFAULT_AI_CONTEXT_CONFIG: AIContextConfig = {

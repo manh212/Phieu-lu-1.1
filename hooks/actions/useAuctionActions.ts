@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
-import { KnowledgeBase, GameMessage, GameScreen, Item, AuctionItem, AuctionCommentaryEntry, Item as ItemType } from '../../types';
-import { generateAuctionData, runAuctionTurn, runAuctioneerCall } from '../../services/geminiService';
+// FIX: Corrected import path for types.
+import { KnowledgeBase, GameMessage, GameScreen, Item, AuctionItem, AuctionCommentaryEntry, Item as ItemType } from '../../types/index';
+import { generateAuctionData, runAuctionTurn, runAuctioneerCall } from '../../services';
 import { performTagProcessing, calculateItemValue } from '../../utils/gameLogicUtils';
 import { VIETNAMESE } from '../../constants';
 

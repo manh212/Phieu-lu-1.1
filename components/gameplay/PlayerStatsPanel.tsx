@@ -1,8 +1,9 @@
 
 
+
 import React from 'react';
-import { PlayerStats, KnowledgeBase } from '../../types'; // Added KnowledgeBase
-import { VIETNAMESE } from '../../constants';
+import { PlayerStats, KnowledgeBase } from '@/types/index'; // Added KnowledgeBase
+import { VIETNAMESE } from '@/constants';
 import StatDisplay from './StatDisplay';
 
 interface PlayerStatsPanelProps {

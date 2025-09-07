@@ -1,6 +1,6 @@
-
 import React, { useRef, useEffect } from 'react';
-import { GameMessage, CombatLogContent } from '../../types';
+// FIX: Correct import path for types.
+import { GameMessage, CombatLogContent } from '@/types/index';
 
 interface CombatLogProps {
     messages: GameMessage[];

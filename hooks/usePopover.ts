@@ -1,5 +1,8 @@
 
+
+
 import { useState, useCallback } from 'react';
+// FIX: Correct import path for types
 import type { GameEntity, GameEntityType } from './types';
 
 export const usePopover = () => {

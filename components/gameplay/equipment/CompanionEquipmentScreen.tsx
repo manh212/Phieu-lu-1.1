@@ -1,15 +1,16 @@
+
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { GameScreen, KnowledgeBase, Item, EquipmentSlotId, EquipmentSlotConfig, Wife, Slave, ComplexCompanionBase, PlayerStats } from '../../../types';
-import Button from '../../ui/Button';
-import { VIETNAMESE, EQUIPMENT_SLOTS_CONFIG, DEFAULT_PLAYER_STATS } from '../../../constants';
-import * as GameTemplates from '../../../templates';
+import { GameScreen, KnowledgeBase, Item, EquipmentSlotId, EquipmentSlotConfig, Wife, Slave, ComplexCompanionBase, PlayerStats } from '@/types/index';
+import Button from '@/components/ui/Button';
+import { VIETNAMESE, EQUIPMENT_SLOTS_CONFIG, DEFAULT_PLAYER_STATS } from '@/constants';
+import * as GameTemplates from '@/types/index';
 import EquipmentSlotUI from './EquipmentSlotUI';
 import EquipmentInventoryList from './EquipmentInventoryList';
-import PlayerStatsWithEquipment from './PlayerStatsWithEquipment';
-import EquippableItemsPopover from './EquippableItemsPopover';
-import { useGame } from '../../../hooks/useGame';
-import InputField from '../../ui/InputField';
-import { calculateEffectiveStats, calculateRealmBaseStats } from '../../../utils/statsCalculationUtils';
+import { PlayerStatsWithEquipment } from './PlayerStatsWithEquipment';
+import EquippableItemsPopover from './EquippableItemsPopover'; 
+import { useGame } from '@/hooks/useGame';
+import InputField from '@/components/ui/InputField';
+import { calculateEffectiveStats, calculateRealmBaseStats } from '@/utils/statsCalculationUtils';
 
 export const CompanionEquipmentScreen: React.FC = () => {
     const { knowledgeBase, setKnowledgeBase, setCurrentScreen } = useGame();

@@ -1,6 +1,7 @@
-import { WorldSettings, StartingItem, GenreType, ViolenceLevel, StoryTone, DIALOGUE_MARKER, TuChatTier, StartingSkill, AIContextConfig } from '../types';
+import type { WorldSettings, StartingItem, GenreType, ViolenceLevel, StoryTone, StartingSkill, AIContextConfig } from '@/types/index';
+import { DIALOGUE_MARKER, TuChatTier } from '@/types/index';
 import { SUB_REALM_NAMES, VIETNAMESE, AVAILABLE_GENRES, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, NSFW_DESCRIPTION_STYLES, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, TU_CHAT_TIERS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
-import * as GameTemplates from '../templates';
+import * as GameTemplates from '@/types/index';
 import { continuePromptSystemRules, storytellingRulesSection } from '../constants/systemRulesNormal';
 import { getTimeOfDayContext } from '../utils/dateUtils';
 import { getNsfwGuidance } from './promptUtils';

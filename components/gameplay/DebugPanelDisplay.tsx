@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { KnowledgeBase, NPC } from '../../types';
-import { VIETNAMESE } from '../../constants';
-import Button from '../ui/Button';
+import { KnowledgeBase, NPC } from '@/types/index';
+import { VIETNAMESE } from '@/constants/index';
+import Button from '@/components/ui/Button';
 
 interface DebugPanelDisplayProps {
   kb: KnowledgeBase;
@@ -21,7 +21,6 @@ interface DebugPanelDisplayProps {
   totalPages: number;
   isAutoPlaying: boolean;
   onToggleAutoPlay: () => void;
-  // FIX: Renamed prop to match what is being passed from GameplayScreen, resolving the error.
   onStartDebugCombat: () => void;
   onProcessDebugTags: (narration: string, tags: string) => Promise<void>;
   isLoading: boolean;

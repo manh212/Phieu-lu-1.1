@@ -1,5 +1,5 @@
 // src/prompts/architectPrompt.ts
-import * as GameTemplates from '../templates';
+import * as GameTemplates from '../types/index';
 import { STAT_POINT_VALUES, SPECIAL_EFFECT_KEYWORDS } from '../constants';
 
 

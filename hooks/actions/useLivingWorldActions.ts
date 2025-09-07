@@ -1,16 +1,16 @@
-
-import { useCallback } from 'react';
-// FIX: Added ActivityLogEntry to imports
-import { KnowledgeBase, GameMessage, NPC, ActivityLogEntry } from '../../types';
-import { generateWorldTickUpdate } from '../../services/geminiService';
+// src/utils/actions/useLivingWorldActions.ts
+// FIX: Correct import path for types
+import { KnowledgeBase, GameMessage, NPC, ActivityLogEntry } from '@/types/index';
+import { generateWorldTickUpdate } from '../../services';
 // FIX: Added PROMPT_FUNCTIONS to imports
 import {
     scheduleWorldTick,
     parseAndValidateResponse,
     convertNpcActionToTag,
     performTagProcessing,
-    PROMPT_FUNCTIONS
 } from '../../utils/gameLogicUtils';
+import { PROMPT_FUNCTIONS } from '../../prompts';
+import { useCallback } from 'react';
 
 export interface UseLivingWorldActionsProps {
     knowledgeBase: KnowledgeBase;
@@ -38,7 +38,7 @@ export const useLivingWorldActions = (props: UseLivingWorldActionsProps) => {
         setKnowledgeBase(prev => ({...prev, isWorldTicking: true}));
         try {
             const npcsToTick = scheduleWorldTick(kbForTick);
-            setLastScoredNpcsForTick(npcsToTick.map(npc => ({ npc, score: npc.tickPriorityScore })));
+            setLastScoredNpcsForTick(npcsToTick.map(npc => ({ npc, score: npc.tickPriorityScore! })));
 
             if (npcsToTick.length === 0) {
                 const updatedKb = JSON.parse(JSON.stringify(kbForTick));
@@ -125,7 +125,6 @@ export const useLivingWorldActions = (props: UseLivingWorldActionsProps) => {
         } finally {
           setKnowledgeBase(prev => ({...prev, isWorldTicking: false}));
         }
-    // FIX: Corrected typo in dependency from setSentLivingWorldResponsesLog to setSentLivingWorldPromptsLog
     }, [setKnowledgeBase, logNpcAvatarPromptCallback, showNotification, setLastScoredNpcsForTick, setRawLivingWorldResponsesLog, setSentLivingWorldPromptsLog]);
 
     const handleManualTick = useCallback(async () => {

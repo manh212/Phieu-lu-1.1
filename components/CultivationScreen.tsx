@@ -1,12 +1,15 @@
 
 
+
 import React, { useState, useMemo, useEffect } from 'react';
-import { KnowledgeBase, GameScreen, Skill, NPC, Wife, Slave } from './../types';
+// FIX: Corrected import path for types.
+import { KnowledgeBase, GameScreen, Skill, NPC, Wife, Slave } from '@/types/index';
 import Button from './ui/Button';
 import InputField from './ui/InputField';
 import Spinner from './ui/Spinner';
 import { VIETNAMESE } from './../constants';
-import * as GameTemplates from './../templates';
+// FIX: Corrected import path for templates.
+import * as GameTemplates from '@/types/index';
 import { useGame } from '../hooks/useGame';
 import Modal from './ui/Modal';
 

@@ -1,6 +1,6 @@
 // src/utils/tagProcessors/relationshipEventTagProcessor.ts
 
-import { KnowledgeBase, GameMessage, VectorMetadata, NPC, Wife, Slave, Prisoner, Master, ActivityLogEntry } from '../../types';
+import { KnowledgeBase, GameMessage, VectorMetadata, NPC, Wife, Slave, Prisoner, Master, ActivityLogEntry } from '../../types/index';
 import { formatRelationshipMemoryForEmbedding } from '../ragUtils';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
 

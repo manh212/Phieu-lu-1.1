@@ -1,8 +1,10 @@
 import React from 'react';
-import { GameLocation } from '../../../types';
+// FIX: Correct import path for types
+import { GameLocation } from '@/types/index';
 import { MAP_COLORS, MAP_SIZES } from './mapConstants';
 import * as LocationIcons from './mapIcons';
-import * as GameTemplates from '../../../templates';
+// FIX: Correct import path for templates
+import * as GameTemplates from '@/types/index';
 
 interface InteractiveMapProps {
   locations: GameLocation[];
@@ -13,7 +15,7 @@ interface InteractiveMapProps {
   onNodeMouseDown: (event: React.MouseEvent<SVGGElement>, locationId: string) => void;
 }
 
-// Define the props interface for the icon components locally, as it is not exported from mapIcons.tsx
+// FIX: Define the props interface for the icon components locally, as it is not exported from mapIcons.tsx
 interface IconProps {
   width?: number | string;
   height?: number | string;

@@ -1,20 +1,18 @@
 
-
-
 import React, { useState, useEffect, ChangeEvent } from 'react';
-import { GameScreen, ApiConfig, SafetySetting, AvatarGenerationEngine } from '../types'; 
+import { GameScreen, ApiConfig, SafetySetting, AvatarGenerationEngine } from '@/types/index'; 
 import Button from './ui/Button';
 import { 
   VIETNAMESE, 
-  API_SETTINGS_STORAGE_KEY, 
+  STORAGE_SETTINGS_STORAGE_KEY, 
   AVAILABLE_MODELS, 
   HARM_CATEGORIES,      
   HARM_BLOCK_THRESHOLDS, 
   DEFAULT_API_CONFIG,
   AVAILABLE_AVATAR_ENGINES, // New Import
   DEFAULT_AVATAR_GENERATION_ENGINE // New Import
-} from '../constants';
-import { getApiSettings } from '../services/geminiService'; 
+} from '@/constants';
+import { getApiSettings } from '@/services'; 
 import { HarmCategory, HarmBlockThreshold } from '@google/genai'; 
 
 interface ApiSettingsScreenProps {
@@ -121,7 +119,7 @@ const ApiSettingsScreen: React.FC<ApiSettingsScreenProps> = ({ setCurrentScreen,
       avatarGenerationEngine: selectedAvatarEngine,
       ragTopK: ragTopK,
     };
-    localStorage.setItem(API_SETTINGS_STORAGE_KEY, JSON.stringify(settingsToSave));
+    localStorage.setItem(STORAGE_SETTINGS_STORAGE_KEY, JSON.stringify(settingsToSave));
     
     setSuccessMessage(VIETNAMESE.settingsSavedMessage);
     onSettingsSavedNotification(); 

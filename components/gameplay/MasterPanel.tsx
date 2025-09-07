@@ -1,5 +1,6 @@
 import React from 'react';
-import { Master } from '../../types';
+// FIX: Correct import path for types
+import { Master } from '../../types/index';
 
 interface MasterPanelProps {
   master: Master;
@@ -108,9 +109,9 @@ const MasterPanel: React.FC<MasterPanelProps> = React.memo(({ master }) => {
                     <strong className="text-gray-400 block mb-1">Nhu Cầu:</strong>
                     {needsOrder.map(needKey => {
                         const value = master.needs?.[needKey];
-                        // Ensure we only render if the need exists and has a value
-                        return value !== undefined && value !== null ? (
-                            <StatBar key={needKey} label={needKey} value={value} colorClass={needColorMapping[needKey] || 'bg-teal-500'} />
+                        // FIX: Ensure value is a number before rendering to prevent errors.
+                        return typeof value === 'number' ? (
+                            <StatBar key={String(needKey)} label={String(needKey)} value={value} colorClass={needColorMapping[needKey] || 'bg-teal-500'} />
                         ) : null;
                     })}
                 </div>

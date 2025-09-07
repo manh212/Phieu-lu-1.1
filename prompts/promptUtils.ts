@@ -1,5 +1,5 @@
-
-import { WorldSettings } from '../types';
+// FIX: Corrected import paths for types.
+import { WorldSettings } from '../types/index';
 import { VIETNAMESE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, DEFAULT_NSFW_DESCRIPTION_STYLE } from '../constants';
 
 /**
@@ -34,6 +34,7 @@ ${worldConfig.customNsfwPrompt}
   let nsfwStyleGuidance = "";
   switch (currentNsfwStyle) {
     case 'Hoa Mỹ': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy; break;
+    // FIX: Access correct keys from VIETNAMESE object
     case 'Trần Tục': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceTranTuc; break;
     case 'Gợi Cảm': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceGoiCam; break;
     case 'Mạnh Bạo (BDSM)': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceManhBaoBDSM; break;
@@ -42,6 +43,7 @@ ${worldConfig.customNsfwPrompt}
 
   let violenceGuidance = "";
   switch (currentViolenceLevel) {
+    // FIX: Access correct keys from VIETNAMESE object
     case 'Nhẹ Nhàng': violenceGuidance = VIETNAMESE.violenceLevelGuidanceNheNhang; break;
     case 'Thực Tế': violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe; break;
     case 'Cực Đoan': violenceGuidance = VIETNAMESE.violenceLevelGuidanceCucDoan; break;
@@ -50,6 +52,7 @@ ${worldConfig.customNsfwPrompt}
 
   let toneGuidance = "";
   switch (currentStoryTone) {
+    // FIX: Access correct keys from VIETNAMESE object
     case 'Tích Cực': toneGuidance = VIETNAMESE.storyToneGuidanceTichCuc; break;
     case 'Trung Tính': toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh; break;
     case 'Đen Tối': toneGuidance = VIETNAMESE.storyToneGuidanceDenToi; break;

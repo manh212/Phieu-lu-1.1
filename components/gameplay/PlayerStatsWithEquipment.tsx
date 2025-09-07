@@ -1,12 +1,12 @@
 import React, { useState, ChangeEvent, useRef } from 'react'; 
-import { PlayerStats, Item, EquipmentSlotId, KnowledgeBase, StatusEffect, WorldDate, TuChatTier } from '../../../types';
-import { VIETNAMESE, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL } from '../../../constants';
-import * as GameTemplates from '../../../templates';
-import Modal from './../../ui/Modal'; 
-import Button from './../../ui/Button'; 
-import InputField from './../../ui/InputField'; // Added InputField
-import Spinner from './../../ui/Spinner'; // Added Spinner
-import { isValidImageUrl } from '../../../utils/imageValidationUtils'; // Added image validation
+import { PlayerStats, Item, EquipmentSlotId, KnowledgeBase, StatusEffect, WorldDate, TuChatTier } from '../../types/index';
+import { VIETNAMESE, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL } from '../../constants';
+import * as GameTemplates from '../../types/index';
+import Modal from './../ui/Modal'; 
+import Button from './../ui/Button'; 
+import InputField from './../ui/InputField'; // Added InputField
+import Spinner from './../ui/Spinner'; // Added Spinner
+import { isValidImageUrl } from '../../utils/imageValidationUtils'; // Added image validation
 
 interface PlayerStatsWithEquipmentProps {
   playerStats: PlayerStats; 
@@ -25,6 +25,7 @@ interface PlayerStatsWithEquipmentProps {
   isUploadingPlayerAvatar?: boolean; 
   currentLocationName?: string;
   tuChat?: TuChatTier;
+  personId?: string; // Add missing prop
 }
 
 const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = ({

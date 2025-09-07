@@ -1,7 +1,10 @@
-import { WorldSettings, DIALOGUE_MARKER, AIContextConfig, WorldDate } from '../types';
-import * as GameTemplates from '../templates';
+// FIX: Correct import path for types
+import { WorldSettings, DIALOGUE_MARKER, AIContextConfig, WorldDate } from '../types/index';
+// FIX: Correct import path for types
+import * as GameTemplates from '../types/index';
 import { WEAPON_TYPES_FOR_VO_Y, TU_CHAT_TIERS, ALL_FACTION_ALIGNMENTS, SUB_REALM_NAMES } from '../constants';
-import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../templates';
+// FIX: Correct import path for types
+import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../types/index';
 import { continuePromptSystemRules as baseContinuePromptSystemRules } from './systemRulesNormal'; // Renamed to avoid conflict
 
 export const prisonContinuePromptSystemRules = (worldConfig: WorldSettings | null, statusType: 'Tù Nhân' | 'Nô Lệ', mainRealms: string[], config: AIContextConfig, worldDate: WorldDate ): string => {

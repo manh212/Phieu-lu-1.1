@@ -1,7 +1,12 @@
 
-import { KnowledgeBase, GameMessage, Skill, VectorMetadata } from '../../types';
-import * as GameTemplates from '../../templates';
-import { PROFICIENCY_EXP_THRESHOLDS, PROFICIENCY_TIERS } from '../../constants';
+
+
+import { KnowledgeBase, GameMessage, Skill, VectorMetadata } from '../../types/index';
+import * as GameTemplates from '../../types/index';
+// FIX: Import PROFICIENCY_TIERS from the types module directly to resolve export error.
+import { PROFICIENCY_EXP_THRESHOLDS } from '../../constants/index';
+// FIX: Import PROFICIENCY_TIERS from the types module directly to resolve export error.
+import { PROFICIENCY_TIERS } from '../../types/index';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
 import { formatSkillForEmbedding } from '../ragUtils';
 

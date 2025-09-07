@@ -1,7 +1,6 @@
-
-
-import { KnowledgeBase, Skill, NPC, Wife, Slave } from '../types';
-import * as GameTemplates from '../templates';
+// FIX: Corrected import paths for types.
+import { KnowledgeBase, Skill, NPC, Wife, Slave } from '../types/index';
+import * as GameTemplates from '../types/index';
 import { VIETNAMESE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE } from '../constants';
 import { getNsfwGuidance } from './promptUtils';
 
@@ -116,62 +115,44 @@ ${header}
 - **Người chơi:**
     - Tên: ${worldConfig?.playerName || 'Người chơi'}
     - Cảnh giới: ${playerStats.realm}
-    - Chỉ số: Sinh lực ${playerStats.sinhLuc}/${playerStats.maxSinhLuc}, Linh lực ${playerStats.linhLuc}/${playerStats.maxLinhLuc}.
-    - Thiên Phú: Linh căn "${playerStats.spiritualRoot}", Thể chất "${playerStats.specialPhysique}".
-    - Trạng thái: ${playerStats.activeStatusEffects.map(e => e.name).join(', ') || 'Không có hiệu ứng đặc biệt.'}
-- **Hoàn cảnh:**
-    - Địa điểm tu luyện: "${currentLocation?.name || 'Không rõ'}" (Đặc tính an toàn: ${currentLocation?.isSafeZone}). Mô tả: ${currentLocation?.description || ''}
-    - Nhiệm vụ đang làm: ${kb.allQuests.filter(q => q.status === 'active').map(q => q.title).join(', ') || 'Không có.'}
-- **Các yếu tố ảnh hưởng đến thành công:**
-${successFactors}
-- **Các yếu tố ảnh hưởng đến thất bại:**
-${failureFactors}
+    - Chỉ số: Sinh lực ${playerStats.sinhLuc}/${playerStats.maxSinhLuc}, Linh lực ${playerStats.linhLuc}/${playerStats.maxLinhLuc}
+- **Địa điểm hiện tại:** "${currentLocation?.name || 'Không rõ'}" (An toàn: ${currentLocation?.isSafeZone ? 'Có' : 'Không'})
 
 ${contextBlock}
-${mainRequest}
 
-**HƯỚN DẪN VỀ ĐỘ KHÓ (Rất quan trọng để AI tuân theo):**
-- **Dễ:** ${VIETNAMESE.difficultyGuidanceEasy}
-- **Thường:** ${VIETNAMESE.difficultyGuidanceNormal}
-- **Khó:** ${VIETNAMESE.difficultyGuidanceHard}
-- **Ác Mộng:** ${VIETNAMESE.difficultyGuidanceNightmare}
-Hiện tại người chơi đang ở độ khó: **${currentDifficultyName}**. Hãy điều chỉnh kết quả tu luyện (lượng kinh nghiệm, độ thuần thục nhận được) và khả năng gặp tâm ma/trở ngại dựa trên độ khó này.
+${mainRequest}
 
 **CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH:**
 ${nsfwGuidance}
 
+**HƯỚNG DẪN VỀ ĐỘ KHÓ (Rất quan trọng để AI tuân theo):**
+- **Dễ:** ${VIETNAMESE.difficultyGuidanceEasy}
+- **Thường:** ${VIETNAMESE.difficultyGuidanceNormal}
+- **Khó:** ${VIETNAMESE.difficultyGuidanceHard}
+- **Ác Mộng:** ${VIETNAMESE.difficultyGuidanceNightmare}
+Hiện tại người chơi đang ở độ khó: **${currentDifficultyName}**. Hãy điều chỉnh kết quả tu luyện (lượng kinh nghiệm, độ thuần thục nhận được, khả năng gặp sự cố) một cách hợp lý với độ khó này.
+
 **NHIỆM VỤ CỦA BẠN (AI):**
+1.  **VIẾT LỜI KỂ:**
+    *   Mô tả chi tiết và hợp lý quá trình tu luyện trong ${duration} ngày.
+    *   Lời kể phải dựa trên các yếu tố thành công/thất bại đã nêu.
+    *   Hãy sáng tạo! Có thể có những sự kiện bất ngờ xảy ra trong quá trình tu luyện (ngộ ra chân lý, tâm ma xâm nhập, linh khí bạo động, bạn đồng tu có hành động bất ngờ...).
+    *   Nếu là Song Tu và 18+ BẬT, hãy mô tả cảnh đó theo phong cách đã chỉ định.
 
-1.  **VIẾT LỜI KỂ CHI TIẾT:**
-    *   Mô tả lại quá trình tu luyện trong ${duration} ngày một cách sống động.
-    *   Kể về những khó khăn, những cảm ngộ, những đột phá nhỏ (hoặc lớn) mà nhân vật trải qua.
-    *   Nếu là Song Tu và chế độ 18+ đang bật (${isNsfw}): Hãy mô tả cảnh song tu một cách chi tiết, nóng bỏng, phù hợp với phong cách "${nsfwStyle}" đã chọn. Tập trung vào sự giao hòa âm dương, linh lực chảy trong cơ thể, và cảm xúc của hai nhân vật.
-    *   Ngược lại, nếu là Song Tu và chế độ 18+ đang TẮT: Hãy mô tả quá trình một cách trong sáng và tinh tế. Tập trung vào sự giao hòa linh lực, tâm ý tương thông, và sự cộng hưởng đại đạo. Ví dụ: hai người ngồi đối diện, tay chạm tay, linh lực của họ tạo thành một vòng tuần hoàn ánh sáng huyền ảo. Tuyệt đối không miêu tả các hành vi tình dục hay khỏa thân.
-    *   Nếu là bế quan, hãy tả sự tĩnh lặng, sự vận hành của chu thiên, những ảo cảnh do tâm ma, hoặc những tia linh quang lóe lên trong đầu.
-    *   Nếu là tu luyện linh kĩ, hãy tả cách nhân vật thi triển, thất bại, rồi dần dần nắm bắt được yếu quyết của kỹ năng.
+2.  **TẠO TAGS CẬP NHẬT (QUAN TRỌNG):**
+    *   **Tăng thời gian:** Dùng tag **[CHANGE_TIME: ngay=${duration}]**.
+    *   **Cập nhật chỉ số người chơi:**
+        - Nếu là tu luyện công pháp, dùng **[STATS_UPDATE: kinhNghiem=+=X]**. Lượng X phải hợp lý với thời gian, độ khó, và các yếu tố khác.
+        - Nếu là tu luyện kỹ năng, dùng **[SKILL_UPDATE: name="${skill?.name}", proficiency=+=Y]**. Lượng Y phải hợp lý.
+    *   **Cập nhật chỉ số bạn đồng tu (nếu có):**
+        - Nếu là song tu, bạn đồng tu cũng nhận được kinh nghiệm. Dùng tag **[${partnerUpdateTag}: name="${partner?.name}", ... (cập nhật chỉ số)]**. Đồng thời, cập nhật các chỉ số quan hệ như \`affinity\`, \`obedience\`.
+    *   **QUAN TRỌNG:** KHÔNG tạo các tag [CHOICE].
 
-2.  **QUYẾT ĐỊNH KẾT QUẢ & TẠO TAG:**
-    *   Dựa trên tất cả các yếu tố thành công/thất bại đã liệt kê, hãy quyết định kết quả của đợt tu luyện này.
-    *   **Nếu tu luyện Linh Kĩ:**
-        *   Tạo tag **[SKILL_UPDATE: name="${skill?.name}", proficiency=+=X]** với X là lượng điểm thuần thục nhận được. Lượng điểm này nên tương xứng với thời gian và độ khó. Một phiên tu luyện thành công trong ${duration} ngày có thể nhận được từ ${duration * 5} đến ${duration * 20} điểm thuần thục.
-    *   **Nếu tu luyện Công Pháp (Bế Quan):**
-        *   Tạo tag **[STATS_UPDATE: kinhNghiem=+Y]** với Y là lượng kinh nghiệm nhận được. Lượng kinh nghiệm phải phản ánh tất cả các yếu tố: cảnh giới, linh căn, thể chất, phẩm chất công pháp.
-    *   **Nếu tu luyện Công Pháp (Song Tu):**
-        *   Tạo tag **[STATS_UPDATE: kinhNghiem=+Z]**. Lượng kinh nghiệm Z nhận được từ Song Tu nên **cao hơn đáng kể** (ví dụ: 1.5x đến 3x) so với Bế Quan trong cùng khoảng thời gian và phải phản ánh thêm cả tư chất và thiện cảm của bạn đồng tu.
-        *   Tạo tag **[${partnerUpdateTag}: name="${partner?.name}", affinity=+=W]** để tăng độ thiện cảm với bạn đồng tu.
-    *   Tạo tag **[CHANGE_TIME: ngay=${duration}]** để thể hiện thời gian đã trôi qua.
-    
-    **QUAN TRỌNG:** Chỉ trả về **duy nhất** các tag liên quan và lời kể. Không thêm bất kỳ lời dẫn hay giải thích nào khác.
-
-**VÍ DỤ (Tu Luyện Linh Kĩ thành công):**
-Bạn ngồi xếp bằng, tâm trí hoàn toàn tập trung vào "Hỏa Cầu Thuật". Từng dòng linh lực được vận chuyển theo một lộ trình phức tạp, ngưng tụ nơi đầu ngón tay. Lần đầu tiên, quả cầu lửa phập phù rồi tắt ngấm. Không nản lòng, bạn thử lại lần nữa, rồi lần nữa. Sau ${duration} ngày đêm không nghỉ, cuối cùng bạn cũng cảm nhận được sự lưu chuyển của hỏa linh lực. Một quả cầu lửa to bằng nắm tay, rực sáng và ổn định, hiện ra trong lòng bàn tay bạn.
-[SKILL_UPDATE: name="Hỏa Cầu Thuật", proficiency=+=50]
+**VÍ DỤ (Song Tu thành công):**
+(Lời kể)
+... Dưới sự dẫn dắt của bạn, cả hai nhanh chóng tiến vào trạng thái tu luyện sâu. Âm dương giao hòa, linh lực của cả hai lưu chuyển thành một chu thiên hoàn mỹ, bổ sung và khuếch đại cho nhau. Sau ${duration} ngày, bạn cảm thấy tu vi của mình tăng tiến một cách rõ rệt, mối liên kết với ${partner?.name} cũng trở nên sâu đậm hơn.
 [CHANGE_TIME: ngay=${duration}]
-
-**VÍ DỤ (Song Tu thành công, NSFW Bật):**
-(Đoạn văn mô tả chi tiết cảnh giao hợp, tập trung vào sự hòa quyện linh lực, theo phong cách "${nsfwStyle}") ... Khi cơn khoái lạc đỉnh điểm qua đi, cả hai cùng thở dốc. Một luồng linh lực thuần khiết và mạnh mẽ chưa từng có chảy trong kinh mạch của bạn, tu vi tăng vọt.
-[STATS_UPDATE: kinhNghiem=+500]
-[${partnerUpdateTag}: name="${partner?.name}", affinity=+=20]
-[CHANGE_TIME: ngay=${duration}]
-`
+[STATS_UPDATE: kinhNghiem=+=5000]
+[${partnerUpdateTag}: name="${partner?.name}", affinity=+=10]
+`;
 };

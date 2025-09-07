@@ -17,10 +17,11 @@ export * from './constants/npc';
 export * from './constants/economy';
 export * from './constants/auction'; // NEW
 export * from './constants/combat'; // NEW
+export * from './constants/user_manual'; // NEW
 
 // Re-export prompt templates
 // Assuming 'prompts' directory is directly under 'src', so './prompts/index' from 'src/constants.ts'
-export { PROMPT_FUNCTIONS } from './prompts/index';
+export { PROMPT_FUNCTIONS } from './prompts';
 
 // Import translations from their respective modules
 import { VIETNAMESE_TRANSLATIONS as BaseTranslations } from './constants/translations';
@@ -28,7 +29,7 @@ import { NSFW_TRANSLATIONS } from './constants/nsfw';
 
 // Re-export prompt templates
 // Assuming 'prompts' directory is directly under 'src', so './prompts/index' from 'src/constants.ts'
-export { PROMPT_FUNCTIONS as PROMPT_TEMPLATES } from './prompts/index';
+export { PROMPT_FUNCTIONS as PROMPT_TEMPLATES } from './prompts';
 
 // Merge all translations into a single VIETNAMESE object
 export const VIETNAMESE = {
@@ -41,4 +42,3 @@ export const VIETNAMESE = {
 // to prevent circular dependencies.
 // The EquipmentSlotConfig in types.ts directly imports from './constants/translations' for its labelKey type
 // to also avoid circular dependencies.
-export { PROFICIENCY_TIERS, TU_CHAT_TIERS } from './types';

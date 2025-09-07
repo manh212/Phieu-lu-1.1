@@ -1,5 +1,6 @@
 import React, { useState, ChangeEvent, useEffect } from 'react';
-import { GameScreen, AIContextConfig } from '../types';
+// FIX: Correct import path for types
+import { GameScreen, AIContextConfig } from '../types/index';
 import Button from './ui/Button';
 import CollapsibleSection from './ui/CollapsibleSection';
 import { useGame } from '../hooks/useGame';

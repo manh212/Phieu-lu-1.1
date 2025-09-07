@@ -1,8 +1,8 @@
 import React, { ChangeEvent, useState, useRef, useEffect } from 'react';
-import { GameMessage, PlayerActionInputType, ResponseLength, GameLocation, AiChoice } from '../../../types';
+import { GameMessage, PlayerActionInputType, ResponseLength, GameLocation, AiChoice } from '../../../types/index';
 import Button from '../../ui/Button';
 import { VIETNAMESE } from '../../../constants';
-import * as GameTemplates from '../../../templates';
+import * as GameTemplates from '../../../types/index';
 
 interface PlayerInputAreaProps {
   latestMessageWithChoices: GameMessage | undefined;

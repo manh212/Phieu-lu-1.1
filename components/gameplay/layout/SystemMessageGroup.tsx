@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react';
-import { GameMessage } from '../../../types';
+// FIX: Correct import path for types
+import { GameMessage } from '../../../types/index';
 
 interface SystemMessageGroupProps {
   messages: GameMessage[];
@@ -18,7 +18,7 @@ const SystemMessageGroup: React.FC<SystemMessageGroupProps> = ({ messages }) => 
     return (
         <div className="bg-yellow-600 bg-opacity-30 text-yellow-200 border border-yellow-500 italic text-xs sm:text-sm p-2 sm:p-3 rounded-xl shadow">
             {/* FIX: Ensure content is a string before rendering */}
-            {typeof messages[0].content === 'string' ? messages[0].content : null}
+            {typeof messages[0].content === 'string' ? messages[0].content : ''}
         </div>
     );
   }
@@ -49,7 +49,7 @@ const SystemMessageGroup: React.FC<SystemMessageGroupProps> = ({ messages }) => 
           {messages.map(msg => (
             <p key={msg.id} className="text-xs text-yellow-200/90 italic">
               {/* FIX: Ensure content is a string before rendering */}
-              - {typeof msg.content === 'string' ? msg.content : null}
+              - {typeof msg.content === 'string' ? msg.content : ''}
             </p>
           ))}
         </div>

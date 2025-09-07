@@ -1,7 +1,7 @@
 import React from 'react';
-import { Item, EquipmentSlotId, EquipmentSlotConfig } from '../../../types';
+import { Item, EquipmentSlotId, EquipmentSlotConfig } from '../../../types/index';
 import { VIETNAMESE } from '../../../constants';
-import * as GameTemplates from '../../../templates';
+import * as GameTemplates from '../../../types/index';
 
 interface EquipmentSlotUIProps {
   slotConfig: EquipmentSlotConfig;

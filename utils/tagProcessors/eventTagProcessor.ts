@@ -1,9 +1,10 @@
 // src/utils/tagProcessors/eventTagProcessor.ts
 
-import { KnowledgeBase, GameMessage, GameEvent, GameEventType, WorldDate, GameLocation, EventDetail } from '../../types';
+import { KnowledgeBase, GameMessage, GameEvent, GameEventType, WorldDate, GameLocation, EventDetail } from '../../types/index';
 import { addDaysToWorldDate, parseDurationString, worldDateToTotalDays } from '../dateUtils';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
-import * as GameTemplates from '../../templates';
+// FIX: Correct import path for types
+import * as GameTemplates from '../../types/index';
 
 // A high threshold to ensure we only match very similar event titles.
 const EVENT_SIMILARITY_THRESHOLD = 0.85;

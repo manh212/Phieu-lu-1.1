@@ -1,9 +1,10 @@
 import React, { createContext, useState, useCallback, ReactNode } from 'react';
-import { CombatState, Combatant, PlayerStats, NPC, YeuThu, Wife, Slave, CombatActionOutcome, KnowledgeBase, GameMessage, AiChoice, CombatEndPayload, CombatDispositionMap, CombatLogContent, GameScreen, Skill, StatusEffect, Item } from '../types';
+// FIX: Correct import path for types.
+import { CombatState, Combatant, PlayerStats, NPC, YeuThu, Wife, Slave, CombatActionOutcome, KnowledgeBase, GameMessage, AiChoice, CombatEndPayload, CombatDispositionMap, CombatLogContent, GameScreen, Skill, StatusEffect, Item } from '../types/index';
 import { useGame } from '../hooks/useGame';
 import * as combatConstants from '../constants/combat';
 import { VIETNAMESE } from '../constants';
-import * as GameTemplates from '../templates';
+import * as GameTemplates from '../types/index';
 import { calculateEffectiveStats } from '../utils/statsCalculationUtils';
 
 export interface CombatContextType {
@@ -154,7 +155,8 @@ export const CombatProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             return newKb;
         });
         
-        addCombatLog({ type: 'info', message: `--- TRẬN CHIẾN KẾT THÚC! (${VIETNAMESE[outcome === 'victory' ? 'combatVictory' : (outcome === 'defeat' ? 'combatDefeat' : 'Thoát')]}) ---` });
+        // FIX: Replaced string literal 'Thoát' with a lookup in the VIETNAMESE object to prevent runtime errors.
+        addCombatLog({ type: 'info', message: `--- TRẬN CHIẾN KẾT THÚC! (${VIETNAMESE[outcome === 'victory' ? 'combatVictory' : outcome === 'defeat' ? 'combatDefeat' : 'combatEscaped']}) ---` });
         
         setCombatState(INITIAL_COMBAT_STATE);
         game.setCurrentScreen(GameScreen.Gameplay);

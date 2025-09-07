@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useCombat } from '../../hooks/useCombat';
 import { useGame } from '../../hooks/useGame';
@@ -6,8 +5,9 @@ import OpponentArea from '../combat/OpponentArea';
 import PlayerControlPanel, { ActionSelection } from '../combat/PlayerControlPanel';
 import CombatLog from '../combat/CombatLog';
 import Spinner from '../ui/Spinner';
-import { Skill, Item } from '../../types';
-import * as GameTemplates from '../../templates';
+// FIX: Corrected import path for types.
+import { Skill, Item } from '@/types/index';
+import * as GameTemplates from '@/types/index';
 
 type InteractionState = 'idle' | 'selecting_target';
 

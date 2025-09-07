@@ -1,6 +1,8 @@
 
+
 import React from 'react';
-import { Item as ItemType } from '../../../types';
+// FIX: Corrected import path for types.
+import { Item as ItemType } from '../../../types/index';
 import { VIETNAMESE } from '../../../constants';
 import Button from '../../ui/Button';
 

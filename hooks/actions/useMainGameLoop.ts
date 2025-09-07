@@ -1,12 +1,11 @@
-
-
 import { useCallback, useState } from 'react';
-import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, FindLocationParams } from '../../types';
+import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, AiChoice, NPC, FindLocationParams } from '../../types/index';
 import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS, LIVING_WORLD_TICK_INTERVAL_HOURS } from '../../constants';
-import { generateNextTurn, summarizeTurnHistory, generateCityEconomy, generateGeneralSubLocations, findLocationWithAI, getApiSettings } from '../../services/geminiService';
+// FIX: Corrected import path for services and removed obsolete geminiService module.
+import { generateNextTurn, summarizeTurnHistory, generateCityEconomy, generateGeneralSubLocations, findLocationWithAI, getApiSettings } from '../../services';
 import { generateEmbeddings } from '../../services/embeddingService';
 import { performTagProcessing, addTurnHistoryEntryRaw, getMessagesForPage, calculateEffectiveStats, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, handleLocationEntryEvents, searchVectors, extractEntityContextsFromString, worldDateToTotalMinutes } from '../../utils/gameLogicUtils';
-import * as GameTemplates from '../../templates';
+import * as GameTemplates from '../../types/index';
 
 interface UseMainGameLoopProps {
   knowledgeBase: KnowledgeBase;
@@ -159,16 +158,71 @@ export const useMainGameLoop = (props: UseMainGameLoopProps) => {
 
             finalKbForThisTurn.autoSaveTurnCounter = (finalKbForThisTurn.autoSaveTurnCounter + 1);
             if (finalKbForThisTurn.autoSaveTurnCounter >= AUTO_SAVE_INTERVAL_TURNS) {
-                finalKbForThisTurn.autoSaveTurnCounter = 0;
-                // Auto-save logic...
+                 finalKbForThisTurn.autoSaveTurnCounter = 0;
+                const newSlotIndex = (knowledgeBase.currentAutoSaveSlotIndex + 1) % MAX_AUTO_SAVE_SLOTS;
+                const saveName = `Auto Save Slot ${newSlotIndex + 1}`;
+                const existingId = knowledgeBase.autoSaveSlotIds[newSlotIndex];
+                const newSaveId = await executeSaveGame(finalKbForThisTurn, [...gameMessages, ...combinedSystemMessages], saveName, existingId, true);
+                if (newSaveId) {
+                    finalKbForThisTurn.autoSaveSlotIds[newSlotIndex] = newSaveId;
+                    finalKbForThisTurn.currentAutoSaveSlotIndex = newSlotIndex;
+                    showNotification(VIETNAMESE.autoSaveSuccess(saveName), 'info');
+                }
             }
             
+            const turnJustCompleted = finalKbForThisTurn.playerStats.turn;
+
             const newMessagesForThisCycle: GameMessage[] = [playerActionMessage, {
                 id: Date.now().toString() + Math.random(), type: 'narration', content: response.narration,
-                timestamp: Date.now(), choices: response.choices, turnNumber: finalKbForThisTurn.playerStats.turn
+                timestamp: Date.now(), choices: response.choices, turnNumber: turnJustCompleted
             }, ...combinedSystemMessages];
 
-            addMessageAndUpdateState(newMessagesForThisCycle, finalKbForThisTurn);
+            if (turnJustCompleted > 0 && turnJustCompleted % TURNS_PER_PAGE === 0 && gameMessagesAtActionStart.length > 0) {
+                setIsSummarizingNextPageTransition(true);
+            
+                const allMessagesForPage = [...gameMessagesAtActionStart, ...newMessagesForThisCycle];
+                const messagesToSummarize = getMessagesForPage(currentPageDisplay, finalKbForThisTurn, allMessagesForPage);
+                
+                try {
+                    const { processedSummary } = await summarizeTurnHistory(
+                        messagesToSummarize,
+                        finalKbForThisTurn.worldConfig?.theme || '',
+                        finalKbForThisTurn.worldConfig?.playerName || '',
+                        finalKbForThisTurn.worldConfig?.genre,
+                        finalKbForThisTurn.worldConfig?.customGenreName,
+                        logSentPromptCallback,
+                        logSummarizationResponseCallback
+                    );
+                    
+                    if (!finalKbForThisTurn.pageSummaries) finalKbForThisTurn.pageSummaries = {};
+                    finalKbForThisTurn.pageSummaries[currentPageDisplay] = processedSummary;
+                    
+                    if (!finalKbForThisTurn.currentPageHistory) finalKbForThisTurn.currentPageHistory = [1];
+                    if (finalKbForThisTurn.currentPageHistory[finalKbForThisTurn.currentPageHistory.length - 1] !== turnJustCompleted + 1) {
+                        finalKbForThisTurn.currentPageHistory.push(turnJustCompleted + 1);
+                    }
+                    
+                    finalKbForThisTurn.lastSummarizedTurn = turnJustCompleted;
+            
+                    const newTotalPages = finalKbForThisTurn.currentPageHistory.length;
+            
+                    addMessageAndUpdateState(newMessagesForThisCycle, finalKbForThisTurn, () => {
+                        setCurrentPageDisplay(newTotalPages);
+                        setIsSummarizingNextPageTransition(false);
+                    });
+            
+                } catch (summaryError) {
+                    console.error("Failed to summarize page, proceeding without pagination:", summaryError);
+                    const errorMsg = summaryError instanceof Error ? summaryError.message : "Lỗi tóm tắt trang.";
+                    showNotification(`Lỗi tóm tắt trang: ${errorMsg}`, 'error');
+                    addMessageAndUpdateState(newMessagesForThisCycle, finalKbForThisTurn, () => {
+                        setIsSummarizingNextPageTransition(false);
+                    });
+                }
+            
+            } else {
+                addMessageAndUpdateState(newMessagesForThisCycle, finalKbForThisTurn);
+            }
 
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err);
@@ -189,7 +243,7 @@ export const useMainGameLoop = (props: UseMainGameLoopProps) => {
         lastNarrationFromPreviousPage, setSummarizationResponsesLog,
         setSentEconomyPromptsLog, setReceivedEconomyResponsesLog,
         setSentGeneralSubLocationPromptsLog, setReceivedGeneralSubLocationResponsesLog,
-        executeWorldTick, isAutoPlaying, setIsAutoPlaying, setKnowledgeBase
+        executeWorldTick, isAutoPlaying, setIsAutoPlaying, setKnowledgeBase, logSummarizationResponseCallback
     ]);
     
     const handleFindLocation = useCallback(async (params: FindLocationParams) => {
@@ -227,6 +281,6 @@ export const useMainGameLoop = (props: UseMainGameLoopProps) => {
     return {
         handlePlayerAction,
         isSummarizingNextPageTransition,
-        handleFindLocation,
+        handleFindLocation
     };
 };

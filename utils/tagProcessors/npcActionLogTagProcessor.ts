@@ -1,6 +1,5 @@
-
 // src/utils/tagProcessors/npcActionLogTagProcessor.ts
-import { KnowledgeBase, GameMessage, NPC, Wife, Slave, Prisoner, Master, ActivityLogEntry } from '../../types';
+import { KnowledgeBase, GameMessage, NPC, Wife, Slave, Prisoner, Master, ActivityLogEntry } from '../../types/index';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
 
 const PERSON_SIMILARITY_THRESHOLD = 0.8;

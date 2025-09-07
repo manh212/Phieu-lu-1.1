@@ -1,4 +1,5 @@
-import { StyleSettings } from '../types';
+// FIX: Correct import path for types
+import type { StyleSettings } from '@/types/index';
 
 export const STYLE_SETTINGS_STORAGE_KEY = 'daoDoAiStyleSettings_v1';
 export const AVAILABLE_FONTS = ['Bookerly', 'Inter', 'Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Georgia', 'Comic Sans MS', 'inherit'];

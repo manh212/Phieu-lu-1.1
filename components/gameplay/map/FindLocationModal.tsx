@@ -1,10 +1,12 @@
 import React, { useState, ChangeEvent } from 'react';
-import { FindLocationParams, SearchMethod, SEARCH_METHODS } from '../../../types';
+// FIX: Corrected import path for types.
+import { FindLocationParams, SearchMethod, SEARCH_METHODS } from '../../../types/index';
 import Modal from '../../ui/Modal';
 import Button from '../../ui/Button';
 import InputField from '../../ui/InputField';
-import { VIETNAMESE } from '../../../constants';
-import * as GameTemplates from '../../../templates';
+// FIX: Corrected import path for templates.
+import * as GameTemplates from '../../../types/index';
+import { VIETNAMESE } from '../../../constants/index';
 
 interface FindLocationModalProps {
   isOpen: boolean;
@@ -98,7 +100,8 @@ const FindLocationModal: React.FC<FindLocationModalProps> = ({ isOpen, onClose, 
           label={VIETNAMESE.findLocationMethodLabel || 'Phương Thức Tìm Kiếm'}
           id="searchMethod"
           type="select"
-          options={SEARCH_METHODS}
+          // FIX: Spread the readonly array into a new mutable array to satisfy the 'Key' type constraint for the map key.
+          options={[...SEARCH_METHODS]}
           value={searchMethod}
           onChange={(e) => setSearchMethod(e.target.value as SearchMethod)}
         />

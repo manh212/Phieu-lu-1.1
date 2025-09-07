@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { KnowledgeBase, NPC, YeuThu } from '../../types';
+import { KnowledgeBase, NPC, YeuThu } from '../../types/index';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import InputField from '../ui/InputField';

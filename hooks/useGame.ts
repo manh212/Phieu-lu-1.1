@@ -1,5 +1,8 @@
 
+
+
 import { useContext } from 'react';
+// FIX: Correct import path for types
 import { GameContext, GameContextType } from '../contexts/GameContext';
 
 /**

@@ -1,6 +1,8 @@
 // src/constants/economy.ts
-import { EquipmentRarity } from '../templates';
-import * as GameTemplates from '../templates';
+// FIX: Correct import path for types
+import { EquipmentRarity } from '../types/index';
+// FIX: Correct import path for types
+import * as GameTemplates from '../types/index';
 
 /**
  * Constants for the formula-based item valuation system.

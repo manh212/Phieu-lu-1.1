@@ -1,4 +1,5 @@
-import { KnowledgeBase, CombatEndPayload, NPC } from '../types';
+// FIX: Corrected import path for types.
+import { KnowledgeBase, NPC } from '@/types/index';
 import { VIETNAMESE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, TU_CHAT_TIERS } from '../constants';
 import { getNsfwGuidance } from './promptUtils';
 

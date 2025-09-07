@@ -1,9 +1,10 @@
 
 
+
 import React, { useState, useEffect } from 'react';
-import { GameScreen, StorageSettings } from '../types';
+import { GameScreen, StorageSettings } from '@/types/index';
 import Button from './ui/Button';
-import { VIETNAMESE, STORAGE_SETTINGS_STORAGE_KEY, DEFAULT_STORAGE_SETTINGS } from '../constants';
+import { VIETNAMESE, STORAGE_SETTINGS_STORAGE_KEY, DEFAULT_STORAGE_SETTINGS } from '@/constants';
 
 interface StorageSettingsScreenProps {
   setCurrentScreen: (screen: GameScreen) => void;

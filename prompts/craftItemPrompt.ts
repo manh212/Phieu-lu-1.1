@@ -1,6 +1,5 @@
-
-import { Item, PlayerStats, WorldSettings } from '../types';
-import * as GameTemplates from '../templates';
+import type { Item, PlayerStats, WorldSettings } from '../types/index';
+import * as GameTemplates from '../types/index';
 import { VIETNAMESE, CUSTOM_GENRE_VALUE, STAT_POINT_VALUES } from '../constants';
 import { getNsfwGuidance } from './promptUtils';
 

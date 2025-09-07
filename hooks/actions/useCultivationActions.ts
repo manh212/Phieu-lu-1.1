@@ -1,9 +1,7 @@
-
-
-
 import { useCallback } from 'react';
-import { KnowledgeBase, GameMessage, GameScreen, Skill, NPC, Wife, Slave } from '../../types';
-import { generateCultivationSession, summarizeCultivationSession } from '../../services/geminiService';
+// FIX: Corrected import path for types.
+import { KnowledgeBase, GameMessage, GameScreen, Skill, NPC, Wife, Slave } from '@/types/index';
+import { generateCultivationSession, summarizeCultivationSession } from '../../services';
 import { performTagProcessing, handleLevelUps } from '../../utils/gameLogicUtils';
 import { VIETNAMESE } from '../../constants';
 

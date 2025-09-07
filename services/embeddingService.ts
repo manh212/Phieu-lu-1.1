@@ -1,7 +1,6 @@
-
 // src/services/embeddingService.ts
 import { GoogleGenAI, ContentEmbedding } from "@google/genai";
-import { getApiSettings } from './geminiService'; // Reuse API settings logic
+import { getApiSettings } from './api/geminiClient'; // Reuse API settings logic
 import { VIETNAMESE } from '../constants';
 import { incrementApiCallCount } from '../utils/apiUsageTracker';
 

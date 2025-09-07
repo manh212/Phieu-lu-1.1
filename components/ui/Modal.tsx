@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import Button from './Button';
-import { VIETNAMESE } from '../../constants';
+import { VIETNAMESE } from '@/constants';
 
 interface ModalProps {
   isOpen: boolean;

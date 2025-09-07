@@ -1,6 +1,9 @@
 // src/constants/world.ts
-import { WorldSettings, GenreType, GENRE_VALUES_FOR_TYPE, CustomGenreType, WorldDate } from '../types';
-import * as GameTemplates from '../templates';
+// FIX: Correct import path for types
+import type { WorldSettings, GenreType, CustomGenreType, WorldDate } from '@/types/index';
+import { GENRE_VALUES_FOR_TYPE } from '@/types/index';
+// FIX: Correct import path for types
+import * as GameTemplates from '@/types/index';
 
 export const CUSTOM_GENRE_VALUE: CustomGenreType = "Khác (Tự định nghĩa)";
 export const AVAILABLE_GENRES: typeof GENRE_VALUES_FOR_TYPE = GENRE_VALUES_FOR_TYPE;

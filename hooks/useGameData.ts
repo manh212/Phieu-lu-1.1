@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { KnowledgeBase, GameMessage, CombatEndPayload, NPC } from '../types';
+import { KnowledgeBase, GameMessage, CombatEndPayload, NPC } from '@/types/index';
 import { INITIAL_KNOWLEDGE_BASE } from '../constants';
 import { calculateTotalPages, getMessagesForPage } from '../utils/gameLogicUtils';
 
@@ -96,7 +96,7 @@ export const useGameData = () => {
     setLastScoredNpcsForTick([]);
     setCurrentPageDisplay(1);
     setMessageIdBeingEdited(null);
-  }, [setKnowledgeBase, setGameMessages, setRawAiResponsesLog, setSentPromptsLog, setSentEconomyPromptsLog, setReceivedEconomyResponsesLog, setSentGeneralSubLocationPromptsLog, setReceivedGeneralSubLocationResponsesLog, setLatestPromptTokenCount, setSummarizationResponsesLog, setSentCraftingPromptsLog, setReceivedCraftingResponsesLog, setCurrentPageDisplay, setMessageIdBeingEdited, setRetrievedRagContextLog, setAiCopilotMessages]);
+  }, []);
 
 
   return {

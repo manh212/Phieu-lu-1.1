@@ -1,5 +1,4 @@
-
-import { KnowledgeBase, GameMessage } from '../../types';
+import { KnowledgeBase, GameMessage } from '../../types/index';
 import { calculateRealmBaseStats, calculateEffectiveStats } from '../statsCalculationUtils';
 
 

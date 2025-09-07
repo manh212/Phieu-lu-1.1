@@ -1,5 +1,5 @@
 import React from 'react';
-import { KnowledgeBase, StyleSettings, DIALOGUE_MARKER } from '../types';
+import { KnowledgeBase, StyleSettings, DIALOGUE_MARKER } from '../types/index';
 import KeywordSpan from '../components/ui/KeywordSpan';
 import type { GameEntity, GameEntityType } from '../hooks/types';
 

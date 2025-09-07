@@ -1,4 +1,4 @@
-import { KnowledgeBase, GameMessage } from '../../types';
+import { KnowledgeBase, GameMessage } from '../../types/index';
 
 export const processChangeTime = (
     currentKb: KnowledgeBase,
@@ -48,43 +48,20 @@ export const processChangeTime = (
         month -= 12;
         year += 1;
     }
-    
+
     newKb.worldDate = { day, month, year, hour, minute };
 
-    // --- Lifespan Reduction ---
-    const daysPassedForLifespan = totalMinutesPassed / (24 * 60);
-    if (daysPassedForLifespan > 0) {
-        const yearsPassed = daysPassedForLifespan / 360.0;
-        
-        // Player
-        if (newKb.playerStats.thoNguyen !== undefined) {
-            newKb.playerStats.thoNguyen -= yearsPassed;
-            if (newKb.playerStats.thoNguyen <= 0) {
-                newKb.playerStats.thoNguyen = 0;
-                systemMessages.push({ id: `player-lifespan-depleted-${Date.now()}`, type: 'error', content: `Thọ nguyên đã cạn! Sinh mệnh của bạn đã đến hồi kết.`, timestamp: Date.now(), turnNumber: turnForSystemMessages });
-            }
+    // --- Lifespan Reduction Logic ---
+    // Assuming 1 year passed in game = 1 year of lifespan lost
+    const yearsPassed = totalMinutesPassed / (360 * 24 * 60);
+    if (newKb.worldConfig?.isCultivationEnabled && newKb.playerStats.thoNguyen !== undefined && yearsPassed > 0) {
+        newKb.playerStats.thoNguyen -= yearsPassed;
+        if (newKb.playerStats.thoNguyen <= 0) {
+            newKb.playerStats.thoNguyen = 0;
+            // The game should handle the consequence of running out of lifespan elsewhere
+            // We just update the state here.
         }
-        // NPCs, Wives, Slaves, Prisoners...
-        [...newKb.discoveredNPCs, ...newKb.wives, ...newKb.slaves, ...newKb.prisoners].forEach(char => {
-            if (char.stats?.thoNguyen !== undefined) {
-                char.stats.thoNguyen -= yearsPassed;
-                if (char.stats.thoNguyen <= 0) {
-                    char.stats.thoNguyen = 0;
-                }
-            }
-        });
     }
-
-    // --- Generate System Message ---
-    const timePassedParts: string[] = [];
-    if (yearsToAdd > 0) timePassedParts.push(`${yearsToAdd} năm`);
-    if (monthsToAdd > 0) timePassedParts.push(`${monthsToAdd} tháng`);
-    if (daysToAdd > 0) timePassedParts.push(`${daysToAdd} ngày`);
-    if (hoursToAdd > 0) timePassedParts.push(`${hoursToAdd} giờ`);
-    if (minutesToAdd > 0) timePassedParts.push(`${minutesToAdd} phút`);
     
-    const timePassedMessage = `Thời gian đã trôi qua: ${timePassedParts.join(', ')}.`;
-    systemMessages.push({ id: `time-changed-${Date.now()}`, type: 'system', content: timePassedMessage, timestamp: Date.now(), turnNumber: turnForSystemMessages });
-
     return { updatedKb: newKb, systemMessages };
 };

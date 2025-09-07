@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useGame } from '../../../hooks/useGame';
-import { GameScreen } from '../../../types';
+import { GameScreen } from '../../../types/index';
 import Button from '../../ui/Button';
 import { VIETNAMESE } from '../../../constants';
 
@@ -97,6 +97,7 @@ export const MainMenuPanel: React.FC<MainMenuPanelProps> = ({ onClose, setIsChar
                     <span className="mr-3 text-lg" role="img" aria-hidden="true">🐞</span>
                     Debug Panel
                 </Button>
+                 <MenuButton label="Thống Kê API" icon="📊" onClick={() => handleScreenNavigation(GameScreen.ApiUsage)} />
             </MenuGroup>
         </div>
     );

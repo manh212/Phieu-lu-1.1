@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { WorldSettings, StartingSkill, SkillTypeValues } from '../../../../types';
-import * as GameTemplates from '../../../../templates';
+import { WorldSettings, StartingSkill, SkillTypeValues } from '../../../../types/index';
+import * as GameTemplates from '../../../../types/index';
 import { VIETNAMESE, WEAPON_TYPES_FOR_VO_Y } from '../../../../constants';
 import InputField from '../../../ui/InputField';
 import Button from '../../../ui/Button';

@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
-import { KnowledgeBase, GameMessage } from '../../types';
-import { generateCopilotResponse, getApiSettings } from '../../services/geminiService';
+// FIX: Correct import path for types
+import { KnowledgeBase, GameMessage } from '../../types/index';
+// FIX: Corrected import path for services
+import { generateCopilotResponse, getApiSettings } from '../../services';
 
 export interface UseCopilotActionsProps {
     knowledgeBase: KnowledgeBase;
@@ -40,7 +42,8 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
         setAiCopilotMessages(newCopilotMessages);
 
         try {
-            const { turnHistory, ragVectorStore, aiCopilotMessages: kbCopilotMessages, userPrompts, ...kbSnapshot } = knowledgeBase;
+            // FIX: Removed aiCopilotMessages from this destructuring as it's not part of knowledgeBase
+            const { turnHistory, ragVectorStore, userPrompts, ...kbSnapshot } = knowledgeBase;
             const last20Messages = gameMessages.slice(-20).map(msg => {
                 if (msg.type === 'player_action') return `${knowledgeBase.worldConfig?.playerName || 'Người chơi'}: ${msg.content}`;
                 if (msg.type === 'narration') return `AI: ${msg.content}`;

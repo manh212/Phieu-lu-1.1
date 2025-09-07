@@ -1,5 +1,4 @@
-
-import { KnowledgeBase, GameMessage, GameLocation, VectorMetadata } from '../../types';
+import { KnowledgeBase, GameMessage, GameLocation, VectorMetadata } from '../../types/index';
 import { handleLocationEntryEvents } from '../locationEvents';
 import { formatLocationForEmbedding } from '../ragUtils';
 

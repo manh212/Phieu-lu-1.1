@@ -1,12 +1,13 @@
-
 import React, { useState, useRef, MouseEvent } from 'react';
-import { KnowledgeBase, GameLocation, GameScreen, Region, LocationConnection, FindLocationParams } from '../../../types';
+// FIX: Corrected import paths to point to the new centralized type export.
+import { KnowledgeBase, GameLocation, GameScreen, Region, LocationConnection, FindLocationParams } from '@/types/index';
 import InteractiveMap from './InteractiveMap';
 import Button from '../../../components/ui/Button';
-import { VIETNAMESE } from '../../../constants';
+import { VIETNAMESE } from '../../../constants/index';
 import { MAP_COLORS, MAP_SIZES } from './mapConstants';
 import Modal from '../../../components/ui/Modal';
-import * as GameTemplates from '../../../templates';
+// FIX: Corrected import to use the new centralized type export instead of the empty templates file.
+import * as GameTemplates from '@/types/index';
 import * as LocationIcons from './mapIcons';
 import FindLocationModal from './FindLocationModal'; // New Import
 import { useGame } from '../../../hooks/useGame'; // New Import
@@ -32,7 +33,7 @@ const LegendItem: React.FC<{ color?: string; icon?: React.ReactNode; label: stri
   </div>
 );
 
-const MapPanel: React.FC<MapPanelProps> = ({
+export const MapPanel: React.FC<MapPanelProps> = ({
   knowledgeBase,
   setCurrentScreen,
 }) => {
@@ -221,159 +222,124 @@ const MapPanel: React.FC<MapPanelProps> = ({
           Bản Đồ Thế Giới
         </h1>
         <div className="flex items-center gap-2">
-            <Button onClick={() => setIsEditMode(prev => !prev)} size="sm" variant={isEditMode ? "primary" : "secondary"} title={isEditMode ? "Tắt chế độ sửa" : "Bật chế độ sửa tọa độ"} className={`${isEditMode ? 'bg-orange-600 hover:bg-orange-700 ring-2 ring-orange-400' : 'border-orange-500 text-orange-300 hover:bg-orange-700/60'}`}>
-                {isEditMode ? 'Lưu Tọa Độ' : 'Sửa Tọa Độ'}
+            <Button onClick={() => setIsEditMode(prev => !prev)} size="sm" variant={isEditMode ? "primary" : "secondary"} title={isEditMode ? "Tắt chế độ sửa" : "Bật chế độ sửa tọa độ"} className={`${isEditMode ? 'bg-orange-600 hover:bg-orange-700 ring-2 ring-orange-400' : 'border-orange-500 text-orange-300 hover:bg-orange-700/50'}`}>
+                {isEditMode ? "Tắt Sửa" : "Sửa Vị Trí"}
+            </Button>
+            <Button onClick={() => setIsFindModalOpen(true)} size="sm" variant="secondary" title={VIETNAMESE.findLocationButtonTitle}>
+                {VIETNAMESE.findLocationButtonLabel}
+            </Button>
+            <Button onClick={() => setIsLegendOpen(!isLegendOpen)} size="sm" variant="secondary" title={VIETNAMESE.mapLegendTitle}>
+                Chú Giải
             </Button>
             <Button variant="secondary" onClick={() => setCurrentScreen(GameScreen.Gameplay)}>
                 {VIETNAMESE.goBackButton}
             </Button>
         </div>
       </header>
-      
-      <div className="flex-grow bg-gray-900 rounded-lg shadow-xl border border-gray-700 relative overflow-hidden">
-        {currentLocation && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-gray-900/70 px-3 py-1 rounded-full z-20 pointer-events-none text-xs sm:text-sm text-center">
-              Vị trí hiện tại: <strong className="text-amber-400">{currentLocation.name}</strong>
-            </div>
-          )}
+
+      <div className="flex-grow bg-gray-900 rounded-lg shadow-xl border border-gray-700 overflow-hidden relative">
         <svg
-            ref={svgRef}
-            width="100%"
-            height="100%"
-            viewBox={viewBox}
-            className="rounded-md"
-            onMouseDown={onSvgMouseDown}
-            onMouseUp={onMouseUp}
-            onMouseLeave={onMouseUp}
-            onMouseMove={onMouseMove}
-            onWheel={onWheel}
-            style={{ cursor: isEditMode ? 'default' : 'grab' }}
-            aria-label="Bản đồ thế giới tương tác"
+          ref={svgRef}
+          width="100%"
+          height="100%"
+          viewBox={viewBox}
+          className="bg-gray-800"
+          onMouseDown={onSvgMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+          onWheel={onWheel}
+          style={{ cursor: interaction ? 'grabbing' : (isEditMode ? 'default' : 'grab') }}
         >
-            <rect width={MAP_SIZES.SVG_VIEWBOX_WIDTH} height={MAP_SIZES.SVG_VIEWBOX_HEIGHT} fill={MAP_COLORS.MAP_BACKGROUND} />
-            <InteractiveMap
-              locations={knowledgeBase.discoveredLocations}
-              currentLocationId={currentLocation?.id || null}
-              onLocationClick={handleLocationClick}
-              transform={transformString}
-              isEditMode={isEditMode}
-              onNodeMouseDown={handleNodeMouseDown}
-            />
+          <InteractiveMap
+            locations={knowledgeBase.discoveredLocations}
+            currentLocationId={knowledgeBase.currentLocationId || null}
+            onLocationClick={handleLocationClick}
+            transform={transformString}
+            isEditMode={isEditMode}
+            onNodeMouseDown={handleNodeMouseDown}
+          />
         </svg>
 
-        {/* Floating Controls */}
-        <div className="absolute top-2 right-2 z-20 flex gap-2 flex-wrap justify-end">
-            <Button onClick={() => setIsFindModalOpen(true)} size="sm" variant="secondary" title={VIETNAMESE.findLocationButtonTitle} className="border-cyan-500 text-cyan-300 hover:bg-cyan-700/60" disabled={game.isLoadingApi || isEditMode}>
-                {VIETNAMESE.findLocationButtonLabel}
-            </Button>
-            <Button onClick={() => setIsLegendOpen(!isLegendOpen)} size="sm" variant="secondary" title={VIETNAMESE.mapLegendTitle}>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125V4.125c0-.621-.504-1.125-1.125-1.125h-7.5c-.621 0-1.125.504-1.125 1.125v14.25c0 .621.504 1.125 1.125 1.125z" /></svg>
+        {/* Zoom Controls */}
+        <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+            <Button onClick={() => zoom(1.2)} size="sm" variant="secondary" title={VIETNAMESE.zoomIn} className="!p-2 aspect-square">+</Button>
+            <Button onClick={() => zoom(0.8)} size="sm" variant="secondary" title={VIETNAMESE.zoomOut} className="!p-2 aspect-square">-</Button>
+            <Button onClick={resetView} size="sm" variant="secondary" title={VIETNAMESE.resetView} className="!p-2 aspect-square">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6" />
+                </svg>
             </Button>
         </div>
-        
+
+        {/* Legend */}
         {isLegendOpen && (
-            <div className="absolute top-12 right-2 z-20 bg-gray-900/80 backdrop-blur-sm p-3 rounded-lg border border-gray-700 max-h-[70vh] w-56 overflow-y-auto custom-scrollbar">
-                <h3 className="text-md font-semibold text-teal-300 mb-3 border-b border-gray-600 pb-2">{VIETNAMESE.mapLegendTitle}</h3>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-200 mb-2">{VIETNAMESE.mapIconLegendTitle || "Chú giải Icon"}</h4>
-                    <div className="space-y-2">
-                        {iconLegendData.map(item => <LegendItem key={item.label} icon={item.icon} label={item.label} />)}
-                    </div>
+            <div className="absolute top-4 left-4 bg-gray-900/80 p-4 rounded-lg border border-gray-600 backdrop-blur-sm space-y-4 max-h-[80%] overflow-y-auto custom-scrollbar">
+               <div>
+                  <h3 className="font-semibold text-gray-200 mb-2">{VIETNAMESE.mapIconLegendTitle}</h3>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    {iconLegendData.map(item => <LegendItem key={item.label} icon={item.icon} label={item.label} />)}
                   </div>
-                  <div className="border-t border-gray-700 pt-3">
-                    <h4 className="text-sm font-semibold text-gray-200 mb-2">{VIETNAMESE.mapColorLegendTitle || "Chú giải Màu sắc"}</h4>
-                    <div className="space-y-2">
-                        {colorLegendData.map(item => <LegendItem key={item.label} color={item.color} label={item.label} />)}
-                    </div>
+               </div>
+               <div className="border-t border-gray-700 pt-3">
+                  <h3 className="font-semibold text-gray-200 mb-2">{VIETNAMESE.mapColorLegendTitle}</h3>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {colorLegendData.map(item => <LegendItem key={item.label} color={item.color} label={item.label} />)}
                   </div>
-                </div>
+               </div>
             </div>
         )}
-
-        <div className="absolute bottom-2 right-2 flex flex-col gap-1 bg-gray-900/50 p-1.5 rounded-lg z-20">
-            <Button onClick={() => zoom(1.2)} size="sm" variant="secondary" title={VIETNAMESE.zoomIn} className="!w-8 !h-8 !p-0">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            </Button>
-            <Button onClick={() => zoom(1/1.2)} size="sm" variant="secondary" title={VIETNAMESE.zoomOut} className="!w-8 !h-8 !p-0">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
-            </Button>
-            <Button onClick={resetView} size="sm" variant="secondary" title={VIETNAMESE.resetView} className="!w-8 !h-8 !p-0">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
-            </Button>
-        </div>
       </div>
-      
-       {selectedLocationDetails && (
-        <Modal
-          isOpen={isLocationModalOpen}
-          onClose={handleCloseModal}
-          title={`Chi Tiết: ${selectedLocationDetails.name}`}
+    </div>
+    
+    {isLocationModalOpen && selectedLocationDetails && (
+        <Modal 
+            isOpen={isLocationModalOpen} 
+            onClose={handleCloseModal} 
+            title={locationHistory[0].name}
         >
-          <div className="space-y-2 text-sm">
-            <p><strong className="text-indigo-300">Tên:</strong> {selectedLocationDetails.name}</p>
-            {selectedLocationDetails.locationType && <p><strong className="text-indigo-300">Loại:</strong> {selectedLocationDetails.locationType}</p>}
-            {(selectedLocationDetails.mapX !== undefined && selectedLocationDetails.mapY !== undefined) && (
-              <p><strong className="text-indigo-300">Tọa độ:</strong> ({selectedLocationDetails.mapX}-{selectedLocationDetails.mapY})</p>
-            )}
-            {selectedLocationDetails.description && <p><strong className="text-indigo-300">Mô tả:</strong> {selectedLocationDetails.description}</p>}
-            {selectedLocationDetails.regionId && (
-                <p><strong className="text-indigo-300">{VIETNAMESE.regionLabel || "Vùng"}:</strong> {getRegionName(selectedLocationDetails.regionId) || selectedLocationDetails.regionId}</p>
-            )}
-            <p><strong className="text-indigo-300">An toàn:</strong> {selectedLocationDetails.isSafeZone ? "Có" : "Không"}</p>
-            {selectedLocationDetails.parentLocationId === undefined && (
-              <p><strong className="text-indigo-300">{VIETNAMESE.locationStatusLabel}:</strong> <span className={selectedLocationDetails.visited ? 'text-green-400 font-semibold' : 'text-gray-400'}>{selectedLocationDetails.visited ? VIETNAMESE.locationStatusVisited : VIETNAMESE.locationStatusUnvisited}</span></p>
-            )}
-            
-            {selectedLocationDetails.connections && selectedLocationDetails.connections.some(c => c.isDiscovered) && (
-              <div className="mt-2">
-                <strong className="text-indigo-300">Kết nối đã biết:</strong>
-                <ul className="list-disc list-inside pl-4 text-gray-300 text-xs">
-                  {selectedLocationDetails.connections.filter(c => c.isDiscovered).map(conn => {
-                    const target = knowledgeBase.discoveredLocations.find(l => l.id === conn.targetLocationId);
-                    let connDetails = target?.name || conn.targetLocationId;
-                    if (conn.travelTimeTurns) connDetails += ` (Thời gian: ${conn.travelTimeTurns} lượt)`;
-                    if (conn.description) connDetails += ` - ${conn.description}`;
-                    return <li key={conn.targetLocationId}>{connDetails}</li>;
-                  })}
-                </ul>
-              </div>
-            )}
-            {subLocationsForSelected.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-gray-600">
-                    <strong className="text-indigo-300">Khu Vực Phụ:</strong>
-                    <ul className="list-disc list-inside pl-4 mt-1 space-y-1">
-                        {subLocationsForSelected.map(subLoc => (
-                            <li key={subLoc.id}>
-                                <button onClick={() => handleSubLocationClick(subLoc)} className="text-cyan-400 hover:text-cyan-300 underline">
-                                    {subLoc.name}
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-          </div>
-           {locationHistory.length > 1 && (
-                 <div className="mt-4 pt-4 border-t border-gray-700 flex justify-start">
-                     <Button onClick={handleModalBack} variant="secondary">
+            <div className="space-y-4">
+                {locationHistory.length > 1 && (
+                    <Button onClick={handleModalBack} variant="ghost" size="sm" className="mb-2">
                         &larr; Quay lại {locationHistory[locationHistory.length - 2].name}
                     </Button>
+                )}
+                <h3 className="text-xl font-bold text-indigo-300">{selectedLocationDetails.name}</h3>
+                <p className="text-sm italic text-gray-400">{selectedLocationDetails.description}</p>
+                
+                <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-700 text-sm">
+                    <p><strong className="text-gray-400">Loại:</strong> {selectedLocationDetails.locationType}</p>
+                    <p><strong className="text-gray-400">Vùng:</strong> {getRegionName(selectedLocationDetails.regionId) || 'Chưa rõ'}</p>
+                    <p><strong className="text-gray-400">An toàn:</strong> {selectedLocationDetails.isSafeZone ? 'Có' : 'Không'}</p>
+                    <p><strong className="text-gray-400">Trạng thái:</strong> {selectedLocationDetails.visited ? 'Đã đến' : 'Chưa đến'}</p>
                 </div>
-            )}
+
+                {subLocationsForSelected.length > 0 && (
+                     <div className="pt-3 border-t border-gray-700">
+                        <h4 className="font-semibold text-gray-300 mb-2">Các Khu Vực Phụ:</h4>
+                        <ul className="space-y-1">
+                            {subLocationsForSelected.map(subLoc => (
+                                <li key={subLoc.id}>
+                                    <button 
+                                        onClick={() => handleSubLocationClick(subLoc)}
+                                        className="w-full text-left p-2 rounded text-indigo-300 hover:bg-gray-700/50"
+                                    >
+                                        - {subLoc.name}
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                     </div>
+                )}
+            </div>
         </Modal>
-      )}
-    </div>
-    {isFindModalOpen && (
-        <FindLocationModal
-            isOpen={isFindModalOpen}
-            onClose={() => setIsFindModalOpen(false)}
-            onSearch={handleStartSearch}
-            isLoading={game.isLoadingApi}
-        />
     )}
+    <FindLocationModal
+        isOpen={isFindModalOpen}
+        onClose={() => setIsFindModalOpen(false)}
+        onSearch={handleStartSearch}
+        isLoading={game.isLoadingApi}
+    />
     </>
   );
 };
-
-export default MapPanel;

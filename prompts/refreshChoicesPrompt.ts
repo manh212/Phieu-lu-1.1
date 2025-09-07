@@ -1,4 +1,5 @@
-import { KnowledgeBase, AiChoice } from '../types';
+// FIX: Correct import path for types
+import { KnowledgeBase, AiChoice } from '@/types/index';
 
 export const generateRefreshChoicesPrompt = (
     lastNarration: string,

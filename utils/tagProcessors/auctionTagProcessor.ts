@@ -2,7 +2,9 @@
 
 
 
-import { KnowledgeBase, GameMessage, Item, AuctionItem, AuctionNPC } from '../../types';
+
+// FIX: Corrected import path for types.
+import { KnowledgeBase, GameMessage, Item, AuctionItem, AuctionNPC } from '../../types/index';
 import { VIETNAMESE } from '../../constants';
 import { createItemFromParams } from './itemTagProcessor'; // Reusing the item creation helper
 

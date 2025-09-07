@@ -1,5 +1,5 @@
-
-import { KnowledgeBase, AuctionSlave } from '../types';
+// FIX: Corrected import path for types.
+import { KnowledgeBase, AuctionSlave } from '@/types/index';
 
 export const runSlaveAuctionTurnPrompt = (kb: KnowledgeBase, item: AuctionSlave, playerBid: number): string => {
     const allPotentialBidders = [

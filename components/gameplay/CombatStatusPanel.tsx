@@ -1,6 +1,8 @@
+
 import React from 'react';
+// FIX: Corrected import path for types.
+import { Combatant } from '@/types/index';
 import { useCombat } from '../../hooks/useCombat';
-import { Combatant } from '../../types';
 
 const HPBar: React.FC<{ combatant: Combatant }> = ({ combatant }) => {
     const { sinhLuc, maxSinhLuc } = combatant.currentStats;

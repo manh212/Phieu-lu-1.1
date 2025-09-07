@@ -1,8 +1,9 @@
 
 
+
 import React from 'react';
-import { Skill } from '../../types';
-import { VIETNAMESE } from '../../constants';
+import { Skill } from '@/types/index';
+import { VIETNAMESE } from '@/constants';
 
 interface SkillsPanelProps {
   skills: Skill[];

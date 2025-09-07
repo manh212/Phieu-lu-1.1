@@ -1,9 +1,9 @@
-
-
-import { KnowledgeBase, GameLocation, GameMessage, NPC, Item } from '../types';
-import { generateVendorRestock as generateVendorRestockPrompt, parseAiResponseText, generateVendorRestock } from '../services/geminiService';
+// src/utils/locationEvents.ts
+import { KnowledgeBase, GameLocation, GameMessage, NPC, Item } from '@/types/index';
+import { generateVendorRestock } from '../services';
 import { createItemFromParams } from './tagProcessors/itemTagProcessor';
 import { parseTagValue } from './parseTagValue';
+import * as GameTemplates from '@/types/index';
 
 export async function handleLocationEntryEvents(
     kb: KnowledgeBase,

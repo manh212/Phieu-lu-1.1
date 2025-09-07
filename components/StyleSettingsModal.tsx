@@ -1,8 +1,8 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
-import { StyleSettings, StyleSettingProperty } from '../types';
+import { StyleSettings, StyleSettingProperty } from '@/types/index';
 import Button from './ui/Button';
-import Modal from './ui/Modal'; // Corrected import path
-import { VIETNAMESE, AVAILABLE_FONTS, AVAILABLE_FONT_SIZES, DEFAULT_STYLE_SETTINGS } from '../constants';
+import Modal from './ui/Modal'; 
+import { VIETNAMESE, AVAILABLE_FONTS, AVAILABLE_FONT_SIZES, DEFAULT_STYLE_SETTINGS } from '@/constants/index';
 import InputField from './ui/InputField';
 
 interface StyleSettingsModalProps {
@@ -44,7 +44,8 @@ const StyleSettingsModal: React.FC<StyleSettingsModalProps> = ({ initialSettings
   const handleResetSection = (section: keyof StyleSettings) => {
     setCurrentStyles(prev => ({
       ...prev,
-      [section]: DEFAULT_STYLE_SETTINGS[section],
+      // FIX: Explicitly cast symbol key to string to prevent runtime error
+      [section]: DEFAULT_STYLE_SETTINGS[section as keyof typeof DEFAULT_STYLE_SETTINGS],
     }));
   };
   
@@ -80,10 +81,10 @@ const StyleSettingsModal: React.FC<StyleSettingsModalProps> = ({ initialSettings
           {(!isKeywordSection && !isDialogueSection) && ( 
             <>
               <div>
-                <label htmlFor={`${sectionKey}-fontFamily`} className="block text-sm font-medium text-gray-300 mb-1">{VIETNAMESE.fontFamilyLabel}</label>
+                <label htmlFor={`${String(sectionKey)}-fontFamily`} className="block text-sm font-medium text-gray-300 mb-1">{VIETNAMESE.fontFamilyLabel}</label>
                 <select
-                  id={`${sectionKey}-fontFamily`}
-                  value={sectionStyles.fontFamily || 'inherit'}
+                  id={`${String(sectionKey)}-fontFamily`}
+                  value={(sectionStyles as any).fontFamily || 'inherit'}
                   onChange={(e) => handleStyleChange(sectionKey, 'fontFamily', e.target.value)}
                   className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-gray-100"
                 >
@@ -91,10 +92,10 @@ const StyleSettingsModal: React.FC<StyleSettingsModalProps> = ({ initialSettings
                 </select>
               </div>
               <div>
-                <label htmlFor={`${sectionKey}-fontSize`} className="block text-sm font-medium text-gray-300 mb-1">{VIETNAMESE.fontSizeLabel}</label>
+                <label htmlFor={`${String(sectionKey)}-fontSize`} className="block text-sm font-medium text-gray-300 mb-1">{VIETNAMESE.fontSizeLabel}</label>
                 <select
-                  id={`${sectionKey}-fontSize`}
-                  value={sectionStyles.fontSize || 'inherit'}
+                  id={`${String(sectionKey)}-fontSize`}
+                  value={(sectionStyles as any).fontSize || 'inherit'}
                   onChange={(e) => handleStyleChange(sectionKey, 'fontSize', e.target.value)}
                   className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-gray-100"
                 >
@@ -104,11 +105,11 @@ const StyleSettingsModal: React.FC<StyleSettingsModalProps> = ({ initialSettings
             </>
           )}
           <div>
-            <label htmlFor={`${sectionKey}-textColor`} className="block text-sm font-medium text-gray-300 mb-1">{VIETNAMESE.textColorLabel}</label>
+            <label htmlFor={`${String(sectionKey)}-textColor`} className="block text-sm font-medium text-gray-300 mb-1">{VIETNAMESE.textColorLabel}</label>
             <input
               type="color"
-              id={`${sectionKey}-textColor`}
-              value={sectionStyles.textColor} 
+              id={`${String(sectionKey)}-textColor`}
+              value={(sectionStyles as any).textColor} 
               onChange={(e) => handleStyleChange(sectionKey, 'textColor', e.target.value)}
               className="w-full h-10 p-1 bg-gray-700 border border-gray-600 rounded-md cursor-pointer"
             />
@@ -116,11 +117,11 @@ const StyleSettingsModal: React.FC<StyleSettingsModalProps> = ({ initialSettings
           {/* Background color only if not keyword or dialogue section */}
           {(!isKeywordSection && !isDialogueSection) && ( 
             <div>
-              <label htmlFor={`${sectionKey}-backgroundColor`} className="block text-sm font-medium text-gray-300 mb-1">{VIETNAMESE.backgroundColorLabel}</label>
+              <label htmlFor={`${String(sectionKey)}-backgroundColor`} className="block text-sm font-medium text-gray-300 mb-1">{VIETNAMESE.backgroundColorLabel}</label>
               <input
                 type="color"
-                id={`${sectionKey}-backgroundColor`}
-                value={sectionStyles.backgroundColor || '#000000'} // Default to black if undefined for picker
+                id={`${String(sectionKey)}-backgroundColor`}
+                value={(sectionStyles as any).backgroundColor || '#000000'} // Default to black if undefined for picker
                 onChange={(e) => handleStyleChange(sectionKey, 'backgroundColor', e.target.value)}
                 className="w-full h-10 p-1 bg-gray-700 border border-gray-600 rounded-md cursor-pointer"
               />

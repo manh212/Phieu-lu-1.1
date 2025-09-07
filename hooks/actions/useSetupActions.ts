@@ -1,9 +1,12 @@
 import { useCallback } from 'react';
-import { KnowledgeBase, GameMessage, WorldSettings, GameScreen, RealmBaseStatDefinition, TurnHistoryEntry, WorldDate, StartingLocation } from '../../types';
+// FIX: Corrected import path for types
+import { KnowledgeBase, GameMessage, WorldSettings, GameScreen, RealmBaseStatDefinition, TurnHistoryEntry, WorldDate, StartingLocation } from '../../types/index';
 import { INITIAL_KNOWLEDGE_BASE, APP_VERSION, DEFAULT_PLAYER_STATS, DEFAULT_TIERED_STATS, VIETNAMESE, MAX_AUTO_SAVE_SLOTS, DEFAULT_MODEL_ID } from '../../constants';
-import { generateInitialStory } from '../../services/geminiService';
+// FIX: Corrected import path for services
+import { generateInitialStory } from '../../services';
 import { performTagProcessing, calculateRealmBaseStats, addTurnHistoryEntryRaw, calculateEffectiveStats, vectorizeKnowledgeBase, DEFAULT_AI_CONTEXT_CONFIG, normalizeLocationName } from '../../utils/gameLogicUtils'; // Import vectorizeKnowledgeBase
-import * as GameTemplates from '../../templates';
+// FIX: Corrected import path for templates
+import * as GameTemplates from '../../types/index';
 
 
 interface UseSetupActionsProps {

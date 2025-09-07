@@ -1,6 +1,6 @@
-import { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, DIALOGUE_MARKER, Master, AIContextConfig } from '../types';
+import { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, DIALOGUE_MARKER, Master, AIContextConfig } from '../types/index';
 import { VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, WEAPON_TYPES_FOR_VO_Y, TU_CHAT_TIERS, ALL_FACTION_ALIGNMENTS, SUB_REALM_NAMES } from '../constants';
-import * as GameTemplates from '../templates';
+import * as GameTemplates from '../types/index';
 import { prisonContinuePromptSystemRules } from '../constants/systemRulesPrison';
 import { getWorldDateDifferenceString } from '../utils/dateUtils';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
@@ -69,7 +69,10 @@ export const generateContinuePrisonPrompt = (
       );
 
       if (relevantEvents.length > 0) {
-          eventGuidance = `\n**HƯỚNG DẪN VỀ SỰ KIỆN THẾ GIỚI (CỰC KỲ QUAN TRỌNG):**\nBạn đang ở một địa điểm có sự kiện. Hãy tuân thủ nghiêm ngặt các quy tắc sau:\n`;
+          eventGuidance = `
+**HƯỚNG DẪN VỀ SỰ KIỆN THẾ GIỚI (CỰC KỲ QUAN TRỌNG):**
+Bạn đang ở một địa điểm có sự kiện. Hãy tuân thủ nghiêm ngặt các quy tắc sau:
+`;
           relevantEvents.forEach(event => {
               const timeDiff = getWorldDateDifferenceString(event.startDate, event.endDate, knowledgeBase.worldDate);
               if (event.status === 'Sắp diễn ra') {
@@ -110,7 +113,9 @@ ${userPrompts.map(p => `- ${p}`).join('\n')}
   const ragContextSection = aiContextConfig.sendRagContext ? `
 **A. BỐI CẢNH TRUY XUẤT (RAG CONTEXT - LONG-TERM MEMORY):**
 Dưới đây là một số thông tin liên quan từ các sự kiện trong quá khứ có thể hữu ích cho lượt này. Hãy sử dụng nó để đảm bảo tính nhất quán của câu chuyện.
-${retrievedContext ? `\`\`\`\n${retrievedContext}\n\`\`\`` : "Không có bối cảnh truy xuất nào."}` : '';
+${retrievedContext ? `\`\`\`
+${retrievedContext}
+\`\`\`` : "Không có bối cảnh truy xuất nào."}` : '';
   
   const coreContextSection = aiContextConfig.sendCoreContext ? `
 **B. BỐI CẢNH CỐT LÕI (CORE CONTEXT - PLAYER'S CURRENT STATE):**
@@ -285,7 +290,7 @@ ${eventGuidance}
 **HƯỚNG DẪN XỬ LÝ DÀNH CHO AI:**
 ${inputType === 'action'
     ? `Xử lý nội dung trên như một hành động mà nhân vật chính (${worldConfig?.playerName}) đang thực hiện. Mô tả kết quả của hành động này và các diễn biến tiếp theo một cách chi tiết và hấp dẫn, dựa trên các chỉ số thân phận và TOÀN BỘ BỐI CẢNH.`
-    : `Nội dung trên là một gợi ý, mô tả, hoặc mong muốn của người chơi để định hướng hoặc làm phong phú thêm câu chuyện. Đây KHÔNG phải là hành động trực tiếp của nhân vật chính (${worldConfig?.playerName}). **NHIỆM VỤ CỦA BẠN LÀ BẮT BUỘC PHẢI LÀM CHO DIỄN BIẾN NÀY XẢY RA TRONG LƯỢT TIẾP THEO.** Hãy tìm một cách tự nhiên và hợp lý nhất để hợp thức hóa sự kiện này trong bối cảnh hiện tại của một ${statusType}. Sau khi mô tả sự kiện này đã xảy ra, hãy cung cấp các lựa chọn [CHOICE: "..."] để người chơi phản ứng với tình huống mới.`
+    : 'Nội dung trên là một gợi ý, mô tả, hoặc mong muốn của người chơi để định hướng hoặc làm phong phú thêm câu chuyện. Đây KHÔNG phải là hành động trực tiếp của nhân vật chính (' + (worldConfig?.playerName || 'Người chơi') + '). **NHIỆM VỤ CỦA BẠN LÀ BẮT BUỘC PHẢI LÀM CHO DIỄN BIẾN NÀY XẢY RA TRONG LƯỢT TIẾP THEO.** Hãy tìm một cách tự nhiên và hợp lý nhất để hợp thức hóa sự kiện này trong bối cảnh hiện tại của một ' + statusType + '. Sau khi mô tả sự kiện này đã xảy ra, hãy cung cấp các lựa chọn [CHOICE: "..."] để người chơi phản ứng với tình huống mới.'
   }
 *   **VIẾT LỜI KỂ:** Mô tả chi tiết và hợp lý kết quả của hành động. Phản ứng của chủ nhân (${specialStatus?.ownerName}) và môi trường xung quanh phải logic và bị ảnh hưởng bởi các chỉ số thân phận. Tuân thủ nghiêm ngặt **CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH** đã chọn.
 *   **SỬ DỤNG TAGS HỆ THỐNG:** Tạo ra các tag để cập nhật trạng thái game. Mỗi tag trên một dòng riêng.
@@ -302,16 +307,18 @@ Nhiệm vụ của bạn là vẽ nên những bức tranh sống động và t�
     *   **"Tả", không "Kể":** Thay vì dùng những từ ngữ chung chung, hãy mô tả chi tiết để người chơi tự cảm nhận.
     *   **Nội tâm nhân vật:** Mô tả những suy nghĩ, cảm xúc, ký ức thoáng qua của nhân vật chính.
 
-*   **A.2. MỆNH LỆNH "THẾ GIỚI SỐNG ĐỘNG"**
-    *   Làm cho thế giới cảm thấy đang "sống" và tự vận hành.
-    *   **QUY TRÌNH:** Trong mỗi phản hồi, hãy **luôn mô tả ngắn gọn một sự kiện nền** đang diễn ra xung quanh không liên quan trực tiếp đến người chơi.
-    *   **Ví dụ:**
-        *   **SAI:** "Bạn bước vào quán rượu. Quán rượu đông đúc."
-        *   **ĐÚNG:** "**Hai thương nhân ở góc phòng đang lớn tiếng tranh cãi về giá cả. Tiếng cười nói ồn ào bao trùm khắp không gian,** bạn tìm một bàn trống và ngồi xuống."
-
-*   **A.3. GIAO THỨC "NPC CHỦ ĐỘNG"**
+*   **A.2. GIAO THỨC "NPC CHỦ ĐỘNG"**
     *   Trong mỗi cảnh, **BẮT BUỘC có ít nhất MỘT NPC thực hiện một hành động chủ động** (tiếp cận người chơi, nói chuyện với NPC khác, đưa ra đề nghị, thể hiện cảm xúc...).
     *   **TUYỆT ĐỐI KHÔNG** để tất cả NPC chỉ đứng yên.
+*   **A.3. QUY TẮC MỚI VỀ TƯƠNG TÁC GIỮA CÁC NHÂN VẬT:**
+    *   Khi bạn mô tả một tương tác xã hội quan trọng giữa hai nhân vật (NPC, đạo lữ, nô lệ, v.v., **KHÔNG BAO GỒM NGƯỜI CHƠI**), bạn **BẮT BUỘC** phải sử dụng tag mới sau: \`[RELATIONSHIP_EVENT: source="Tên/ID Nhân Vật A", target="Tên/ID Nhân Vật B", reason="Mô tả sự kiện", affinity_change=X]\`.
+    *   **source:** Tên của người chủ động.
+    *   **target:** Tên của người bị động.
+    *   **reason:** Một mô tả ngắn gọn về hành động (ví dụ: "cãi nhau về tiền bạc", "tỏ tình nhưng bị từ chối", "cùng nhau uống rượu và kết giao", "dạy dỗ một bài học").
+    *   **affinity_change:** Sự thay đổi thiện cảm giữa hai người (số âm nếu tiêu cực, dương nếu tích cực).
+    *   **VÍ DỤ:** Nếu bạn kể "Lý Mộc và Lý Tứ tranh cãi nảy lửa về việc phân chia chiến lợi phẩm.", bạn phải thêm tag:
+        \`[RELATIONSHIP_EVENT: source="Lý Mộc", target="Lý Tứ", reason="tranh cãi nảy lửa về việc phân chia chiến lợi phẩm", affinity_change=-15]\`
+    *   Việc này giúp các nhân vật 'ghi nhớ' các tương tác xã hội với nhau, tạo ra một thế giới sâu sắc hơn.
 
 *   **A.4. CHỈ THỊ "CỐI XAY TIN ĐỒN"**
     *   Nội dung hội thoại của NPC phải đa dạng (chính trị, kinh tế, sự kiện, nhân vật nổi tiếng, chuyện lạ).

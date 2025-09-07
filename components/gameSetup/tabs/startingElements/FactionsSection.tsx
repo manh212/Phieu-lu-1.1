@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { StartingFaction } from '../../../../types';
-import * as GameTemplates from '../../../../templates';
+import { StartingFaction } from '../../../../types/index';
+import * as GameTemplates from '../../../../types/index';
 import { VIETNAMESE, ALL_FACTION_ALIGNMENTS } from '../../../../constants';
 import InputField from '../../../ui/InputField';
 import Button from '../../../ui/Button';

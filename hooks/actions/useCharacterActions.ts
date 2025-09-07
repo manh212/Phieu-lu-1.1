@@ -1,14 +1,12 @@
-
 import { useCallback } from 'react';
-import {
-    KnowledgeBase, GameMessage, GameScreen, Prisoner, Wife, Slave, NPC
-} from '../../types';
+// FIX: Correct import path for types
+import { KnowledgeBase, GameMessage, GameScreen, Prisoner, Wife, Slave, NPC } from '../../types/index';
 import {
     handleCompanionInteraction,
     handlePrisonerInteraction,
     summarizeCompanionInteraction,
     summarizePrisonerInteraction
-} from '../../services/geminiService';
+} from '../../services';
 import { performTagProcessing, calculateSlaveValue } from '../../utils/gameLogicUtils';
 import { VIETNAMESE } from '../../constants';
 

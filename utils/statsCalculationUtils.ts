@@ -1,5 +1,5 @@
 
-import { PlayerStats, RealmBaseStatDefinition, Item, EquipmentSlotId, StatusEffect, GameMessage, KnowledgeBase, Slave } from '../types';
+import { PlayerStats, RealmBaseStatDefinition, Item, EquipmentSlotId, StatusEffect, GameMessage, KnowledgeBase, Slave } from '../types/index';
 import { 
     DEFAULT_PLAYER_STATS, 
     SUB_REALM_NAMES, 
@@ -17,9 +17,10 @@ import {
     SPECIAL_EFFECT_KEYWORDS,
     UNKNOWN_EFFECT_MULTIPLIER,
     AUCTION_NPC_CURRENCY_BY_REALM_TIER,
-    TU_CHAT_VALUE_MULTIPLIERS,
+    // FIX: Corrected typo in constant name.
+    TU_CHAT_MULTIPLIERS,
 } from '../constants';
-import * as GameTemplates from '../templates';
+import * as GameTemplates from '../types/index';
 import { normalizeStringForComparison } from './questUtils';
 
 // Calculates base stats (maxHP, maxMP, baseATK, maxEXP, etc.) based on realm.
@@ -104,7 +105,7 @@ export const calculateRealmBaseStats = (
         };
     }
     
-    const subRealmIndex = SUB_REALM_NAMES.indexOf(subRealmName);
+    const subRealmIndex = SUB_REALM_NAMES.indexOf(subRealmName as any);
     
     if (subRealmIndex === -1) {
          let tierDefinitionForError = currentRealmBaseStatsMap[mainRealmName] || fallbackTierDefinition;
@@ -477,7 +478,7 @@ export const calculateSlaveValue = (slave: Slave, realmProgressionList: string[]
 
     // 3. Apply aptitude (Tu Chất) multiplier
     if (slave.tuChat) {
-        const tuChatMultiplier = TU_CHAT_VALUE_MULTIPLIERS[slave.tuChat] || 1.0;
+        const tuChatMultiplier = TU_CHAT_MULTIPLIERS[slave.tuChat] || 1.0;
         baseValue *= tuChatMultiplier;
     }
 

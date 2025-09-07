@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
-import { Quest } from '../../types';
-import { VIETNAMESE } from '../../constants';
+import { Quest } from '@/types/index';
+import { VIETNAMESE } from '@/constants';
 
 interface QuestsDisplayPanelProps {
   quests: Quest[];

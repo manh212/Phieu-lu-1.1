@@ -1,9 +1,10 @@
 
+
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
-import { GameScreen, SaveGameMeta, StorageType, SaveGameData, KnowledgeBase, GameMessage, TurnHistoryEntry } from '../types';
+import { GameScreen, SaveGameMeta, StorageType, SaveGameData, KnowledgeBase, GameMessage, TurnHistoryEntry } from '@/types/index';
 import Button from './ui/Button';
 import Spinner from './ui/Spinner';
-import { VIETNAMESE, APP_VERSION, KEYFRAME_INTERVAL } from '../constants';
+import { VIETNAMESE, APP_VERSION, KEYFRAME_INTERVAL } from '@/constants';
 import * as jsonpatch from "fast-json-patch"; 
 import { Operation } from 'fast-json-patch';
 import pako from 'pako';
@@ -361,4 +362,3 @@ const ImportExportScreen: React.FC<ImportExportScreenProps> = ({
 };
 
 export default ImportExportScreen;
-    

@@ -1,16 +1,14 @@
 import { useCallback, useState } from 'react';
-import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, AiChoice, NPC, FindLocationParams } from '../../types';
-// FIX: Added missing constants.
-import { countTokens, generateRefreshedChoices, generateNextTurn, summarizeTurnHistory, findLocationWithAI, getApiSettings } from '../../services/geminiService';
-// FIX: Added missing import.
+// FIX: Correct import path for types
+import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, AiChoice, NPC, FindLocationParams } from '../../types/index';
+// FIX: Corrected import path for services
+import { countTokens, generateRefreshedChoices, generateNextTurn, summarizeTurnHistory, findLocationWithAI, getApiSettings } from '../../services';
 import { generateEmbeddings } from '../../services/embeddingService';
 import { performTagProcessing, addTurnHistoryEntryRaw, getMessagesForPage, calculateEffectiveStats, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, handleLocationEntryEvents, searchVectors, extractEntityContextsFromString, worldDateToTotalMinutes } from '../../utils/gameLogicUtils';
-// FIX: Added missing constants.
 import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS, LIVING_WORLD_TICK_INTERVAL_HOURS } from '../../constants';
 
 // Interface was likely shared, defining it here for clarity.
-// FIX: Added all missing properties to the interface to resolve multiple TypeScript errors.
-interface UseMainGameLoopActionsProps {
+export interface UseMainGameLoopActionsProps {
   knowledgeBase: KnowledgeBase;
   setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeBase>>;
   gameMessages: GameMessage[];
@@ -64,12 +62,10 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
       lastNarrationFromPreviousPage,
       executeWorldTick,
       isAutoPlaying, setIsAutoPlaying,
-      // FIX: Destructure newly added props from the interface.
       setKnowledgeBase,
       executeSaveGame,
     } = props;
     
-    // INLINED STATE AND LOGIC FROM MISSING useMainGameLoop HOOK
     const [isSummarizingNextPageTransition, setIsSummarizingNextPageTransition] = useState<boolean>(false);
     
     const logSentPromptCallback = useCallback((prompt: string) => {
@@ -202,7 +198,6 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
                 timestamp: Date.now(), choices: response.choices, turnNumber: turnJustCompleted
             }, ...combinedSystemMessages];
 
-            // *** PAGINATION AND SUMMARIZATION LOGIC - RESTORED ***
             if (turnJustCompleted > 0 && turnJustCompleted % TURNS_PER_PAGE === 0 && gameMessagesAtActionStart.length > 0) {
                 setIsSummarizingNextPageTransition(true);
             
@@ -375,5 +370,6 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
       isSummarizingNextPageTransition,
       handleRefreshChoices,
       handleCheckTokenCount,
+      logSentPromptCallback,
     };
 };

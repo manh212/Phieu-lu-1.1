@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
-import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase } from './types';
+import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase } from './types/index';
 import { VIETNAMESE } from './constants';
-import * as GameTemplates from './templates'; // Import GameTemplates
+import * as GameTemplates from './types/index'; // Import GameTemplates
 
 // Import Layout Components
 import GameHeader from './components/gameplay/layout/GameHeader';
@@ -14,7 +14,7 @@ import CharacterSidePanel from './components/gameplay/CharacterSidePanel';
 import QuestsSidePanel from './components/gameplay/QuestsSidePanel';
 import WorldSidePanel from './components/gameplay/WorldSidePanel';
 import DebugPanelDisplay from './components/gameplay/DebugPanelDisplay';
-import MiniInfoPopover from './components/ui/MiniInfoPopover';
+import MiniInfoPopover from './components/gameplay/MiniInfoPopover';
 import { MainMenuPanel } from './components/gameplay/layout/MainMenuPanel';
 import AICopilotPanel from './components/gameplay/AICopilotPanel';
 

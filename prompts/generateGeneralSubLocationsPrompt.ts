@@ -1,6 +1,5 @@
-
-import { KnowledgeBase, GameLocation } from '../types';
-import * as GameTemplates from '../templates';
+import { KnowledgeBase, GameLocation } from '../types/index';
+import * as GameTemplates from '../types/index';
 
 export const generateGeneralSubLocationsPrompt = (mainLocation: GameLocation, kb: KnowledgeBase): string => {
     const { worldConfig } = kb;
@@ -29,7 +28,8 @@ export const generateGeneralSubLocationsPrompt = (mainLocation: GameLocation, kb
     }
 
 
-    return `Bạn là một AI kiến tạo thế giới game nhập vai, chuyên tạo ra các chi tiết và địa điểm thú vị để làm cho thế giới trở nên sống động.
+    return `
+Bạn là một AI kiến tạo thế giới game nhập vai, chuyên tạo ra các chi tiết và địa điểm thú vị để làm cho thế giới trở nên sống động.
 Người chơi vừa lần đầu tiên đặt chân đến **${mainLocation.name}**, một ${locationTypeString}. Hãy tạo ra các khu vực phụ **phi kinh tế** đặc trưng cho nơi này.
 
 **BỐI CẢNH:**

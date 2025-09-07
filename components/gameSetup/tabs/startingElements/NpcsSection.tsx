@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { WorldSettings, StartingNPC, TuChatTier, TU_CHAT_TIERS, StartingLocation } from '../../../../types';
+// FIX: Corrected import path for types.
+import { WorldSettings, StartingNPC, TuChatTier, TU_CHAT_TIERS, StartingLocation } from '@/types/index';
 import { VIETNAMESE } from '../../../../constants';
 import InputField from '../../../ui/InputField';
 import Button from '../../../ui/Button';

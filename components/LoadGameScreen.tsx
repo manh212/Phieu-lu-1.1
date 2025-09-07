@@ -1,12 +1,13 @@
 
 
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { GameScreen, SaveGameMeta, StorageType } from '../types';
+import { GameScreen, SaveGameMeta, StorageType } from '@/types/index';
 import Button from './ui/Button';
 import Spinner from './ui/Spinner';
-import { VIETNAMESE, MAX_AUTO_SAVE_SLOTS } from '../constants';
+import { VIETNAMESE, MAX_AUTO_SAVE_SLOTS } from '@/constants';
 // loadGamesFromFirestore, deleteGameFromFirestore removed
-import { loadGamesFromIndexedDB, deleteGameFromIndexedDB } from '../services/indexedDBService';
+import { loadGamesFromIndexedDB, deleteGameFromIndexedDB } from '@/services/indexedDBService';
 
 // Helper function to format bytes, moved outside component
 const formatBytes = (bytes: number | undefined, decimals: number = 2): string => {

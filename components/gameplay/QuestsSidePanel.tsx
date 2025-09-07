@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Quest } from '../../types';
+import { Quest } from '@/types/index';
 // import { VIETNAMESE } from '../../constants'; // No longer needed for title here
 import QuestsDisplayPanel from './QuestsDisplayPanel';
 // import Button from '../ui/Button'; // No longer needed for close button

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo, useLayoutEffect } from 'react';
-import { GameMessage, KnowledgeBase, StyleSettings, StyleSettingProperty, CombatLogContent } from '../../../types';
+import { GameMessage, KnowledgeBase, StyleSettings, StyleSettingProperty, CombatLogContent } from '../../../types/index';
 import Button from '../../ui/Button';
 import Spinner from '../../ui/Spinner';
 import { VIETNAMESE } from '../../../constants';

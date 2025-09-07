@@ -1,8 +1,9 @@
 
+
 import React, { useCallback, useRef, useEffect } from 'react';
-import { GameScreen } from '../types'; 
+import { GameScreen } from '@/types/index'; 
 import Button from './ui/Button';
-import { VIETNAMESE, GAME_TITLE, APP_VERSION } from '../constants';
+import { VIETNAMESE, GAME_TITLE, APP_VERSION } from '@/constants';
 
 interface InitialScreenProps {
   setCurrentScreen: (screen: GameScreen) => void;

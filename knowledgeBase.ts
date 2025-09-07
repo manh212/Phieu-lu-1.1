@@ -1,6 +1,7 @@
-import { KnowledgeBase, AIContextConfig } from '../types';
-import { DEFAULT_PLAYER_STATS } from './character';
-import { MAX_AUTO_SAVE_SLOTS } from './game';
+// FIX: Correct import path for types
+import { KnowledgeBase, AIContextConfig } from './types/index';
+import { DEFAULT_PLAYER_STATS } from './constants';
+import { MAX_AUTO_SAVE_SLOTS } from './constants';
 
 export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   playerStats: { ...DEFAULT_PLAYER_STATS },
@@ -43,7 +44,8 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   currentLocationId: undefined,
   auctionState: null,
   slaveAuctionState: null, // New
-  // FIX: Removed 'pendingCombat' property which is not defined in the KnowledgeBase type.
+  // FIX: Removed 'pendingCombat' and added 'pendingOpponentIdsForCombat' to match the KnowledgeBase type.
+  pendingOpponentIdsForCombat: null,
   postCombatState: null, // NEW
   userPrompts: [], // NEW
   // New Entities

@@ -1,6 +1,7 @@
-import { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, DIALOGUE_MARKER, TuChatTier, AIContextConfig } from '../types';
+import type { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, AIContextConfig } from '@/types/index';
+import { DIALOGUE_MARKER } from '@/types/index';
 import { SUB_REALM_NAMES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, NSFW_DESCRIPTION_STYLES, TU_CHAT_TIERS, SPECIAL_EVENT_INTERVAL_TURNS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
-import * as GameTemplates from '../templates';
+import * as GameTemplates from '@/types/index';
 import { continuePromptSystemRules, storytellingRulesSection } from '../constants/systemRulesNormal';
 import { getWorldDateDifferenceString } from '../utils/dateUtils';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
@@ -15,21 +16,17 @@ export const generateContinuePrompt = (
   previousPageSummaries: string[],
   isStrictMode: boolean, // NEW
   lastNarrationFromPreviousPage?: string,
-  retrievedContext?: string // NEW: For RAG
+  retrievedContext?: string
 ): string => {
   const aiContextConfig = knowledgeBase.aiContextConfig || DEFAULT_AI_CONTEXT_CONFIG;
   const { worldConfig, worldDate, playerStats, userPrompts } = knowledgeBase;
   const genre = worldConfig?.genre || "Tu Tiên (Mặc định)";
   const customGenreName = worldConfig?.customGenreName;
-  const isCultivationEnabled = worldConfig?.isCultivationEnabled !== undefined ? worldConfig.isCultivationEnabled : true;
   const effectiveGenre = (genre === CUSTOM_GENRE_VALUE && customGenreName) ? customGenreName : genre;
   
   const currentDifficultyName = worldConfig?.difficulty || 'Thường';
-  const writingStyleGuide = worldConfig?.writingStyleGuide; // NEW
 
   // --- START: CONSTRUCT CORE CONTEXT ---
-  // This object contains only the essential, player-centric information that must be in every prompt.
-  // Information about the wider world (other NPCs, locations, etc.) should be provided via RAG in `retrievedContext`.
   const coreContext = {
       playerInfo: {
           name: worldConfig?.playerName,
@@ -41,18 +38,8 @@ export const generateContinuePrompt = (
           status: playerStats
       },
       playerAssets: {
-          inventory: knowledgeBase.inventory,
-          equippedItems: knowledgeBase.equippedItems,
-          skills: knowledgeBase.playerSkills,
-      },
-      playerRelationshipsAndState: {
-          quests: knowledgeBase.allQuests.filter(q => q.status === 'active'),
-          companions: {
-              wives: knowledgeBase.wives,
-              slaves: knowledgeBase.slaves,
-              prisoners: knowledgeBase.prisoners,
-          },
-          master: knowledgeBase.master,
+          inventory: knowledgeBase.inventory.slice(0, 20).map(i => `${i.name} (x${i.quantity})`), // Truncate for brevity & simplify
+          skills: knowledgeBase.playerSkills.map(s => s.name),
       },
       worldState: {
           theme: worldConfig?.theme,
@@ -64,112 +51,14 @@ export const generateContinuePrompt = (
   };
   // --- END: CONSTRUCT CORE CONTEXT ---
 
-  let difficultyGuidanceText = "";
-  if (aiContextConfig.sendDifficultyGuidance) {
-      switch (currentDifficultyName) {
-        case 'Dễ': difficultyGuidanceText = VIETNAMESE.difficultyGuidanceEasy; break;
-        case 'Thường': difficultyGuidanceText = VIETNAMESE.difficultyGuidanceNormal; break;
-        case 'Khó': difficultyGuidanceText = VIETNAMESE.difficultyGuidanceHard; break;
-        case 'Ác Mộng': difficultyGuidanceText = VIETNAMESE.difficultyGuidanceNightmare; break;
-        default: difficultyGuidanceText = VIETNAMESE.difficultyGuidanceNormal;
-      }
-  }
-
-  let nsfwGuidanceCombined = "";
-  if (aiContextConfig.sendNsfwGuidance) {
-      nsfwGuidanceCombined = getNsfwGuidance(worldConfig);
-  }
-  
-  let specialEventInstruction = "";
-  if (aiContextConfig.sendSpecialEventRules) {
-    if (playerStats.turn > 0 && playerStats.turn % SPECIAL_EVENT_INTERVAL_TURNS === 0) {
-        specialEventInstruction = `
-**SỰ KIỆN CỐT TRUYỆN ĐẶC BIỆT:**
-Lượt chơi hiện tại là ${playerStats.turn}, đây là một mốc quan trọng! Hãy tạo ra một sự kiện bất ngờ hoặc một bước ngoặt lớn liên quan đến mục tiêu chính của nhân vật (${knowledgeBase.worldConfig?.playerGoal || 'không rõ'}) hoặc xung đột trung tâm của thế giới. Sự kiện này nên thay đổi cục diện hiện tại và tạo ra những cơ hội hoặc thách thức mới cho người chơi.
-`;
-    }
-  }
-
-  // NEW: World Event Guidance Logic - Updated for multi-genre
-  let eventGuidance = "";
-  if (aiContextConfig.sendEventGuidance) {
-      const currentLocationId = knowledgeBase.currentLocationId;
-      const relevantEvents = knowledgeBase.gameEvents.filter(event =>
-          event.locationId === currentLocationId && (event.status === 'Sắp diễn ra' || event.status === 'Đang diễn ra' || event.status === 'Đã kết thúc')
-      );
-
-      if (relevantEvents.length > 0) {
-          eventGuidance = `\n**HƯỚNG DẪN VỀ SỰ KIỆN THẾ GIỚI (CỰC KỲ QUAN TRỌNG):**\nBạn đang ở một địa điểm có sự kiện. Hãy tuân thủ nghiêm ngặt các quy tắc sau, diễn tả cho phù hợp với thể loại game ("${effectiveGenre}"):\n`;
-          relevantEvents.forEach(event => {
-              const timeDiff = getWorldDateDifferenceString(event.startDate, event.endDate, knowledgeBase.worldDate);
-              if (event.status === 'Sắp diễn ra') {
-                  eventGuidance += `
-    - **Sự kiện "${event.title}" (Loại: ${event.type}) SẮP DIỄN RA (${timeDiff}).**
-      - **QUY TẮC:** **TUYỆT ĐỐI KHÔNG** bắt đầu sự kiện này.
-      - **NHIỆM VỤ:** Mô tả không khí chuẩn bị cho sự kiện.
-        - *Ví dụ (Võ Hiệp - Thi Đấu):* Các cao thủ từ khắp nơi đổ về thành, các tửu điếm chật ních người bàn tán về giải đấu.
-        - *Ví dụ (Khoa Huyễn - Khám Phá):* Các phi thuyền đang được nâng cấp, các đội thám hiểm đang phân tích bản đồ tín hiệu.
-        - *Ví dụ (Cung Đấu - Lễ Hội):* Cung nữ bận rộn trang hoàng Ngự Hoa Viên, các phi tần đang chọn lựa trang phục lộng lẫy nhất.
-      - **Lựa chọn:** Cung cấp lựa chọn để người chơi chuẩn bị hoặc chờ đợi (ví dụ: "Tìm hiểu về các đối thủ", "Nâng cấp trang bị", "Đặt cược cho một bên tham gia").
-    `;
-              } else if (event.status === 'Đang diễn ra') {
-                  eventGuidance += `
-    - **Sự kiện "${event.title}" (Loại: ${event.type}) ĐANG DIỄN RA (${timeDiff}).**
-      - **QUY TẮC:** **BẮT BUỘC** phải mô tả sự kiện đang diễn ra.
-      - **NHIỆM VỤ:** Mô tả sự kiện đang diễn ra một cách sống động.
-        - *Ví dụ (Tu Tiên - Khám Phá):* Linh khí từ cửa vào Bí Cảnh tỏa ra nồng đậm, các tu sĩ đang lần lượt tiến vào.
-        - *Ví dụ (Tây Phương Fantasy - Thi Đấu):* Tiếng reo hò vang dội từ đấu trường, hai hiệp sĩ đang giao tranh quyết liệt trên lưng ngựa.
-      - **Lựa chọn:** Cung cấp lựa chọn để người chơi có thể tham gia hoặc tương tác trực tiếp (ví dụ: "Ghi danh tham gia", "Bước vào hầm ngục", "Chen vào đám đông để xem").
-    `;
-              } else if (event.status === 'Đã kết thúc') {
-                  eventGuidance += `
-    - **Sự kiện "${event.title}" (Loại: ${event.type}) ĐÃ KẾT THÚC (${timeDiff}).**
-      - **QUY TẮC:** **TUYỆT ĐỐI KHÔNG** mô tả sự kiện này đang diễn ra. **KHÔNG** cung cấp lựa chọn để tham gia.
-      - **NHIỆM VỤ:** Mô tả tàn dư hoặc hậu quả của sự kiện.
-        - *Ví dụ (Chiến Tranh):* Tàn tích của thành trì vẫn còn bốc khói, người dân đang thu dọn đống đổ nát.
-        - *Ví dụ (Đấu Giá):* Dân chúng vẫn đang bàn tán sôi nổi về món bảo vật cuối cùng đã được bán với giá trên trời.
-      - **Lựa chọn:** Cung cấp các lựa chọn không liên quan trực tiếp đến việc tham gia sự kiện.
-    `;
-              }
-          });
-      }
-  }
-  // END NEW LOGIC
-  
-  const strictModeInstruction = isStrictMode ? `
-**CHẾ ĐỘ NGHIÊM NGẶT ĐANG BẬT (QUY TẮC CỰC KỲ QUAN TRỌNG):**
-Sau khi mô tả kết quả trực tiếp của hành động từ người chơi, bạn phải tuân thủ các quy tắc sau:
-1.  **NHÂN VẬT CHÍNH:** TUYỆT ĐỐI KHÔNG được thực hiện bất kỳ **hành động vật lý** nào tiếp theo. Nhân vật chính phải dừng lại và chờ lệnh.
-2.  **NỘI TÂM & CẢM XÚC:** Bạn **ĐƯỢỢC PHÉP** và **ĐƯỢỢC KHUYẾN KHÍCH** mô tả suy nghĩ, cảm xúc, hoặc ký ức của nhân vật chính khi họ dừng lại.
-3.  **NPC & MÔI TRƯỜNG:** Các NPC khác và môi trường xung quanh **ĐƯỢỢC PHÉP** và **NÊN** tiếp tục hành động và phản ứng một cách tự nhiên.
-4.  **LỰA CHỌN:** Các lựa chọn [CHOICE: "..."] bạn đưa ra PHẢI là những hành động vật lý mà nhân vật chính có thể thực hiện tiếp theo.
-**Mục tiêu của chế độ này là trao toàn quyền kiểm soát hành động vật lý cho người chơi.**` : '';
-
-  const playerRaceSystem = worldConfig?.raceCultivationSystems.find(s => s.raceName === (worldConfig?.playerRace || 'Nhân Tộc'));
-  const mainRealms = (playerRaceSystem?.realmSystem || '').split(' - ').map(s => s.trim()).filter(Boolean);
-
-  const writingStyleGuideSection = (aiContextConfig.sendWritingStyle && writingStyleGuide) ? `
-**HƯỚNG DẪN BẮT CHƯỚC VĂN PHONG NGƯỜI DÙNG (CỰC KỲ QUAN TRỌNG):**
-Mục tiêu hàng đầu của bạn là tái hiện một cách trung thực nhất văn phong của người dùng dựa vào đoạn văn mẫu sau. Đừng chỉ sao chép từ ngữ, mà hãy nắm bắt và áp dụng đúng **nhịp điệu**, **cách lựa chọn từ vựng**, và **thái độ/cảm xúc** đặc trưng của họ. Lời kể của bạn phải khiến người đọc tin rằng nó do chính người dùng viết ra. TUYỆT ĐỐI không pha trộn giọng văn AI hoặc làm "mềm hóa" văn phong gốc.
-
-**VĂN BẢN MẪU CỦA NGƯỜI DÙNG ĐỂ BẠN BẮT CHƯỚC:**
-"""
-${writingStyleGuide}
-"""
-` : '';
-
-  const userPromptsSection = (aiContextConfig.sendUserPrompts && userPrompts && userPrompts.length > 0)
-    ? `
-**LỜI NHẮC TỪ NGƯỜI CHƠI (QUY TẮC BẮT BUỘC TUÂN THỦ):**
-Đây là những quy tắc do người chơi đặt ra. Bạn **BẮT BUỘC PHẢI** tuân theo những lời nhắc này một cách nghiêm ngặt trong mọi phản hồi.
-${userPrompts.map(p => `- ${p}`).join('\n')}
-`
-    : '';
+  const mainRealms = (knowledgeBase.realmProgressionList || []);
 
   const ragContextSection = aiContextConfig.sendRagContext ? `
 **A. BỐI CẢNH TRUY XUẤT (RAG CONTEXT - LONG-TERM MEMORY):**
 Dưới đây là một số thông tin liên quan từ các sự kiện trong quá khứ có thể hữu ích cho lượt này. Hãy sử dụng nó để đảm bảo tính nhất quán của câu chuyện.
-${retrievedContext ? `\`\`\`\n${retrievedContext}\n\`\`\`` : "Không có bối cảnh truy xuất nào."}` : '';
+${retrievedContext ? `\`\`\`
+${retrievedContext}
+\`\`\`` : "Không có bối cảnh truy xuất nào."}` : '';
   
   const coreContextSection = aiContextConfig.sendCoreContext ? `
 **B. BỐI CẢNH CỐT LÕI (CORE CONTEXT - PLAYER'S CURRENT STATE):**
@@ -181,24 +70,73 @@ ${JSON.stringify(coreContext, null, 2)}
   const conversationalContextSection = aiContextConfig.sendConversationalContext ? `
 **C. BỐI CẢNH HỘI THOẠI (CONVERSATIONAL CONTEXT - SHORT-TERM MEMORY):**
 - **Tóm tắt các diễn biến trang trước:**
-${previousPageSummaries.length > 0 ? previousPageSummaries.map((summary, index) => {
-    const pageNumberForSummary = index + 1;
-    const startTurnOfSummaryPage = knowledgeBase.currentPageHistory?.[pageNumberForSummary - 1];
-    const endTurnOfSummaryPage = (knowledgeBase.currentPageHistory?.[pageNumberForSummary] || playerStats.turn + 1) - 1;
-    return `Tóm tắt Trang ${pageNumberForSummary} (Lượt ${startTurnOfSummaryPage}-${endTurnOfSummaryPage}):\n${summary}`;
-  }).join("\n\n") : "Không có tóm tắt từ các trang trước."}
+${previousPageSummaries.length > 0 ? previousPageSummaries.join("\n\n") : "Không có tóm tắt từ các trang trước."}
 - **Diễn biến gần nhất (lượt trước - Lượt ${playerStats.turn}):**
 ${lastNarrationFromPreviousPage || "Chưa có."}
 - **Diễn biến chi tiết trang hiện tại (từ lượt đầu trang đến lượt ${playerStats.turn}):**
 ${currentPageMessagesLog || "Chưa có diễn biến nào trong trang này."}` : '';
 
+  const userPromptsSection = (aiContextConfig.sendUserPrompts && userPrompts && userPrompts.length > 0)
+    ? `
+**LỜI NHẮC TỪ NGƯỜI CHƠI (QUY TẮC BẮT BUỘC TUÂN THỦ):**
+${userPrompts.map(p => `- ${p}`).join('\n')}
+`
+    : '';
+    
+  let eventGuidance = "";
+  if (aiContextConfig.sendEventGuidance) {
+      const currentLocationId = knowledgeBase.currentLocationId;
+      const relevantEvents = knowledgeBase.gameEvents.filter(event =>
+          event.locationId === currentLocationId && (event.status === 'Sắp diễn ra' || event.status === 'Đang diễn ra' || event.status === 'Đã kết thúc')
+      );
+
+      if (relevantEvents.length > 0) {
+          eventGuidance = `
+**HƯỚNG DẪN VỀ SỰ KIỆN THẾ GIỚI (CỰC KỲ QUAN TRỌNG):**
+`;
+          relevantEvents.forEach(event => {
+              const timeDiff = getWorldDateDifferenceString(event.startDate, event.endDate, knowledgeBase.worldDate);
+              if (event.status === 'Sắp diễn ra') {
+                  eventGuidance += `
+    - **Sự kiện "${event.title}" SẮP DIỄN RA (${timeDiff}).**
+      - **QUY TẮC:** **TUYỆT ĐỐI KHÔNG** bắt đầu sự kiện này.
+      - **NHIỆM VỤ:** Hãy mô tả không khí chuẩn bị.
+    `;
+              } else if (event.status === 'Đang diễn ra') {
+                  eventGuidance += `
+    - **Sự kiện "${event.title}" ĐANG DIỄN RA (${timeDiff}).**
+      - **QUY TẮC:** **BẮT BUỘC** phải mô tả sự kiện đang diễn ra.
+      - **NHIỆM VỤ:** Cung cấp lựa chọn để tham gia.
+    `;
+              } else if (event.status === 'Đã kết thúc') {
+                  eventGuidance += `
+    - **Sự kiện "${event.title}" ĐÃ KẾT THÚC (${timeDiff}).**
+      - **QUY TẮC:** **TUYỆT ĐỐI KHÔNG** mô tả sự kiện đang diễn ra.
+      - **NHIỆM VỤ:** Hãy mô tả hậu quả của sự kiện.
+    `;
+              }
+          });
+      }
+  }
+
+  let nsfwGuidanceCombined = "";
+  if (aiContextConfig.sendNsfwGuidance) {
+      nsfwGuidanceCombined = getNsfwGuidance(worldConfig);
+  }
+
+    let specialEventGuidance = "";
+    if (aiContextConfig.sendSpecialEventRules && (playerStats.turn % SPECIAL_EVENT_INTERVAL_TURNS === 0 && playerStats.turn > 0)) {
+        specialEventGuidance = `
+**HƯỚNG DẪN SỰ KIỆN ĐẶC BIỆT (QUAN TRỌNG):**
+Đã đến lúc cho một sự kiện lớn! Hãy tạo ra một diễn biến bất ngờ, có thể thay đổi cục diện hoặc mở ra một nhánh truyện mới. Ví dụ: một cuộc gặp gỡ định mệnh, một tai họa bất ngờ, một cơ duyên hiếm có, hoặc một kẻ thù mạnh xuất hiện. Hãy làm cho nó thật đáng nhớ!`;
+    }
+
   return `
-**YÊU CẦU CỐT LÕI:** Nhiệm vụ của bạn là tiếp tục câu chuyện game nhập vai thể loại "${effectiveGenre}" bằng tiếng Việt.
-**QUY TẮC QUAN TRỌNG NHẤT:** Bắt đầu phản hồi của bạn bằng cách đi thẳng vào lời kể về những gì xảy ra do hành động của người chơi. **TUYỆT ĐỐI KHÔNG** bình luận về lựa chọn của người chơi. Hãy kể trực tiếp kết quả.
+**YÊU CẦU CỐT LÕI:** Tiếp tục câu chuyện game nhập vai thể loại "${effectiveGenre}" bằng tiếng Việt.
+**QUY TẮC QUAN TRỌNG NHẤT:** Bắt đầu phản hồi bằng cách đi thẳng vào lời kể. **TUYỆT ĐỐI KHÔNG** bình luận về lựa chọn của người chơi.
 
 ---
 **PHẦN 1: BỐI CẢNH (CONTEXT)**
-Đây là thông tin nền để bạn hiểu câu chuyện.
 
 ${ragContextSection}
 ${coreContextSection}
@@ -206,28 +144,24 @@ ${conversationalContextSection}
 
 ---
 **PHẦN 2: HƯỚNG DẪN HÀNH ĐỘNG**
-${writingStyleGuideSection}
 ${userPromptsSection}
 
 **HƯỚNG DẪN TỪ NGƯỜI CHƠI (CHO LƯỢT TIẾP THEO - LƯỢT ${playerStats.turn + 1}):**
-- Loại hướng dẫn: ${inputType === 'action' ? 'Hành động trực tiếp của nhân vật' : 'Gợi ý/Mô tả câu chuyện (do người chơi cung cấp)'}
+- Loại hướng dẫn: ${inputType === 'action' ? 'Hành động trực tiếp' : 'Gợi ý câu chuyện'}
 - Nội dung hướng dẫn: "${playerActionText}"
-${strictModeInstruction}
-
-${specialEventInstruction}
+${specialEventGuidance}
 ${eventGuidance}
 
 **HƯỚNG DẪN XỬ LÝ DÀNH CHO AI:**
 ${inputType === 'action'
-    ? `Xử lý nội dung trên như một hành động mà nhân vật chính (${worldConfig?.playerName}) đang thực hiện. Mô tả kết quả của hành động này và các diễn biến tiếp theo một cách chi tiết và hấp dẫn, dựa trên TOÀN BỘ BỐI CẢNH.`
-    : `Nội dung trên là một gợi ý, mô tả, hoặc mong muốn của người chơi để định hướng hoặc làm phong phú thêm câu chuyện. Đây KHÔNG phải là hành động trực tiếp của nhân vật chính (${worldConfig?.playerName}). **NHIỆM VỤ CỦA BẠN LÀ BẮT BUỘC PHẢI LÀM CHO DIỄN BIẾN NÀY XẢY RA TRONG LƯỢT TIẾP THEO.** Hãy tìm một cách tự nhiên và hợp lý nhất để hợp thức hóa sự kiện này trong bối cảnh hiện tại. Sau khi mô tả sự kiện này đã xảy ra, hãy cung cấp các lựa chọn [CHOICE: "..."] để người chơi phản ứng với tình huống mới.`
+    ? `Xử lý nội dung trên như một hành động mà nhân vật chính (${worldConfig?.playerName}) đang thực hiện.`
+    : `Nội dung trên là một gợi ý của người chơi. **NHIỆM VỤ CỦA BẠN LÀ BẮT BUỘC PHẢI LÀM CHO DIỄN BIẾN NÀY XẢY RA.**`
   }
-*   **VIẾT LỜI KỂ:** Mô tả chi tiết và hợp lý kết quả của hành động. Phản ứng của các NPC và môi trường xung quanh phải logic. Tuân thủ nghiêm ngặt **CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH** đã chọn.
-*   **SỬ DỤNG TAGS HỆ THỐNG:** Tạo ra các tag để cập nhật trạng thái game. Mỗi tag trên một dòng riêng.
+*   **VIẾT LỜI KỂ:** Mô tả kết quả của hành động.
+*   **SỬ DỤNG TAGS HỆ THỐNG:** Tạo ra các tag để cập nhật trạng thái game.
 
 ---
-**PHẦN 3: QUY TẮC VÀ HƯỚSNG DẪN CHI TIẾT**
-Đây là các quy tắc bạn phải tuân theo để tạo ra phản hồi hợp lệ.
+**PHẦN 3: QUY TẮC VÀ HƯỚNG DẪN CHI TIẾT**
 
 ${storytellingRulesSection(aiContextConfig)}
 
@@ -236,21 +170,15 @@ ${aiContextConfig.sendDifficultyGuidance ? `- **Dễ:** ${VIETNAMESE.difficultyG
 - **Thường:** ${VIETNAMESE.difficultyGuidanceNormal}
 - **Khó:** ${VIETNAMESE.difficultyGuidanceHard}
 - **Ác Mộng:** ${VIETNAMESE.difficultyGuidanceNightmare}
-Hiện tại người chơi đang ở độ khó: **${currentDifficultyName}**. Hãy điều chỉnh tỉ lệ thành công, lợi ích và rủi ro trong các lựa chọn [CHOICE: "..."] của bạn cho phù hợp với hướng dẫn độ khó này.` : ''}
+Hiện tại người chơi đang ở độ khó: **${currentDifficultyName}**.` : ''}
 
 **C. CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH:**
 ${nsfwGuidanceCombined}
 
 **D. ĐỘ DÀI PHẢN HỒI MONG MUỐN:**
-- Người chơi yêu cầu độ dài phản hồi: ${responseLength === 'short' ? 'Ngắn (khoảng 2-3 đoạn văn súc tích)' :
-    responseLength === 'medium' ? 'Trung bình (khoảng 3-6 đoạn văn vừa phải)' :
-      responseLength === 'long' ? 'Dài (khoảng 8+ đoạn văn chi tiết)' :
-        'Mặc định (linh hoạt theo diễn biến)'
-  }.
-Hãy cố gắng điều chỉnh độ dài của lời kể và mô tả cho phù hợp với yêu cầu này của người chơi, nhưng vẫn đảm bảo tính tự nhiên và logic của câu chuyện.
+- Độ dài yêu cầu: ${responseLength}
 
 **E. CÁC QUY TẮC SỬ DỤNG TAG (CỰC KỲ QUAN TRỌNG):**
-
 ${continuePromptSystemRules(worldConfig, mainRealms, aiContextConfig, worldDate)}
 `;
 };

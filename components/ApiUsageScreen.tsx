@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { GameScreen } from '../types';
+// FIX: Add missing import for `GameScreen` type to resolve the 'Cannot find name' error.
+import { GameScreen } from '../types/index';
 import Button from './ui/Button';
 import { getApiCallStats, resetApiCallStats, API_CALL_CATEGORIES, ApiCallCategory, ApiCallStats } from '../utils/apiUsageTracker';
 import { useGame } from '../hooks/useGame';

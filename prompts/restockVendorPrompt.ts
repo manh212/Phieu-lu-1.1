@@ -1,6 +1,6 @@
-
-import { KnowledgeBase, NPC } from '../types';
-import * as GameTemplates from '../templates';
+// FIX: Corrected import paths for types.
+import { KnowledgeBase, NPC } from '../types/index';
+import * as GameTemplates from '../types/index';
 import { STAT_POINT_VALUES } from '../constants';
 
 export const generateRestockVendorPrompt = (vendor: NPC, kb: KnowledgeBase): string => {

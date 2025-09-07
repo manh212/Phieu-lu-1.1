@@ -1,6 +1,6 @@
 
 
-import { KnowledgeBase, GameMessage, NPC, Wife, Slave } from '../types';
+import { KnowledgeBase, GameMessage, NPC, Wife, Slave } from '../types/index';
 import { TU_CHAT_MULTIPLIERS, NPC_BASE_EXP_PERCENTAGE, NPC_BOTTLENECK_DURATION_TURNS, SUB_REALM_NAMES, VIETNAMESE } from '../constants';
 import { calculateRealmBaseStats } from './statsCalculationUtils';
 

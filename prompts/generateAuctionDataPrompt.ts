@@ -1,5 +1,6 @@
-import { KnowledgeBase, AuctionItem } from '../types';
-import * as GameTemplates from '../templates';
+// FIX: Correct import paths for types.
+import { KnowledgeBase, AuctionItem } from '../types/index';
+import * as GameTemplates from '../types/index';
 import { AUCTION_NPC_CURRENCY_BY_REALM_TIER } from '../constants';
 
 export const generateAuctionDataPrompt = (kb: KnowledgeBase): string => {
@@ -76,4 +77,5 @@ Bạn là một Đấu Giá Sư bậc thầy trong một thế giới game nhậ
 [AUCTION_NPC: name="Yêu Nữ Áo Đỏ", realm="Trúc Cơ Đỉnh Phong", currency=18000]
 
 - Chỉ trả về các tag, không có lời dẫn hay giải thích gì thêm.
-`};
+`;
+};

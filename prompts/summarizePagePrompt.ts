@@ -1,13 +1,13 @@
-
-import { GameMessage } from '../types';
-import { VIETNAMESE, CUSTOM_GENRE_VALUE } from '../constants'; // Added CUSTOM_GENRE_VALUE
+// prompts/summarizePagePrompt.ts
+import type { GameMessage } from '@/types/index';
+import { VIETNAMESE, CUSTOM_GENRE_VALUE } from '../constants';
 
 export const generateSummarizePagePrompt = (
     messagesToSummarize: GameMessage[], 
     worldTheme: string, 
     playerName: string, 
-    genre?: string, // This is the selected GenreType
-    customGenreName?: string // Added for custom genre
+    genre?: string,
+    customGenreName?: string
     ): string => {
   const effectiveGenre = (genre === CUSTOM_GENRE_VALUE && customGenreName) ? customGenreName : (genre || "Tu Tiên (Mặc định)");
   const genreContext = effectiveGenre !== "Tu Tiên (Mặc định)" ? `thể loại "${effectiveGenre}"` : "tu tiên";
@@ -26,13 +26,10 @@ ${messagesToSummarize
         } else if (msg.type === 'narration') {
             prefix = "AI kể: ";
         } else if (msg.type === 'event_summary') {
-            // Add a prefix for event summaries if they don't already have one.
-            // FIX: Add type guard to ensure content is a string before using string methods.
             if (typeof msg.content === 'string' && !msg.content.toLowerCase().startsWith('tóm tắt')) {
                 prefix = "Tóm tắt sự kiện: ";
             }
         }
-        // FIX: Ensure content is a string before concatenation to avoid [object Object].
         return typeof msg.content === 'string' ? `${prefix}${msg.content}` : '';
       }).join("\n---\n")}
 

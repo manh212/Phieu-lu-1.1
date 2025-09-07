@@ -1,9 +1,10 @@
 
+
 import React, { useState, useMemo } from 'react';
-import { Item as ItemType } from './../../../types';
+import { Item as ItemType } from './../../../types/index';
 import Modal from './../../ui/Modal';
 import InputField from './../../ui/InputField';
-import * as GameTemplates from './../../../templates';
+import * as GameTemplates from './../../../types/index';
 import { VIETNAMESE } from '../../../../constants';
 
 interface MaterialSelectionModalProps {

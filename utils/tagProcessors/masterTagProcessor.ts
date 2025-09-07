@@ -1,5 +1,4 @@
-
-import { KnowledgeBase, GameMessage, Master, VectorMetadata } from '../../types';
+import { KnowledgeBase, GameMessage, Master, VectorMetadata } from '../../types/index';
 import { formatPersonForEmbedding } from '../ragUtils';
 
 export const processMasterUpdate = (

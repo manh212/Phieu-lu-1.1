@@ -1,4 +1,5 @@
-import { KnowledgeBase, GameMessage, WorldSettings } from '../../types';
+// FIX: Correct import path for types
+import { KnowledgeBase, GameMessage, WorldSettings } from '../../types/index';
 
 export const processWorldConfigUpdate = (
     currentKb: KnowledgeBase,
@@ -17,13 +18,14 @@ export const processWorldConfigUpdate = (
     }
 
     if (newKb.worldConfig && field in newKb.worldConfig) {
+        // FIX: Explicitly cast the field to a string when using it as a computed property key to avoid potential runtime errors if the key were a symbol.
         // Type assertion to allow assignment
-        (newKb.worldConfig as any)[field] = value;
+        (newKb.worldConfig as any)[String(field)] = value;
         
         systemMessages.push({
-            id: `world-config-update-${field}-${Date.now()}`,
+            id: `world-config-update-${String(field)}-${Date.now()}`,
             type: 'system',
-            content: `Thiết lập thế giới đã được cập nhật: "${field}" đã được đổi thành "${value}".`,
+            content: `Thiết lập thế giới đã được cập nhật: "${String(field)}" đã được đổi thành "${value}".`,
             timestamp: Date.now(),
             turnNumber: turnForSystemMessages,
         });
@@ -31,9 +33,9 @@ export const processWorldConfigUpdate = (
     } else {
         console.warn(`WORLD_CONFIG_UPDATE: Invalid field "${field}" or worldConfig not found.`);
         systemMessages.push({
-            id: `world-config-update-error-${field}-${Date.now()}`,
+            id: `world-config-update-error-${String(field)}-${Date.now()}`,
             type: 'system',
-            content: `[DEBUG] Lỗi cập nhật thiết lập thế giới: không tìm thấy trường "${field}".`,
+            content: `[DEBUG] Lỗi cập nhật thiết lập thế giới: không tìm thấy trường "${String(field)}".`,
             timestamp: Date.now(),
             turnNumber: turnForSystemMessages,
         });

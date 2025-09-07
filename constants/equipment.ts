@@ -1,6 +1,7 @@
-
-import { EquipmentSlotConfig } from '../types';
-import * as GameTemplates from '../templates';
+// FIX: Correct import path for types
+import type { EquipmentSlotConfig } from '../types/index';
+// FIX: Correct import path for types
+import * as GameTemplates from '../types/index';
 // VIETNAMESE object is not directly imported here for values,
 // type 'keyof typeof VIETNAMESE' is handled in types.ts
 

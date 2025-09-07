@@ -1,10 +1,9 @@
-
 // src/utils/ragUtils.ts
 import {
     KnowledgeBase, Item, NPC, YeuThu, Skill, GameLocation, Faction,
     WorldLoreEntry, Quest, Wife, Slave, Prisoner, Master, VectorStore, VectorMetadata, PersonBase, ActivityLogEntry
-} from '../types';
-import * as GameTemplates from '../templates';
+} from '../types/index';
+import * as GameTemplates from '../types/index';
 import { generateEmbeddings } from '../services/embeddingService';
 
 // --- HÀM TIỆN ÍCH (HELPER FUNCTIONS) ---

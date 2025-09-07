@@ -1,13 +1,10 @@
 import { HarmCategory, HarmBlockThreshold } from "@google/genai";
-import { ApiConfig, SafetySetting, AvatarGenerationEngine } from '../types';
+// FIX: Correct import path for types
+import type { ApiConfig, SafetySetting, AvatarGenerationEngine } from '../types/index';
 
-export const API_SETTINGS_STORAGE_KEY = 'daoDoAiApiSettings_v4'; // Incremented version
-
+// FIX: Updated to only include the allowed model for general text tasks per guidelines.
 export const AVAILABLE_MODELS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Khuyến Nghị)' },
-  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Chất lượng Cao Nhất)' },
-  { id: 'gemini-2.5-flash-preview-05-20', name: 'Gemini 2.5 Flash Preview (Thử nghiệm)' },
-  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Siêu Nhanh)' },
 ];
 export const DEFAULT_MODEL_ID = AVAILABLE_MODELS[0].id;
 

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Button from './Button';
-import { VIETNAMESE } from '../../constants';
+import { VIETNAMESE } from '@/constants';
 
 interface OffCanvasPanelProps {
   isOpen: boolean;

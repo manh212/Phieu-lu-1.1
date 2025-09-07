@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { KnowledgeBase, Slave, NPC } from '../../../types';
+// FIX: Corrected import path for types.
+import { KnowledgeBase, Slave, NPC } from '@/types/index';
 import Modal from '../../ui/Modal';
 import { VIETNAMESE } from '../../../constants';
 import Button from '../../ui/Button';

@@ -1,5 +1,5 @@
-
-import { KnowledgeBase, Prisoner } from '../types';
+// FIX: Corrected import path for types.
+import { KnowledgeBase, Prisoner } from '@/types/index';
 import { VIETNAMESE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE } from '../constants';
 import { getNsfwGuidance } from './promptUtils';
 

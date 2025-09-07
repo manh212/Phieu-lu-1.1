@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../hooks/useGame';
-import { Wife, Slave, GameScreen, PlayerStats, ComplexCompanionBase } from '../types';
+// FIX: Corrected import paths for types to point to the new centralized type export.
+import { Wife, Slave, GameScreen, PlayerStats, ComplexCompanionBase } from '../types/index';
 import { VIETNAMESE, MALE_AVATAR_PLACEHOLDER_URL, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, DEFAULT_PLAYER_STATS } from '../constants';
 import Button from './ui/Button';
 import InputField from './ui/InputField';
 import Spinner from './ui/Spinner';
 import Modal from './ui/Modal';
-import PlayerStatsWithEquipment from './gameplay/equipment/PlayerStatsWithEquipment';
+// FIX: Changed to named import for PlayerStatsWithEquipment
+import { PlayerStatsWithEquipment } from './gameplay/equipment/PlayerStatsWithEquipment';
 import { calculateEffectiveStats, calculateRealmBaseStats } from '../utils/statsCalculationUtils';
 import { getDeterministicAvatarSrc } from '../utils/avatarUtils';
 
@@ -28,7 +30,7 @@ const DebugModal: React.FC<{ title: string; prompts: string[]; responses: string
                     {prompt}
                   </pre>
                 </details>
-              )) : <p className="text-gray-500 italic">Chưa có prompt nào được gửi.</p>}
+              )) : <p className="text-gray-400 italic">Chưa có prompt nào được gửi.</p>}
             </div>
           </div>
           <div>

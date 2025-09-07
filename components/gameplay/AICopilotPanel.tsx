@@ -1,14 +1,15 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useGame } from '../../hooks/useGame';
 import OffCanvasPanel from '../ui/OffCanvasPanel';
 import Button from '../ui/Button';
 import InputField from '../ui/InputField';
-import { GameMessage } from '../../types';
+// FIX: Correct import path for types
+import { GameMessage } from '../../types/index';
 import Spinner from '../ui/Spinner';
 import Modal from '../ui/Modal';
 import { AVAILABLE_MODELS } from '../../constants';
-import { getApiSettings } from '../../services/geminiService';
+// FIX: Corrected import path for services
+import { getApiSettings } from '../../services';
 
 interface AICopilotPanelProps {
   isOpen: boolean;

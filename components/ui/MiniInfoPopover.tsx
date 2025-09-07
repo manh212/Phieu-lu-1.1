@@ -1,9 +1,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Item, Skill, Quest, NPC, GameLocation, WorldLoreEntry, Faction, KnowledgeBase, Companion, YeuThu, Wife, Slave, Prisoner } from '../../types';
-import { GameEntity, GameEntityType } from '../../hooks/types';
-import * as GameTemplates from '../../templates'; 
-import { VIETNAMESE } from '../../constants';
+import { Item, Skill, Quest, NPC, GameLocation, WorldLoreEntry, Faction, KnowledgeBase, Companion, YeuThu, Wife, Slave, Prisoner } from '@/types/index';
+import type { GameEntity, GameEntityType } from '@/hooks/types';
+import * as GameTemplates from '@/types/index'; 
+import { VIETNAMESE } from '@/constants/index';
 
 interface MiniInfoPopoverProps {
   isOpen: boolean;

@@ -1,6 +1,7 @@
 
-import { KnowledgeBase, Item, PlayerStats, GameMessage, VectorMetadata } from '../../types';
-import * as GameTemplates from '../../templates';
+
+import { KnowledgeBase, Item, PlayerStats, GameMessage, VectorMetadata } from '../../types/index';
+import * as GameTemplates from '../../types/index';
 import { calculateEffectiveStats, calculateItemValue } from '../statsCalculationUtils'; 
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
 import { formatItemForEmbedding } from '../ragUtils';

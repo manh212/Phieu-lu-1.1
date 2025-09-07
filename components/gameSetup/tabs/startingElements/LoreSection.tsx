@@ -1,6 +1,8 @@
 
+
 import React from 'react';
-import { StartingLore } from '../../../../types';
+// FIX: Corrected import path for types.
+import { StartingLore } from '@/types/index';
 import { VIETNAMESE } from '../../../../constants';
 import InputField from '../../../ui/InputField';
 import Button from '../../../ui/Button';

@@ -1,5 +1,5 @@
-
-import { StorageType, StorageSettings } from '../types';
+// FIX: Correct import path for types
+import type { StorageType, StorageSettings } from '@/types/index';
 
 export const STORAGE_SETTINGS_STORAGE_KEY = 'daoDoAiStorageSettings_v2';
 export const DEFAULT_STORAGE_TYPE: StorageType = 'local';

@@ -1,12 +1,12 @@
-
-import { KnowledgeBase, GameMessage, YeuThu, PlayerStats, VectorMetadata } from '../../types';
-import { YeuThuTemplate } from '../../templates';
+// FIX: Correct import path for types
+import { KnowledgeBase, GameMessage, YeuThu, PlayerStats, VectorMetadata, YeuThu as YeuThuTemplate } from '@/types/index';
 import { DEFAULT_MORTAL_STATS, MALE_AVATAR_PLACEHOLDER_URL } from '../../constants';
 import { calculateRealmBaseStats } from '../statsCalculationUtils';
-import { getApiSettings, generateImageUnified } from '../../services/geminiService';
+import { getApiSettings, generateImageUnified } from '../../services';
 import { uploadImageToCloudinary } from '../../services/cloudinaryService';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
 import { formatYeuThuForEmbedding } from '../ragUtils';
+import { getDeterministicAvatarSrc } from '../avatarUtils';
 
 const SIMILARITY_THRESHOLD = 0.8;
 

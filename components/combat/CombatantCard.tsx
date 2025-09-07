@@ -1,5 +1,6 @@
 import React from 'react';
-import { Combatant } from '../../types';
+// FIX: Correct import path for types.
+import { Combatant } from '@/types/index';
 import { getDeterministicAvatarSrc } from '../../utils/avatarUtils';
 
 interface CombatantCardProps {

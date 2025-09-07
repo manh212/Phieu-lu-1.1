@@ -1,8 +1,10 @@
 // src/utils/setupTagProcessor.ts
-import { WorldSettings, StartingNPC, StartingItem, StartingSkill, StartingLore, StartingLocation, StartingFaction, StartingYeuThu, RaceCultivationSystem, TuChatTier } from '../types';
+// FIX: Correct import path for types
+import { WorldSettings, StartingNPC, StartingItem, StartingSkill, StartingLore, StartingLocation, StartingFaction, StartingYeuThu, RaceCultivationSystem, TuChatTier } from '../types/index';
 import { parseTagValue } from './parseTagValue';
-import { TU_CHAT_TIERS } from '../constants';
-import * as GameTemplates from '../templates';
+// FIX: Import DEFAULT_WORLD_SETTINGS
+import { TU_CHAT_TIERS, DEFAULT_WORLD_SETTINGS } from '../constants';
+import * as GameTemplates from '../types/index';
 
 /**
  * Processes a batch of AI-generated SETUP tags to modify the WorldSettings object.
@@ -357,21 +359,21 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                     if (!params.id) break;
                     newSettings.startingLocations = newSettings.startingLocations.filter((l: StartingLocation) => l.id !== params.id);
                     break;
-                
+
                 // --- FACTION HANDLING ---
                 case 'SETUP_ADD_FACTION': {
                     const newFaction: StartingFaction = {
                         id: `faction-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         name: params.name || 'Phe Phái Mới',
                         description: params.description || '',
-                        alignment: params.alignment as any || 'Trung Lập',
-                        initialPlayerReputation: parseInt(params.initialPlayerReputation, 10) || 0,
+                        alignment: params.alignment as any || GameTemplates.FactionAlignment.TRUNG_LAP,
+                        initialPlayerReputation: params.initialPlayerReputation ? parseInt(params.initialPlayerReputation, 10) : 0,
                     };
                     if (!newSettings.startingFactions) newSettings.startingFactions = [];
                     newSettings.startingFactions.push(newFaction);
                     break;
                 }
-                case 'SETUP_EDIT_FACTION': {
+                case 'SETUP_EDIT_FACTION':
                      if (!params.id) break;
                     const factionIndex = newSettings.startingFactions.findIndex((f: StartingFaction) => f.id === params.id);
                     if (factionIndex > -1) {
@@ -381,53 +383,42 @@ export const processSetupTags = (currentSettings: WorldSettings, tags: string[])
                             const valueStr = params[key];
                             if (key === 'initialPlayerReputation') {
                                 const numValue = parseInt(valueStr, 10);
-                                if (!isNaN(numValue)) factionToUpdate.initialPlayerReputation = numValue;
+                                if (!isNaN(numValue)) (factionToUpdate as any)[key] = numValue;
                             } else {
                                 (factionToUpdate as any)[key] = valueStr;
                             }
                         });
                     }
                     break;
-                }
                 case 'SETUP_DELETE_FACTION':
                     if (!params.id) break;
                     newSettings.startingFactions = newSettings.startingFactions.filter((f: StartingFaction) => f.id !== params.id);
                     break;
 
-                // --- SINGLE SETTING HANDLING ---
-                case 'SETUP_UPDATE_SETTING': {
+                // --- SINGLE SETTING UPDATE ---
+                case 'SETUP_UPDATE_SETTING':
                     const field = params.field as keyof WorldSettings;
                     let value: any = params.value;
-                    
-                    if (field && value !== undefined && allowedFieldsToUpdate.includes(field)) {
-                        // Coerce boolean values from strings
-                        if (typeof (newSettings as any)[field] === 'boolean' || ['isCultivationEnabled', 'nsfwMode'].includes(field)) {
-                            value = (value.toLowerCase() === 'true');
+                    if (allowedFieldsToUpdate.includes(field)) {
+                        // Type conversion based on field name
+                        // FIX: Ensure DEFAULT_WORLD_SETTINGS is defined/imported to prevent reference error.
+                        if (typeof (DEFAULT_WORLD_SETTINGS as any)[field] === 'boolean') {
+                            value = value.toLowerCase() === 'true';
+                        // FIX: Ensure DEFAULT_WORLD_SETTINGS is defined/imported to prevent reference error.
+                        } else if (typeof (DEFAULT_WORLD_SETTINGS as any)[field] === 'number') {
+                            value = parseFloat(value);
+                            if (isNaN(value)) break; // Don't update if it's not a valid number
                         }
-                        // Coerce numeric values from strings
-                        else if (typeof (newSettings as any)[field] === 'number' || ['startingCurrency', 'playerThoNguyen', 'playerMaxThoNguyen'].includes(field)) {
-                            const num = Number(value);
-                            if (!isNaN(num)) {
-                                value = num;
-                            } else {
-                                console.warn(`SETUP_UPDATE_SETTING: Invalid number value "${value}" for field "${field}". Skipping.`);
-                                break; // Skip this update if number conversion fails
-                            }
-                        }
-                        
                         (newSettings as any)[field] = value;
                     } else {
-                        console.warn(`SETUP_UPDATE_SETTING: Attempted to update a non-whitelisted or invalid field: "${field}" value="${value}". Skipping.`);
+                        console.warn(`Attempted to update a non-whitelisted setting: "${field}"`);
                     }
                     break;
-                }
             }
         } catch (error) {
-            console.error(`Error processing tag: ${tag}. Error:`, error);
-            // Continue to the next tag even if one fails.
+            console.error(`Error processing tag "${tagName}":`, error, "Params:", params);
         }
     }
-    
-    // 4. Return the newly modified settings object.
+
     return newSettings;
 };

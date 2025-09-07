@@ -1,5 +1,5 @@
 // src/utils/vectorStore.ts
-import { VectorStore } from '../types';
+import { VectorStore } from '../types/index';
 
 /**
  * Calculates the dot product of two vectors.

@@ -1,5 +1,6 @@
 // src/prompts/copilotPrompt.ts
-import { KnowledgeBase, GameMessage } from '../types';
+// FIX: Correct import path for types
+import { KnowledgeBase, GameMessage } from '@/types/index';
 
 export const generateAICopilotPrompt = (
     knowledgeBaseSnapshot: Omit<KnowledgeBase, 'turnHistory' | 'ragVectorStore' | 'userPrompts'>,

@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { Item as ItemType } from '../../../types';
+import { Item as ItemType } from '../../../types/index';
 import { VIETNAMESE } from '../../../constants';
-import * as GameTemplates from '../../../templates';
+import * as GameTemplates from '../../../types/index';
 
 interface EquipmentInventoryListProps {
   inventory: ItemType[]; // Expects a pre-filtered list of available equipment items

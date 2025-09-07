@@ -1,8 +1,5 @@
-
-
-
-
-import { KnowledgeBase, AuctionItem } from '../types';
+// FIX: Correct import path for types.
+import { KnowledgeBase, AuctionItem } from '../types/index';
 
 export const runAuctionTurnPrompt = (kb: KnowledgeBase, item: AuctionItem, playerBid: number): string => {
     // Combine temporary auction NPCs and real discovered NPCs into a single list of potential bidders

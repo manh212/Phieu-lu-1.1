@@ -1,12 +1,13 @@
 
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { KnowledgeBase, AuctionItem, PlayerStats, Item } from './../types';
+// FIX: Corrected import paths for types.
+import { KnowledgeBase, AuctionItem, PlayerStats, Item } from './../types/index';
 import Button from './ui/Button';
 import InputField from './ui/InputField';
 import Spinner from './ui/Spinner';
 import { VIETNAMESE } from './../constants';
-import * as GameTemplates from './../templates';
+import * as GameTemplates from './../types/index';
 import Modal from './ui/Modal';
 import { useGame } from '../hooks/useGame';
 import { calculateItemValue } from '../utils/statsCalculationUtils';

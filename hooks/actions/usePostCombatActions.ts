@@ -1,12 +1,13 @@
 import { useCallback } from 'react';
+// FIX: Correct import path for types
 import {
     KnowledgeBase, GameMessage, GameScreen, CombatEndPayload
-} from '../../types';
+} from '../../types/index';
 import {
     generateCombatConsequence,
     generateNonCombatDefeatConsequence
-} from '../../services/geminiService';
-import { performTagProcessing } from '../../utils/tagProcessingUtils';
+} from '../../services';
+import { performTagProcessing } from '../../utils/gameLogicUtils';
 import { VIETNAMESE } from '../../constants';
 
 export interface UsePostCombatActionsProps {

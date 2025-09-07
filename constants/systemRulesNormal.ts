@@ -1,7 +1,10 @@
-import { WorldSettings, DIALOGUE_MARKER, TU_CHAT_TIERS, AIContextConfig, WorldDate } from '../types';
-import * as GameTemplates from '../templates';
+// FIX: Correct import path for types
+import { WorldSettings, DIALOGUE_MARKER, TU_CHAT_TIERS, AIContextConfig, WorldDate } from '../types/index';
+// FIX: Correct import path for types
+import * as GameTemplates from '../types/index';
 import { WEAPON_TYPES_FOR_VO_Y } from './character';
-import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../templates';
+// FIX: Correct import path for types
+import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../types/index';
 import { getTimeOfDayContext, getSeason } from '../utils/dateUtils';
 
 
@@ -113,7 +116,7 @@ ${timeOfDayContext}
         [SKILL_LEARNED: name="Huyết Tế Đại Pháp", description="Hi sinh máu tươi để nhận sức mạnh.", skillType="${GameTemplates.SkillType.CAM_THUAT}", sideEffects="Mất 20% sinh lực tối đa vĩnh viễn sau mỗi lần sử dụng.", manaCost=0, cooldown=100, otherEffects="Tăng 100% Sức Tấn Công trong 5 lượt"]
         [SKILL_LEARNED: name="Kim Cang Quyết", description="Một công pháp luyện thể sơ cấp.", skillType="${GameTemplates.SkillType.CONG_PHAP_TU_LUYEN}", congPhapType="Thể Tu", congPhapGrade="Hoàng Phẩm"]`);
     }
-
+    
     if (config.sendQuestRules) {
         rules.push(`**8.  Tags Nhiệm Vụ (\`QUEST_*\`):**
     *   \`[QUEST_ASSIGNED: title="Tên NV",description="Mô tả chi tiết NV",objectives="Mục tiêu 1|Mục tiêu 2|..."]\` (Dấu '|' phân cách các mục tiêu) (Bắt buộc phải có đầy đủ thuộc tính)

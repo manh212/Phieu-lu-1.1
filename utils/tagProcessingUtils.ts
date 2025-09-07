@@ -1,6 +1,4 @@
-
-
-import { KnowledgeBase, GameMessage, VectorMetadata } from './../types';
+import { KnowledgeBase, GameMessage, VectorMetadata } from '@/types/index';
 import { parseTagValue } from './parseTagValue'; 
 import { processPlayerStatsInit, processStatsUpdate, processRemoveBinhCanhEffect, processBecomeSpecialStatus, processPlayerSpecialStatusUpdate, processBecomeFree } from './tagProcessors/statsTagProcessor';
 import { processItemAcquired, processItemConsumed, processItemUpdate, processShopItem } from './tagProcessors/itemTagProcessor';
@@ -54,7 +52,7 @@ import { processEventTriggered, processEventUpdate, processEventDetailRevealed }
 import { processWorldConfigUpdate } from './tagProcessors/worldConfigTagProcessor';
 import { processRelationshipEvent } from './tagProcessors/relationshipEventTagProcessor';
 import { processNpcActionLog } from './tagProcessors/npcActionLogTagProcessor';
-import { generateEmbeddings } from './../services/embeddingService';
+import { generateEmbeddings } from '@/services/embeddingService';
 import { processNpcProduceItem, processNpcInventoryTransfer } from './tagProcessors/npcItemProcessor'; // NEW
 
 

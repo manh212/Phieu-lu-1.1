@@ -1,5 +1,5 @@
-import { KnowledgeBase, GameMessage, ProfessionType } from '../../types';
-import * as GameTemplates from '../../templates';
+import { KnowledgeBase, GameMessage, ProfessionType } from '../../types/index';
+import * as GameTemplates from '../../types/index';
 
 export const processProfessionLearned = (
     currentKb: KnowledgeBase,

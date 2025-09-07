@@ -1,4 +1,4 @@
-import { KnowledgeBase, GameMessage, NPC, YeuThu, ActivityLogEntry } from '../../types';
+import { KnowledgeBase, GameMessage, NPC, YeuThu, ActivityLogEntry } from '../../types/index';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
 
 const SIMILARITY_THRESHOLD = 0.8; // Match if 80% similar

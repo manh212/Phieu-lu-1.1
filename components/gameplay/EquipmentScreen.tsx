@@ -1,12 +1,16 @@
 
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GameScreen, KnowledgeBase, Item, EquipmentSlotId, EquipmentSlotConfig, EquipmentTypeValues as EquipmentTypeValue } from '../../types';
+// FIX: Corrected import paths to point to the new centralized type export.
+import { GameScreen, KnowledgeBase, Item, EquipmentSlotId, EquipmentSlotConfig, EquipmentTypeValues as EquipmentTypeValue } from '../../types/index';
 import Button from '../ui/Button';
 import { VIETNAMESE, EQUIPMENT_SLOTS_CONFIG } from '../../constants';
-import * as GameTemplates from '../../templates';
+// FIX: Corrected import to use the new centralized type export instead of the empty types file.
+import * as GameTemplates from '../../types/index';
 import EquipmentSlotUI from './equipment/EquipmentSlotUI';
 import EquipmentInventoryList from './equipment/EquipmentInventoryList';
-import PlayerStatsWithEquipment from './equipment/PlayerStatsWithEquipment';
+// FIX: Changed to named import for PlayerStatsWithEquipment
+import { PlayerStatsWithEquipment } from './equipment/PlayerStatsWithEquipment';
 import EquippableItemsPopover from './equipment/EquippableItemsPopover'; // New component
 
 interface EquipmentScreenProps {
@@ -209,17 +213,23 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
               })}
             </div>
           </div>
+          {/* FIX: Added missing 'personId' prop, required for deterministic avatar generation. */}
           <PlayerStatsWithEquipment
+            personId={'player'}
             playerStats={knowledgeBase.playerStats}
             equippedItems={knowledgeBase.equippedItems}
             inventory={knowledgeBase.inventory}
             currencyName={knowledgeBase.worldConfig?.currencyName}
             playerName={knowledgeBase.worldConfig?.playerName}
             playerGender={knowledgeBase.worldConfig?.playerGender}
+            playerRace={knowledgeBase.worldConfig?.playerRace}
             playerAvatarUrl={knowledgeBase.worldConfig?.playerAvatarUrl}
             playerAvatarData={knowledgeBase.playerAvatarData}
             worldConfig={knowledgeBase.worldConfig}
+            worldDate={knowledgeBase.worldDate}
             isPlayerContext={true}
+            onPlayerAvatarUploadRequest={onUpdateEquipment as any} // This prop is not used here but required by the component
+            isUploadingPlayerAvatar={false} // This prop is not used here but required by the component
             currentLocationName={currentLocation?.name}
           />
         </div>

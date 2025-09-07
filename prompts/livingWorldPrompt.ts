@@ -1,5 +1,5 @@
 // prompts/livingWorldPrompt.ts
-import { KnowledgeBase, NpcProfile, NPC } from '../types';
+import { KnowledgeBase, NpcProfile, NPC } from '../types/index';
 import { formatWorldDateToString } from '../utils/dateUtils';
 
 /**

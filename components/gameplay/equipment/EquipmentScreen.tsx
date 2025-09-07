@@ -1,23 +1,30 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { GameScreen, KnowledgeBase, Item, EquipmentSlotId, EquipmentSlotConfig, EquipmentTypeValues as EquipmentTypeValue } from '../../../types';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+// FIX: Corrected import paths to point to the new centralized type export.
+import { GameScreen, KnowledgeBase, Item, EquipmentSlotId, EquipmentSlotConfig, EquipmentTypeValues as EquipmentTypeValue } from '../../../types/index';
 import Button from '../../ui/Button';
 import { VIETNAMESE, EQUIPMENT_SLOTS_CONFIG } from '../../../constants';
-import * as GameTemplates from '../../../templates';
+// FIX: Corrected import to use the new centralized type export instead of the empty types file.
+import * as GameTemplates from '../../../types/index';
 import EquipmentSlotUI from './EquipmentSlotUI';
 import EquipmentInventoryList from './EquipmentInventoryList';
-import PlayerStatsWithEquipment from './PlayerStatsWithEquipment';
+// FIX: Changed to named import for PlayerStatsWithEquipment
+import { PlayerStatsWithEquipment } from './PlayerStatsWithEquipment';
 import EquippableItemsPopover from './EquippableItemsPopover'; // New component
 
 interface EquipmentScreenProps {
   knowledgeBase: KnowledgeBase;
   setCurrentScreen: (screen: GameScreen) => void;
   onUpdateEquipment: (slotId: EquipmentSlotId, itemId: Item['id'] | null, previousItemIdInSlot: Item['id'] | null) => void;
+  onUpdatePlayerAvatar: (base64DataOrUrl: string) => void;
+  isUploadingAvatar: boolean;
 }
 
 const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
   knowledgeBase,
   setCurrentScreen,
   onUpdateEquipment,
+  onUpdatePlayerAvatar,
+  isUploadingAvatar,
 }) => {
   const [draggedItemInfo, setDraggedItemInfo] = useState<{
     id: string;
@@ -26,34 +33,32 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
     fromSlotId?: EquipmentSlotId; 
   } | null>(null);
   const [draggingOverSlot, setDraggingOverSlot] = useState<EquipmentSlotId | null>(null);
-  const [activePopover, setActivePopover] = useState<{ slotId: EquipmentSlotId; targetRect: DOMRect | null; } | null>(null);
+
+  // State for click-to-equip popover
+  const [activePopover, setActivePopover] = useState<{
+    slotId: EquipmentSlotId;
+    targetRect: DOMRect | null;
+  } | null>(null);
+  
+  // State for highlighting valid slots on drag
   const [draggedItemTypeForHighlight, setDraggedItemTypeForHighlight] = useState<EquipmentTypeValue | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  const allEquippedItemIds = useMemo(() => {
-    const ids = new Set<string>();
-    Object.values(knowledgeBase.equippedItems).forEach(id => { if (id) ids.add(id); });
-    knowledgeBase.wives.forEach(c => Object.values(c.equippedItems).forEach(id => { if (id) ids.add(id); }));
-    knowledgeBase.slaves.forEach(c => Object.values(c.equippedItems).forEach(id => { if (id) ids.add(id); }));
-    return ids;
-  }, [knowledgeBase.equippedItems, knowledgeBase.wives, knowledgeBase.slaves]);
-
-  const displayableInventory = useMemo(() => {
-      return knowledgeBase.inventory.filter(item => 
-        item.category === GameTemplates.ItemCategory.EQUIPMENT && !allEquippedItemIds.has(item.id)
-      );
-  }, [knowledgeBase.inventory, allEquippedItemIds]);
 
   const handleDragStartFromInventory = useCallback((event: React.DragEvent<HTMLDivElement>, item: Item) => {
     if (item.category === GameTemplates.ItemCategory.EQUIPMENT) {
       const equipment = item as GameTemplates.EquipmentTemplate;
-      event.dataTransfer.setData('application/json-item-id', String(item.id));
-      event.dataTransfer.setData('application/json-item-category', String(item.category));
-      event.dataTransfer.setData('application/json-equipment-type', String(equipment.equipmentType || ''));
+      event.dataTransfer.setData('application/json-item-id', item.id);
+      event.dataTransfer.setData('application/json-item-category', item.category);
+      event.dataTransfer.setData('application/json-equipment-type', equipment.equipmentType || '');
       event.dataTransfer.effectAllowed = 'move';
-      setDraggedItemInfo({ id: item.id, category: item.category, equipmentType: equipment.equipmentType });
-      setDraggedItemTypeForHighlight(equipment.equipmentType);
-      setActivePopover(null);
+      setDraggedItemInfo({
+        id: item.id,
+        category: item.category,
+        equipmentType: equipment.equipmentType,
+      });
+      setDraggedItemTypeForHighlight(equipment.equipmentType); // Set for highlighting
+      setActivePopover(null); // Close popover if open
     }
   }, []);
 
@@ -61,20 +66,25 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
     const item = knowledgeBase.inventory.find(i => i.id === itemId);
     if (item && item.category === GameTemplates.ItemCategory.EQUIPMENT) {
         const equipment = item as GameTemplates.EquipmentTemplate;
-        event.dataTransfer.setData('application/json-item-id', String(item.id));
-        event.dataTransfer.setData('application/json-item-category', String(item.category));
-        event.dataTransfer.setData('application/json-equipment-type', String(equipment.equipmentType || ''));
-        event.dataTransfer.setData('application/json-from-slot-id', String(fromSlotId));
+        event.dataTransfer.setData('application/json-item-id', item.id);
+        event.dataTransfer.setData('application/json-item-category', item.category);
+        event.dataTransfer.setData('application/json-equipment-type', equipment.equipmentType || '');
+        event.dataTransfer.setData('application/json-from-slot-id', fromSlotId);
         event.dataTransfer.effectAllowed = 'move';
-        setDraggedItemInfo({ id: item.id, category: item.category, equipmentType: equipment.equipmentType, fromSlotId: fromSlotId });
-        setDraggedItemTypeForHighlight(equipment.equipmentType);
-        setActivePopover(null);
+        setDraggedItemInfo({
+            id: item.id,
+            category: item.category,
+            equipmentType: equipment.equipmentType,
+            fromSlotId: fromSlotId
+        });
+        setDraggedItemTypeForHighlight(equipment.equipmentType); // Set for highlighting
+        setActivePopover(null); // Close popover if open
     }
   }, [knowledgeBase.inventory]);
 
   const handleDragEnd = useCallback(() => {
     setDraggedItemInfo(null);
-    setDraggedItemTypeForHighlight(null);
+    setDraggedItemTypeForHighlight(null); // Clear highlight
   }, []);
 
   const handleDropOnSlot = useCallback((slotId: EquipmentSlotId, droppedItemId: string) => {
@@ -91,7 +101,7 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
     handleDragEnd();
   }, [knowledgeBase.equippedItems, onUpdateEquipment, draggedItemInfo, handleDragEnd]);
 
-  const handleDropOnInventory = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  const handleDropOnInventory = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const fromSlotId = event.dataTransfer.getData('application/json-from-slot-id') as EquipmentSlotId | undefined;
     const itemId = event.dataTransfer.getData('application/json-item-id');
@@ -99,15 +109,20 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
         onUpdateEquipment(fromSlotId, null, itemId); 
     }
     handleDragEnd();
-  }, [onUpdateEquipment, handleDragEnd]);
+  };
 
   const handleDragOverInventory = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault(); 
   };
 
+  // Click-to-equip handlers
   const handleSlotClick = useCallback((slotId: EquipmentSlotId, targetElement: HTMLDivElement) => {
-    setActivePopover(prev => prev?.slotId === slotId ? null : { slotId, targetRect: targetElement.getBoundingClientRect() });
-  }, []);
+    if (activePopover && activePopover.slotId === slotId) {
+      setActivePopover(null); // Close if already open for this slot
+    } else {
+      setActivePopover({ slotId, targetRect: targetElement.getBoundingClientRect() });
+    }
+  }, [activePopover]);
 
   const handleClosePopover = useCallback(() => {
     setActivePopover(null);
@@ -116,7 +131,7 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-         if (activePopover && !(event.target as HTMLElement).closest('.group')) {
+         if (activePopover && !(event.target as HTMLElement).closest('.group')) { // Check if click was outside any slot UI
             handleClosePopover();
          }
       }
@@ -128,6 +143,7 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [activePopover, handleClosePopover]);
+
 
   const handleEquipFromPopover = useCallback((slotId: EquipmentSlotId, itemIdToEquip: string) => {
     const previousItemIdInSlot = knowledgeBase.equippedItems[slotId];
@@ -143,28 +159,17 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
     handleClosePopover();
   }, [knowledgeBase.equippedItems, onUpdateEquipment, handleClosePopover]);
 
-  const getCompatibleItemsForPopover = useMemo((): Item[] => {
+  const getCompatibleItemsForPopover = (): Item[] => {
     if (!activePopover) return [];
     const slotConfig = EQUIPMENT_SLOTS_CONFIG.find(s => s.id === activePopover.slotId);
     if (!slotConfig) return [];
-    
-    const currentItemInSlotId = knowledgeBase.equippedItems[activePopover.slotId];
-
-    return knowledgeBase.inventory.filter(item => {
-        if (item.category !== GameTemplates.ItemCategory.EQUIPMENT) return false;
-        
-        const equipmentItem = item as GameTemplates.EquipmentTemplate;
-        if (!slotConfig.accepts.includes(equipmentItem.equipmentType)) return false;
-
-        if (allEquippedItemIds.has(item.id)) {
-            return item.id === currentItemInSlotId;
-        }
-        
-        return true;
-    });
-  }, [activePopover, knowledgeBase.inventory, knowledgeBase.equippedItems, allEquippedItemIds]);
+    return knowledgeBase.inventory.filter(item => 
+      item.category === GameTemplates.ItemCategory.EQUIPMENT && 
+      slotConfig.accepts.includes((item as GameTemplates.EquipmentTemplate).equipmentType)
+    );
+  };
   
-  const currentItemInActivePopoverSlot = (activePopover) ? 
+  const currentItemInActivePopoverSlot = activePopover ? 
     knowledgeBase.inventory.find(i => i.id === knowledgeBase.equippedItems[activePopover.slotId]) || null : null;
 
   const currentLocation = knowledgeBase.discoveredLocations.find(l => l.id === knowledgeBase.currentLocationId);
@@ -181,7 +186,8 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
         </Button>
       </header>
 
-      <div className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-4 relative">
+      <div className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-4 relative"> {/* Added relative for popover positioning */}
+        {/* Left Column: Equipment Slots & Stats */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           <div className="bg-gray-900 p-3 sm:p-4 rounded-lg shadow-xl border border-gray-700">
             <h2 className="text-xl font-semibold text-indigo-300 mb-4 border-b border-gray-600 pb-2">
@@ -210,29 +216,34 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
             </div>
           </div>
           <PlayerStatsWithEquipment
+            personId={'player'}
             playerStats={knowledgeBase.playerStats}
             equippedItems={knowledgeBase.equippedItems}
             inventory={knowledgeBase.inventory}
             currencyName={knowledgeBase.worldConfig?.currencyName}
             playerName={knowledgeBase.worldConfig?.playerName}
             playerGender={knowledgeBase.worldConfig?.playerGender}
+            playerRace={knowledgeBase.worldConfig?.playerRace}
             playerAvatarUrl={knowledgeBase.worldConfig?.playerAvatarUrl}
             playerAvatarData={knowledgeBase.playerAvatarData}
             worldConfig={knowledgeBase.worldConfig}
             worldDate={knowledgeBase.worldDate}
             isPlayerContext={true}
+            onPlayerAvatarUploadRequest={onUpdatePlayerAvatar}
+            isUploadingPlayerAvatar={isUploadingAvatar}
             currentLocationName={currentLocation?.name}
           />
         </div>
 
+        {/* Right Column: Inventory */}
         <div 
             className="lg:col-span-1"
             onDrop={handleDropOnInventory}
             onDragOver={handleDragOverInventory}
-            onDragEnd={handleDragEnd}
+            onDragEnd={handleDragEnd} // Added drag end to clear highlight from inventory drags
         >
           <EquipmentInventoryList
-            inventory={displayableInventory}
+            inventory={knowledgeBase.inventory}
             onDragStartItem={handleDragStartFromInventory}
           />
         </div>
@@ -240,7 +251,7 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
           <div ref={popoverRef}>
             <EquippableItemsPopover
               slotId={activePopover.slotId}
-              items={getCompatibleItemsForPopover}
+              items={getCompatibleItemsForPopover()}
               currentItemInSlot={currentItemInActivePopoverSlot as Item | null}
               onSelectItem={(itemId) => handleEquipFromPopover(activePopover.slotId, itemId)}
               onUnequip={() => handleUnequipFromPopover(activePopover.slotId)}

@@ -1,5 +1,4 @@
-
-import { KnowledgeBase, GameMessage, Companion } from '../../types';
+import { KnowledgeBase, GameMessage, Companion } from '../../types/index';
 
 export const processCompanionAdd = (
     currentKb: KnowledgeBase,
