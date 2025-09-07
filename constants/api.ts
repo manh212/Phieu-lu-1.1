@@ -1,3 +1,4 @@
+
 import { HarmCategory, HarmBlockThreshold } from "@google/genai";
 // FIX: Correct import path for types
 import type { ApiConfig, SafetySetting, AvatarGenerationEngine } from '../types/index';
@@ -5,6 +6,7 @@ import type { ApiConfig, SafetySetting, AvatarGenerationEngine } from '../types/
 // FIX: Updated to only include the allowed model for general text tasks per guidelines.
 export const AVAILABLE_MODELS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Khuyến Nghị)' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
 ];
 export const DEFAULT_MODEL_ID = AVAILABLE_MODELS[0].id;
 
