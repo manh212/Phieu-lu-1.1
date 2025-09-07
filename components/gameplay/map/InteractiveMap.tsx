@@ -3,6 +3,7 @@ import React from 'react';
 import { GameLocation } from '@/types/index';
 import { MAP_COLORS, MAP_SIZES } from './mapConstants';
 import * as LocationIcons from './mapIcons';
+import type { IconProps } from './mapIcons';
 // FIX: Correct import path for templates
 import * as GameTemplates from '@/types/index';
 
@@ -13,15 +14,6 @@ interface InteractiveMapProps {
   transform: string;
   isEditMode: boolean;
   onNodeMouseDown: (event: React.MouseEvent<SVGGElement>, locationId: string) => void;
-}
-
-// FIX: Define the props interface for the icon components locally, as it is not exported from mapIcons.tsx
-interface IconProps {
-  width?: number | string;
-  height?: number | string;
-  className?: string;
-  stroke?: string;
-  strokeWidth?: number;
 }
 
 const getLocationIconComponent = (location: GameLocation): React.FC<IconProps> => {

@@ -58,6 +58,101 @@ import { processNpcProduceItem, processNpcInventoryTransfer } from './tagProcess
 
 export { parseTagValue }; 
 
+// --- Tag Processor Registry ---
+const tagProcessorRegistry: Record<string, Function> = {
+    // Stats
+    'PLAYER_STATS_INIT': processPlayerStatsInit,
+    'STATS_UPDATE': processStatsUpdate,
+    'REMOVE_BINH_CANH_EFFECT': processRemoveBinhCanhEffect,
+    'BECOMEPRISONER': (kb: KnowledgeBase, params: any, turn: number) => processBecomeSpecialStatus(kb, params, 'BECOMEPRISONER', turn),
+    'BECOMESLAVE': (kb: KnowledgeBase, params: any, turn: number) => processBecomeSpecialStatus(kb, params, 'BECOMESLAVE', turn),
+    'PLAYER_SPECIAL_STATUS_UPDATE': processPlayerSpecialStatusUpdate,
+    'BECOMEFREE': processBecomeFree,
+
+    // Items
+    'ITEM_ACQUIRED': processItemAcquired,
+    'ITEM_CONSUMED': processItemConsumed,
+    'ITEM_UPDATE': processItemUpdate,
+    'SHOP_ITEM': processShopItem,
+
+    // Skills & Professions
+    'SKILL_LEARNED': processSkillLearned,
+    'SKILL_UPDATE': processSkillUpdate,
+    'PROFESSION_LEARNED': processProfessionLearned,
+
+    // Quests
+    'QUEST_ASSIGNED': processQuestAssigned,
+    'QUEST_UPDATED': processQuestUpdated,
+    'QUEST_COMPLETED': processQuestCompleted,
+    'QUEST_FAILED': processQuestFailed,
+    'OBJECTIVE_UPDATE': processObjectiveUpdate,
+
+    // Entities (NPC, YeuThu, Companions)
+    'NPC': processNpc,
+    'NPC_UPDATE': processNpcUpdate,
+    'NPC_REMOVE': processNpcRemove,
+    'YEUTHU': processYeuThu,
+    'YEUTHU_REMOVE': processYeuThuRemove,
+    'COMPANION_ADD': processCompanionAdd,
+    'COMPANION_JOIN': processCompanionAdd, // Alias
+    'COMPANION_LEAVE': processCompanionLeave,
+    'COMPANION_STATS_UPDATE': processCompanionStatsUpdate,
+
+    // Locations & World
+    'MAINLOCATION': processMainLocation,
+    'SUBLOCATION': processSubLocation,
+    'LOCATION_UPDATE': processLocationUpdate,
+    'LOCATION_CHANGE': processLocationChange,
+    'FACTION_DISCOVERED': processFactionDiscovered,
+    'FACTION_UPDATE': processFactionUpdate,
+    'FACTION_REMOVE': processFactionRemove,
+    'WORLD_LORE_ADD': processWorldLoreAdd,
+    'WORLD_LORE_UPDATE': processWorldLoreUpdate,
+    'WORLD_CONFIG_UPDATE': processWorldConfigUpdate,
+
+    // Combat
+    'SET_COMBAT_STATUS': processSetCombatStatus,
+    'BEGIN_COMBAT': processBeginCombat,
+
+    // System & Time
+    'MESSAGE': processMessage,
+    'REALM_LIST': processRealmList,
+    'CHANGE_TIME': processChangeTime,
+
+    // Status Effects
+    'STATUS_EFFECT_APPLY': processStatusEffectApply,
+    'STATUS_EFFECT_REMOVE': processStatusEffectRemove,
+
+    // Auction
+    'AUCTION_ITEM': processAuctionItem,
+    'AUCTION_NPC': processAuctionNpc,
+    'NPC_BID': processNpcBid,
+    
+    // Slaves, Wives, Prisoners
+    'PRISONER_ADD': processPrisonerAdd,
+    'WIFE_ADD': processWifeAdd,
+    'SLAVE_ADD': processSlaveAdd,
+    'WIFE_UPDATE': processWifeUpdate,
+    'SLAVE_UPDATE': processSlaveUpdate,
+    'PRISONER_UPDATE': processPrisonerUpdate,
+    'WIFE_REMOVE': processWifeRemove,
+    'SLAVE_REMOVE': processSlaveRemove,
+    'PRISONER_REMOVE': processPrisonerRemove,
+    'MASTER_UPDATE': processMasterUpdate,
+    'SLAVE_FOR_SALE': processSlaveForSale,
+    'AUCTION_SLAVE': processAuctionSlave,
+
+    // Living World & Events
+    'EVENT_TRIGGERED': processEventTriggered,
+    'EVENT_UPDATE': processEventUpdate,
+    'EVENT_DETAIL_REVEALED': processEventDetailRevealed,
+    'RELATIONSHIP_EVENT': processRelationshipEvent,
+    'NPC_ACTION_LOG': processNpcActionLog,
+    'NPC_PRODUCE_ITEM': processNpcProduceItem,
+    'NPC_INVENTORY_TRANSFER': processNpcInventoryTransfer,
+};
+
+
 const addOrUpdateVectorMetadata = (
     metadataQueue: VectorMetadata[],
     newMetadata: VectorMetadata
@@ -109,487 +204,4 @@ export const performTagProcessing = async (
             if (tagName === 'MESSAGE' && !cleanedTagParameterString.includes('=')) {
                 tagParams = { message: cleanedTagParameterString.replace(/^"|"$/g, '') };
             } else {
-                tagParams = parseTagValue(cleanedTagParameterString);
-            }
-        }
-
-        try {
-            switch (tagName) {
-                case 'NPC_PRODUCE_ITEM': {
-                    const { updatedKb, systemMessages } = processNpcProduceItem(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'NPC_INVENTORY_TRANSFER': {
-                    const { updatedKb, systemMessages } = processNpcInventoryTransfer(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'NPC_ACTION_LOG': {
-                    const { updatedKb, systemMessages } = processNpcActionLog(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'RELATIONSHIP_EVENT': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processRelationshipEvent(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                 case 'EVENT_TRIGGERED': {
-                    const { updatedKb, systemMessages } = processEventTriggered(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'EVENT_UPDATE': {
-                    const { updatedKb, systemMessages } = processEventUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'EVENT_DETAIL_REVEALED': {
-                    const { updatedKb, systemMessages } = processEventDetailRevealed(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                 case 'ITEM_UPDATE': {
-                    const { updatedKb, systemMessages, updatedVectorMetadata } = processItemUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (updatedVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, updatedVectorMetadata);
-                    break;
-                }
-                case 'SKILL_UPDATE': { 
-                    const { updatedKb, systemMessages, updatedVectorMetadata } = processSkillUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (updatedVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, updatedVectorMetadata);
-                    break;
-                }
-                 case 'NPC_UPDATE': {
-                    const result = await processNpcUpdate(workingKb, tagParams, turnForSystemMessages, setKnowledgeBaseDirectly, logNpcAvatarPromptCallback);
-                    workingKb = result.updatedKb;
-                    allSystemMessages.push(...result.systemMessages);
-                    if (result.updatedVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, result.updatedVectorMetadata);
-                    break;
-                }
-                case 'WIFE_UPDATE': {
-                    const { updatedKb, systemMessages, updatedVectorMetadata } = processWifeUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (updatedVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, updatedVectorMetadata);
-                    break;
-                }
-                case 'SLAVE_UPDATE': {
-                    const { updatedKb, systemMessages, updatedVectorMetadata } = processSlaveUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (updatedVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, updatedVectorMetadata);
-                    break;
-                }
-                case 'PRISONER_UPDATE': {
-                    const { updatedKb, systemMessages, updatedVectorMetadata } = processPrisonerUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (updatedVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, updatedVectorMetadata);
-                    break;
-                }
-                case 'LOCATION_UPDATE': { 
-                    const { updatedKb, systemMessages, updatedVectorMetadata } = processLocationUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (updatedVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, updatedVectorMetadata);
-                    break;
-                }
-                case 'WORLD_LORE_UPDATE': { 
-                    const { updatedKb, systemMessages, updatedVectorMetadata } = processWorldLoreUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (updatedVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, updatedVectorMetadata);
-                    break;
-                }
-                case 'FACTION_UPDATE': { 
-                    const { updatedKb, systemMessages, updatedVectorMetadata } = processFactionUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (updatedVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, updatedVectorMetadata);
-                    break;
-                }
-                 case 'WORLD_CONFIG_UPDATE': {
-                    const { updatedKb, systemMessages } = processWorldConfigUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'SLAVE_FOR_SALE': {
-                    const { updatedKb, systemMessages } = processSlaveForSale(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'AUCTION_SLAVE': {
-                    const { updatedKb, systemMessages } = processAuctionSlave(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'MASTER_UPDATE': {
-                    const { updatedKb, systemMessages, updatedVectorMetadata } = processMasterUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (updatedVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, updatedVectorMetadata);
-                    break;
-                }
-                case 'CHANGE_TIME': {
-                    const { updatedKb, systemMessages } = processChangeTime(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'PLAYER_STATS_INIT': {
-                    const { updatedKb, systemMessages, realmChanged, turnIncremented } = processPlayerStatsInit(workingKb, tagParams);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (realmChanged) realmChangedByAnyTag = true;
-                    if (turnIncremented) turnIncrementedByAnyTag = true;
-                    break;
-                }
-                case 'STATS_UPDATE': {
-                    const { updatedKb, systemMessages, realmChanged, turnIncremented, removedBinhCanh } = processStatsUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (realmChanged) realmChangedByAnyTag = true;
-                    if (turnIncremented) turnIncrementedByAnyTag = true;
-                    if (removedBinhCanh) removedBinhCanhByAnyTag = true;
-                    break;
-                }
-                case 'BECOMEPRISONER':
-                case 'BECOMESLAVE': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processBecomeSpecialStatus(workingKb, tagParams, tagName as 'BECOMEPRISONER' | 'BECOMESLAVE', turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                case 'PLAYER_SPECIAL_STATUS_UPDATE': {
-                    const { updatedKb, systemMessages } = processPlayerSpecialStatusUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'BECOMEFREE': {
-                    const { updatedKb, systemMessages } = processBecomeFree(workingKb, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'ITEM_ACQUIRED': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processItemAcquired(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                case 'SHOP_ITEM': {
-                    const { updatedKb, systemMessages } = processShopItem(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'ITEM_CONSUMED': {
-                    const { updatedKb, systemMessages } = processItemConsumed(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'SKILL_LEARNED': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processSkillLearned(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                case 'PROFESSION_LEARNED': {
-                    const { updatedKb, systemMessages } = processProfessionLearned(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'QUEST_ASSIGNED': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processQuestAssigned(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                case 'QUEST_UPDATED': {
-                    const { updatedKb, systemMessages } = processQuestUpdated(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'QUEST_COMPLETED': {
-                    const { updatedKb, systemMessages } = processQuestCompleted(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'QUEST_FAILED': {
-                    const { updatedKb, systemMessages } = processQuestFailed(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'OBJECTIVE_UPDATE': {
-                    const { updatedKb, systemMessages } = processObjectiveUpdate(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'NPC': { 
-                    const result = await processNpc(workingKb, tagParams, turnForSystemMessages, setKnowledgeBaseDirectly, logNpcAvatarPromptCallback); 
-                    workingKb = result.updatedKb;
-                    allSystemMessages.push(...result.systemMessages);
-                    if (result.newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, result.newVectorMetadata);
-                    break;
-                }
-                case 'YEUTHU': {
-                    const result = await processYeuThu(workingKb, tagParams, turnForSystemMessages, setKnowledgeBaseDirectly, logNpcAvatarPromptCallback); 
-                    workingKb = result.updatedKb;
-                    allSystemMessages.push(...result.systemMessages);
-                    if (result.newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, result.newVectorMetadata);
-                    break;
-                }
-                case 'MAINLOCATION': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processMainLocation(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                case 'SUBLOCATION': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processSubLocation(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                case 'LOCATION_CHANGE': {
-                    const { updatedKb, systemMessages } = await processLocationChange(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'WORLD_LORE_ADD': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processWorldLoreAdd(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                case 'FACTION_DISCOVERED': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processFactionDiscovered(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                 case 'FACTION_REMOVE': { 
-                    const { updatedKb, systemMessages } = processFactionRemove(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'NPC_REMOVE': {
-                    const { updatedKb, systemMessages } = processNpcRemove(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'YEUTHU_REMOVE': {
-                    const { updatedKb, systemMessages } = processYeuThuRemove(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'SET_COMBAT_STATUS': {
-                    const { updatedKb } = processSetCombatStatus(workingKb, tagParams);
-                    workingKb = updatedKb;
-                    break;
-                }
-                case 'BEGIN_COMBAT': { 
-                    const { updatedKb, systemMessages } = processBeginCombat(workingKb, tagParams);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'COMPANION_JOIN':
-                case 'COMPANION_ADD': {
-                    const { updatedKb, systemMessages } = processCompanionAdd(workingKb, tagParams);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'COMPANION_LEAVE': {
-                    const { updatedKb, systemMessages } = processCompanionLeave(workingKb, tagParams);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'COMPANION_STATS_UPDATE': {
-                    const { updatedKb, systemMessages } = processCompanionStatsUpdate(workingKb, tagParams);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                 case 'PRISONER_ADD': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processPrisonerAdd(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                case 'WIFE_ADD': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processWifeAdd(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                case 'SLAVE_ADD': {
-                    const { updatedKb, systemMessages, newVectorMetadata } = processSlaveAdd(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (newVectorMetadata) addOrUpdateVectorMetadata(metadataToVectorize, newVectorMetadata);
-                    break;
-                }
-                case 'WIFE_REMOVE': {
-                    const { updatedKb, systemMessages } = processWifeRemove(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'SLAVE_REMOVE': {
-                    const { updatedKb, systemMessages } = processSlaveRemove(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'PRISONER_REMOVE': {
-                    const { updatedKb, systemMessages } = processPrisonerRemove(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'MESSAGE': {
-                    const msg = processMessage(tagParams, turnForSystemMessages);
-                    if (msg) allSystemMessages.push(msg);
-                    break;
-                }
-                 case 'REALM_LIST': {
-                    const { updatedKb } = processRealmList(workingKb, tagParams);
-                    workingKb = updatedKb;
-                    break;
-                }
-                case 'REMOVE_BINH_CANH_EFFECT': {
-                    const { updatedKb, systemMessages, removedBinhCanh } = processRemoveBinhCanhEffect(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    if (removedBinhCanh) removedBinhCanhByAnyTag = true;
-                    break;
-                }
-                case 'STATUS_EFFECT_APPLY': {
-                    const { updatedKb, systemMessages } = processStatusEffectApply(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'STATUS_EFFECT_REMOVE': {
-                    const { updatedKb, systemMessages } = processStatusEffectRemove(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'AUCTION_ITEM': {
-                    const { updatedKb, systemMessages } = processAuctionItem(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                 case 'AUCTION_NPC': {
-                    const { updatedKb, systemMessages } = processAuctionNpc(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                case 'NPC_BID': {
-                    const { updatedKb, systemMessages } = processNpcBid(workingKb, tagParams, turnForSystemMessages);
-                    workingKb = updatedKb;
-                    allSystemMessages.push(...systemMessages);
-                    break;
-                }
-                default:
-                    if (!tagName.startsWith("GENERATED_") && tagName !== "CHOICE") {
-                        console.warn(`Unknown tag: "${tagName}". Full tag: "${originalTag}"`);
-                    }
-            }
-        } catch (error) {
-             console.error(`Error processing tag "${tagName}":`, error, "Original tag:", originalTag, "Params:", tagParams);
-             allSystemMessages.push({
-                id: 'tag-processing-error-' + Date.now(), type: 'system',
-                content: `Lỗi xử lý tag ${tagName}: ${error instanceof Error ? error.message : "Không rõ"}`,
-                timestamp: Date.now(), turnNumber: turnForSystemMessages
-            });
-        }
-    } 
-
-    if (metadataToVectorize.length > 0) {
-        try {
-            const textChunks = metadataToVectorize.map(m => m.text);
-            const newVectors = await generateEmbeddings(textChunks);
-            
-            if (!workingKb.ragVectorStore) {
-                workingKb.ragVectorStore = { vectors: [], metadata: [] };
-            }
-
-            metadataToVectorize.forEach((metadata, index) => {
-                const newVector = newVectors[index];
-                if (!newVector) return;
-
-                const existingIndex = workingKb.ragVectorStore!.metadata.findIndex(m => m.entityId === metadata.entityId);
-                if (existingIndex > -1) {
-                    workingKb.ragVectorStore!.vectors[existingIndex] = newVector;
-                    workingKb.ragVectorStore!.metadata[existingIndex] = metadata;
-                } else {
-                    workingKb.ragVectorStore!.vectors.push(newVector);
-                    workingKb.ragVectorStore!.metadata.push(metadata);
-                }
-            });
-            
-        } catch (embeddingError) {
-            console.error("Failed to update RAG VectorStore during tag processing:", embeddingError);
-            allSystemMessages.push({
-                id: 'rag-update-error-' + Date.now(),
-                type: 'error',
-                content: `Lỗi cập nhật RAG: ${embeddingError instanceof Error ? embeddingError.message : 'Lỗi không xác định'}`,
-                timestamp: Date.now(),
-                turnNumber: turnForSystemMessages
-            });
-        }
-    }
-
-    return { 
-        newKb: workingKb, 
-        turnIncrementedByTag: turnIncrementedByAnyTag, 
-        systemMessagesFromTags: allSystemMessages, 
-        realmChangedByTag: realmChangedByAnyTag, 
-        appliedBinhCanhViaTag: false,
-        removedBinhCanhViaTag: removedBinhCanhByAnyTag 
-    };
-};
+                tagParams =

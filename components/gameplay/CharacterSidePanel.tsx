@@ -68,20 +68,18 @@ const CharacterSidePanel: React.FC<CharacterSidePanelProps> = React.memo(({
       return knowledgeBase.inventory.filter(item => !allEquippedItemIds.has(item.id));
   }, [knowledgeBase.inventory, allEquippedItemIds]);
 
-  // FIX: Explicitly cast enum value to string to satisfy filter predicate type
-  const congPhapSkills = knowledgeBase.playerSkills.filter(s => s.skillType === String(GameTemplates.SkillType.CONG_PHAP_TU_LUYEN));
-  const linhKiSkills = knowledgeBase.playerSkills.filter(s => s.skillType === String(GameTemplates.SkillType.LINH_KI));
-  const ngheNghiepSkills = knowledgeBase.playerSkills.filter(s => s.skillType === String(GameTemplates.SkillType.NGHE_NGHIEP));
-  // FIX: Explicitly cast enum value to string to satisfy filter predicate type
-  const thanThongSkills = knowledgeBase.playerSkills.filter(s => s.skillType === String(GameTemplates.SkillType.THAN_THONG));
-  const camThuatSkills = knowledgeBase.playerSkills.filter(s => s.skillType === String(GameTemplates.SkillType.CAM_THUAT));
+  // FIX: Removed unnecessary String() casting for cleaner, more direct enum comparison.
+  const congPhapSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.CONG_PHAP_TU_LUYEN);
+  const linhKiSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.LINH_KI);
+  const ngheNghiepSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.NGHE_NGHIEP);
+  const thanThongSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.THAN_THONG);
+  const camThuatSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.CAM_THUAT);
   const otherSkills = knowledgeBase.playerSkills.filter(s => 
-    // FIX: Explicitly cast enum values to strings to satisfy filter predicate type
-    s.skillType !== String(GameTemplates.SkillType.CONG_PHAP_TU_LUYEN) &&
-    s.skillType !== String(GameTemplates.SkillType.LINH_KI) &&
-    s.skillType !== String(GameTemplates.SkillType.NGHE_NGHIEP) &&
-    s.skillType !== String(GameTemplates.SkillType.THAN_THONG) &&
-    s.skillType !== String(GameTemplates.SkillType.CAM_THUAT)
+    s.skillType !== GameTemplates.SkillType.CONG_PHAP_TU_LUYEN &&
+    s.skillType !== GameTemplates.SkillType.LINH_KI &&
+    s.skillType !== GameTemplates.SkillType.NGHE_NGHIEP &&
+    s.skillType !== GameTemplates.SkillType.THAN_THONG &&
+    s.skillType !== GameTemplates.SkillType.CAM_THUAT
   );
 
   return (
