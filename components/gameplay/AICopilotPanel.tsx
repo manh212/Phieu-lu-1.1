@@ -186,39 +186,7 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
           <div ref={chatEndRef} />
         </div>
         <div className="flex-shrink-0 p-2 border-t border-gray-700 space-y-2">
-            <div className="flex justify-between items-center px-1 py-1">
-                <ToggleSwitch
-                    id="copilot-mode-toggle"
-                    checked={isActionModus}
-                    onChange={setIsActionModus}
-                    disabled={isLoadingApi}
-                />
-                <div className="text-sm font-semibold">
-                    <span>Chế độ: </span>
-                    <span className={isActionModus ? 'text-indigo-400' : 'text-gray-400'}>
-                        {isActionModus ? 'Hành Động' : 'Thảo Luận'}
-                    </span>
-                </div>
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-                {quickActions.map(action => (
-                    <Button key={action.label} variant="ghost" size="sm" className="!p-1.5 text-xs" onClick={() => handleQuickAction(action.query, action.contextProvider ? action.contextProvider() : undefined)} disabled={isLoadingApi}>
-                        {action.label}
-                    </Button>
-                ))}
-            </div>
-            <form onSubmit={handleSubmit} className="flex gap-2">
-            <textarea
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              placeholder="Hỏi hoặc ra lệnh cho AI..."
-              className="flex-grow p-2 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white placeholder-gray-400 resize-none text-sm"
-              rows={3}
-              disabled={isLoadingApi}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e); } }}
-            />
-            <div className="flex flex-col gap-1">
-                <Button type="submit" disabled={isLoadingApi || !userInput.trim()} className="flex-grow">Gửi</Button>
+            <div className="flex justify-end">
                 <Button
                     type="button"
                     variant="secondary"
@@ -232,6 +200,35 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
                     </svg>
                 </Button>
             </div>
+            <div className="grid grid-cols-2 gap-1">
+                {quickActions.map(action => (
+                    <Button key={action.label} variant="ghost" size="sm" className="!p-1.5 text-xs" onClick={() => handleQuickAction(action.query, action.contextProvider ? action.contextProvider() : undefined)} disabled={isLoadingApi}>
+                        {action.label}
+                    </Button>
+                ))}
+            </div>
+            <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+                <textarea
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  placeholder="Hỏi hoặc ra lệnh cho AI..."
+                  className="flex-grow p-2 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white placeholder-gray-400 resize-none text-sm"
+                  rows={3}
+                  disabled={isLoadingApi}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e); } }}
+                />
+                <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                    <ToggleSwitch
+                        id="copilot-mode-toggle"
+                        checked={isActionModus}
+                        onChange={setIsActionModus}
+                        disabled={isLoadingApi}
+                    />
+                    <label htmlFor="copilot-mode-toggle" className="text-xs text-gray-400 cursor-pointer">
+                        {isActionModus ? 'Hành Động' : 'Thảo Luận'}
+                    </label>
+                </div>
+                <Button type="submit" disabled={isLoadingApi || !userInput.trim()} className="self-stretch">Gửi</Button>
           </form>
         </div>
       </div>

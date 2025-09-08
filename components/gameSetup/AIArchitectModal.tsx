@@ -1,5 +1,6 @@
 // src/components/gameSetup/AIArchitectModal.tsx
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+// FIX: Import useState, useRef, and useEffect from React to resolve 'Cannot find name' errors.
+import React, { useState, useRef, useEffect } from 'react';
 // FIX: Correct import path for types
 import { WorldSettings } from '../../types/index';
 import Modal from '../ui/Modal';
@@ -147,32 +148,34 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
                     )}
                     <div ref={chatEndRef} />
                 </div>
-                <div className="flex-shrink-0 p-2 border-t border-gray-700 space-y-2">
-                    <div className="flex justify-between items-center px-1 py-1">
-                        <ToggleSwitch
-                            id="architect-mode-toggle"
-                            checked={isActionModus}
-                            onChange={setIsActionModus}
-                            disabled={isLoading}
-                        />
-                        <div className="text-sm font-semibold">
-                            <span>Chế độ: </span>
-                            <span className={isActionModus ? 'text-indigo-400' : 'text-gray-400'}>
-                                {isActionModus ? 'Hành Động' : 'Thảo Luận'}
-                            </span>
+                <div className="flex-shrink-0 p-2 border-t border-gray-700">
+                    <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2 items-end">
+                        <div className="flex-grow space-y-2">
+                            <textarea
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                                placeholder="Yêu cầu AI thay đổi thiết lập..."
+                                className="w-full p-2 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white placeholder-gray-400 resize-none text-sm"
+                                rows={2}
+                                disabled={isLoading}
+                            />
+                             <div className="flex justify-between items-center px-1">
+                                <ToggleSwitch
+                                    id="architect-mode-toggle"
+                                    checked={isActionModus}
+                                    onChange={setIsActionModus}
+                                    disabled={isLoading}
+                                />
+                                <div className="text-sm font-semibold">
+                                    <span>Chế độ: </span>
+                                    <span className={isActionModus ? 'text-indigo-400' : 'text-gray-400'}>
+                                        {isActionModus ? 'Hành Động' : 'Thảo Luận'}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
-                        <textarea
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                            placeholder="Yêu cầu AI thay đổi thiết lập..."
-                            className="flex-grow p-2 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white placeholder-gray-400 resize-none text-sm"
-                            rows={2}
-                            disabled={isLoading}
-                        />
-                        <Button type="submit" disabled={isLoading || !input.trim()}>Gửi</Button>
+                        <Button type="submit" disabled={isLoading || !input.trim()} className="self-stretch">Gửi</Button>
                     </form>
                 </div>
             </div>
