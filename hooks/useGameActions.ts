@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import {
-  KnowledgeBase, GameMessage, GameScreen, SaveGameData, SaveGameMeta,
+  KnowledgeBase, GameMessage, GameScreen, SaveGameData, SaveGameMeta, TurnHistoryEntry,
 } from '@/types/index';
 import {
   saveGameToIndexedDB,
@@ -9,8 +9,13 @@ import {
   importGameToIndexedDB,
 } from '@/services/indexedDBService';
 import { VIETNAMESE } from '@/constants';
-import { calculateTotalPages, getMessagesForPage } from '@/utils/gameLogicUtils';
+// FIX: Moved DEFAULT_AI_CONTEXT_CONFIG import from '@//constants' to the correct module '@//utils/gameLogicUtils' where it is defined.
+// FIX: Changed import for DEFAULT_AI_RULEBOOK to its correct source module to resolve export error.
+import { DEFAULT_AI_RULEBOOK } from '@/constants/systemRulesNormal';
+import { calculateTotalPages, getMessagesForPage, DEFAULT_AI_CONTEXT_CONFIG } from '@/utils/gameLogicUtils';
 import { summarizeTurnHistory } from '@/services/storyService';
+import * as jsonpatch from "fast-json-patch"; 
+import { Operation } from 'fast-json-patch';
 
 
 // Props that this hook will need from the main GameContext
@@ -58,6 +63,72 @@ export const useGameActions = (props: UseGameActionsProps) => {
     try {
       const loadedData = await loadSpecificGameFromIndexedDB(saveId);
       if (loadedData) {
+        
+        // --- START: DATA MIGRATION (STEP 1 & 2) ---
+        // Automatically update older save files by adding new data structures if they don't exist.
+        // This prevents the "Cannot read properties of undefined" error.
+        if (loadedData.knowledgeBase) {
+            if (!loadedData.knowledgeBase.aiContextConfig) {
+                loadedData.knowledgeBase.aiContextConfig = { ...DEFAULT_AI_CONTEXT_CONFIG };
+            }
+            if (!loadedData.knowledgeBase.aiRulebook) {
+                loadedData.knowledgeBase.aiRulebook = { ...DEFAULT_AI_RULEBOOK };
+            }
+        }
+        // --- END: DATA MIGRATION ---
+
+
+        // --- START: RECONSTRUCT TURN HISTORY SNAPSHOTS ---
+        // Delta entries in the DB don't have full snapshots to save space.
+        // We must reconstruct them here so the rollback function has the data it needs.
+        if (loadedData.knowledgeBase && loadedData.knowledgeBase.turnHistory) {
+            let lastKeyframeKb: KnowledgeBase | null = null;
+            let lastKeyframeMessages: GameMessage[] | null = null;
+            const reconstructedHistory: TurnHistoryEntry[] = [];
+
+            for (const entry of loadedData.knowledgeBase.turnHistory) {
+                if (entry.type === 'keyframe' && entry.knowledgeBaseSnapshot && entry.gameMessagesSnapshot) {
+                    // This is a full snapshot, use it as the new base
+                    lastKeyframeKb = JSON.parse(JSON.stringify(entry.knowledgeBaseSnapshot));
+                    lastKeyframeMessages = JSON.parse(JSON.stringify(entry.gameMessagesSnapshot));
+                    reconstructedHistory.push(entry);
+                } else if (entry.type === 'delta') {
+                    if (lastKeyframeKb && lastKeyframeMessages && entry.knowledgeBaseDelta && entry.gameMessagesDelta) {
+                        try {
+                            // Apply patch to the LAST known full state to reconstruct this turn's state
+                            const newKbSnapshot = jsonpatch.applyPatch(JSON.parse(JSON.stringify(lastKeyframeKb)), entry.knowledgeBaseDelta as readonly Operation[]).newDocument as KnowledgeBase;
+                            const newMessagesSnapshot = jsonpatch.applyPatch(JSON.parse(JSON.stringify(lastKeyframeMessages)), entry.gameMessagesDelta as readonly Operation[]).newDocument as GameMessage[];
+                            
+                            const reconstructedEntry: TurnHistoryEntry = {
+                                ...entry,
+                                knowledgeBaseSnapshot: newKbSnapshot,
+                                gameMessagesSnapshot: newMessagesSnapshot,
+                            };
+                            reconstructedHistory.push(reconstructedEntry);
+
+                            // This newly reconstructed snapshot becomes the base for the next delta
+                            lastKeyframeKb = newKbSnapshot;
+                            lastKeyframeMessages = newMessagesSnapshot;
+                        } catch (patchError) {
+                            console.error("Failed to reconstruct delta frame on load, history might be incomplete.", patchError, entry);
+                            reconstructedHistory.push(entry); // Push the entry without a valid snapshot
+                            lastKeyframeKb = null; // Break the chain to prevent further errors
+                            lastKeyframeMessages = null;
+                        }
+                    } else {
+                        console.warn("Could not reconstruct delta frame on load due to missing base or delta. History might be incomplete.", entry);
+                        reconstructedHistory.push(entry); // Push as-is
+                        lastKeyframeKb = null; // Break the chain
+                        lastKeyframeMessages = null;
+                    }
+                } else {
+                     reconstructedHistory.push(entry); // Push keyframes or other types as-is
+                }
+            }
+            loadedData.knowledgeBase.turnHistory = reconstructedHistory;
+        }
+        // --- END: RECONSTRUCTION LOGIC ---
+
         const totalPages = calculateTotalPages(loadedData.knowledgeBase);
         
         setKnowledgeBase(loadedData.knowledgeBase);

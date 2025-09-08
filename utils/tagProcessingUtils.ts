@@ -54,6 +54,12 @@ import { processRelationshipEvent } from './tagProcessors/relationshipEventTagPr
 import { processNpcActionLog } from './tagProcessors/npcActionLogTagProcessor';
 import { generateEmbeddings } from '@/services/embeddingService';
 import { processNpcProduceItem, processNpcInventoryTransfer } from './tagProcessors/npcItemProcessor'; // NEW
+import { processStagedActionSet, processStagedActionClear } from './tagProcessors/stagedActionTagProcessor';
+import { processUserPromptAdd, processUserPromptRemove } from './tagProcessors/userPromptTagProcessor'; // MODIFIED
+import { processNarrativeDirective } from './tagProcessors/narrativeDirectiveTagProcessor';
+import { processAiContextConfigUpdate } from './tagProcessors/aiContextTagProcessor'; // NEW
+import { processAiRuleUpdate, processAiRuleReset } from './tagProcessors/aiRulebookTagProcessor'; // NEW
+import { processRewriteTurn } from './tagProcessors/rewriteTurnTagProcessor'; // NEW
 
 
 export { parseTagValue }; 
@@ -150,6 +156,18 @@ const tagProcessorRegistry: Record<string, Function> = {
     'NPC_ACTION_LOG': processNpcActionLog,
     'NPC_PRODUCE_ITEM': processNpcProduceItem,
     'NPC_INVENTORY_TRANSFER': processNpcInventoryTransfer,
+    // Story Director Tags
+    'STAGED_ACTION_SET': processStagedActionSet,
+    'STAGED_ACTION_CLEAR': processStagedActionClear,
+    'NARRATIVE_DIRECTIVE': processNarrativeDirective,
+    'REWRITE_TURN': processRewriteTurn, // NEW
+
+    // Meta-Analyst & AI Control Tags (NEWLY ADDED/UPDATED)
+    'USER_PROMPT_ADD': processUserPromptAdd,
+    'USER_PROMPT_REMOVE': processUserPromptRemove,
+    'AI_CONTEXT_CONFIG_UPDATE': processAiContextConfigUpdate,
+    'AI_RULE_UPDATE': processAiRuleUpdate, // NEW
+    'AI_RULE_RESET': processAiRuleReset,   // NEW
 };
 
 
@@ -178,13 +196,16 @@ export const performTagProcessing = async (
     realmChangedByTag: boolean;
     appliedBinhCanhViaTag: boolean;
     removedBinhCanhViaTag: boolean;
+    rewriteTurnDirective?: string; // NEW: The special signal for the rewrite feature
 }> => {
     let workingKb: KnowledgeBase = JSON.parse(JSON.stringify(currentKb));
     let turnIncrementedByAnyTag = false;
     const allSystemMessages: GameMessage[] = [];
     let realmChangedByAnyTag = false;
+    let appliedBinhCanhByAnyTag = false;
     let removedBinhCanhByAnyTag = false;
     const metadataToVectorize: VectorMetadata[] = [];
+    let rewriteTurnDirective: string | undefined = undefined; // NEW
 
     for (const originalTag of tagBatch) { 
         const mainMatch = originalTag.match(/\[(.*?)(?::\s*(.*))?\]$/s);
@@ -204,4 +225,105 @@ export const performTagProcessing = async (
             if (tagName === 'MESSAGE' && !cleanedTagParameterString.includes('=')) {
                 tagParams = { message: cleanedTagParameterString.replace(/^"|"$/g, '') };
             } else {
-                tagParams =
+                tagParams = parseTagValue(cleanedTagParameterString);
+            }
+        }
+// FIX: Added the body of the for loop to process tags and the final return statement.
+        const processor = tagProcessorRegistry[tagName];
+        if (processor) {
+            try {
+                let result;
+                // Check if the processor is async. This covers `processNpc` and `processYeuThu`.
+                if (processor.constructor.name === 'AsyncFunction') {
+                    result = await processor(workingKb, tagParams, turnForSystemMessages, setKnowledgeBaseDirectly, logNpcAvatarPromptCallback);
+                } else {
+                    result = processor(workingKb, tagParams, turnForSystemMessages, setKnowledgeBaseDirectly, logNpcAvatarPromptCallback);
+                }
+                
+                if (result) {
+                    if (result.updatedKb) {
+                        workingKb = result.updatedKb;
+                    }
+                    if (result.systemMessages && Array.isArray(result.systemMessages)) {
+                        allSystemMessages.push(...result.systemMessages);
+                    }
+                    if (result.turnIncremented) {
+                        turnIncrementedByAnyTag = true;
+                    }
+                    if (result.realmChanged) {
+                        realmChangedByAnyTag = true;
+                    }
+                    // This flag comes from processStatsUpdate and processRemoveBinhCanhEffect
+                    if (result.removedBinhCanh) {
+                        removedBinhCanhByAnyTag = true;
+                    }
+                    // Handle appliedBinhCanh from STATS_UPDATE
+                    if (tagName === 'STATS_UPDATE' && tagParams.hieuUngBinhCanh?.toLowerCase() === 'true') {
+                        appliedBinhCanhByAnyTag = true;
+                    }
+                    // NEW: Check for the rewrite directive
+                    if (result.rewriteTurnDirective) {
+                        rewriteTurnDirective = result.rewriteTurnDirective;
+                    }
+
+                    // Handle vector metadata
+                    if (result.newVectorMetadata) {
+                        addOrUpdateVectorMetadata(metadataToVectorize, result.newVectorMetadata);
+                    }
+                    if (result.updatedVectorMetadata) {
+                        addOrUpdateVectorMetadata(metadataToVectorize, result.updatedVectorMetadata);
+                    }
+                }
+            } catch (e) {
+                console.error(`Error processing tag "${tagName}":`, e, 'with params:', tagParams);
+            }
+        } else {
+            console.warn(`No processor found for tag: ${tagName}`);
+        }
+    }
+    
+    // After processing all tags, handle vectorization for collected metadata
+    if (metadataToVectorize.length > 0 && workingKb.ragVectorStore) {
+        try {
+            const textChunks = metadataToVectorize.map(m => m.text);
+            const newVectors = await generateEmbeddings(textChunks);
+
+            if (newVectors.length === metadataToVectorize.length) {
+                newVectors.forEach((vector, index) => {
+                    const metadata = metadataToVectorize[index];
+                    const existingIndex = workingKb.ragVectorStore!.metadata.findIndex(m => m.entityId === metadata.entityId);
+                    if (existingIndex > -1) {
+                        // Update existing vector and metadata
+                        workingKb.ragVectorStore!.vectors[existingIndex] = vector;
+                        workingKb.ragVectorStore!.metadata[existingIndex] = metadata;
+                    } else {
+                        // Add new vector and metadata
+                        workingKb.ragVectorStore!.vectors.push(vector);
+                        workingKb.ragVectorStore!.metadata.push(metadata);
+                    }
+                });
+            } else {
+                 console.warn("Mismatch between metadata and generated vectors count.");
+            }
+        } catch (embeddingError) {
+            console.error("Failed to generate and update embeddings:", embeddingError);
+            allSystemMessages.push({
+                id: `rag-update-error-${Date.now()}`,
+                type: 'error',
+                content: `Lỗi cập nhật vector ngữ cảnh: ${embeddingError instanceof Error ? embeddingError.message : 'Unknown error'}.`,
+                timestamp: Date.now(),
+                turnNumber: turnForSystemMessages
+            });
+        }
+    }
+
+    return {
+        newKb: workingKb,
+        turnIncrementedByTag: turnIncrementedByAnyTag,
+        systemMessagesFromTags: allSystemMessages,
+        realmChangedByTag: realmChangedByAnyTag,
+        appliedBinhCanhViaTag: appliedBinhCanhByAnyTag,
+        removedBinhCanhViaTag: removedBinhCanhByAnyTag,
+        rewriteTurnDirective, // NEW
+    };
+};

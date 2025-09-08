@@ -1,3 +1,4 @@
+// FIX: Removed 'RequestOptions' as it is not an exported member of '@google/genai'.
 import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, CountTokensResponse, Type } from "@google/genai";
 import { ApiConfig, SafetySetting, ParsedAiResponse, AiChoice } from '../../types/index'; 
 // FIX: Corrected constant name from API_SETTINGS_STORAGE_KEY to STORAGE_SETTINGS_STORAGE_KEY.

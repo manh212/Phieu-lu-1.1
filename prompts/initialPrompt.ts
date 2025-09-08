@@ -2,7 +2,7 @@ import type { WorldSettings, StartingItem, GenreType, ViolenceLevel, StoryTone, 
 import { DIALOGUE_MARKER, TuChatTier } from '@/types/index';
 import { SUB_REALM_NAMES, VIETNAMESE, AVAILABLE_GENRES, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, NSFW_DESCRIPTION_STYLES, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, TU_CHAT_TIERS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
 import * as GameTemplates from '@/types/index';
-import { continuePromptSystemRules, storytellingRulesSection } from '../constants/systemRulesNormal';
+import { DEFAULT_AI_RULEBOOK, buildRulesSection } from '../constants/systemRulesNormal';
 import { getTimeOfDayContext } from '../utils/dateUtils';
 import { getNsfwGuidance } from './promptUtils';
 
@@ -111,11 +111,12 @@ ${timeOfDayContext}
 4.  **MỆNH LỆNH:** Hãy bắt đầu lời kể của bạn ngay lập tức bằng cách mô tả cảnh vật và tình huống của nhân vật tại địa điểm và thời gian chính xác đã nêu. TUYỆT ĐỐI tuân thủ các hướng dẫn về môi trường và hoạt động của NPC cho thời điểm này.
 `;
 
+  // Build the rules section dynamically
+  const rulesSection = buildRulesSection(aiContextConfig, DEFAULT_AI_RULEBOOK, worldConfig, mainRealms, startingDate);
+
   return `**YÊU CẦU CỐT LÕI:** Bắt đầu một câu chuyện game nhập vai thể loại "${effectiveGenre}" bằng tiếng Việt. Tạo ra một thế giới sống động và một cốt truyện mở đầu hấp dẫn dựa trên thông tin do người chơi cung cấp. Bắt đầu lời kể ngay lập tức, không có lời dẫn hay tự xưng là người kể chuyện.
 
 ${writingStyleGuideSection}
-
-${storytellingRulesSection(aiContextConfig)}
 
 ${isCultivationEnabled ? subRealmNamesInstruction : ''}
 
@@ -235,7 +236,7 @@ ${isCultivationEnabled ? `2.  **Xác nhận Hệ thống Cảnh giới:** Hệ t
 4.  **QUY TẮC VỀ THỜI GIAN (CHO LƯỢT ĐẦU TIÊN NÀY):** Bạn **TUYỆT ĐỐI KHÔNG** được sử dụng tag \\\`[CHANGE_TIME]\` trong phản hồi đầu tiên này. Thời gian đã được hệ thống game thiết lập chính xác tại thời điểm bắt đầu. Bạn chỉ cần tập trung vào việc tạo các tag khởi tạo khác và viết lời kể.
 
 **QUY TẮC SỬ DỤNG TAGS (DÀNH CHO CÁC LƯỢT KỂ TIẾP THEO):**
-${continuePromptSystemRules(worldConfig, mainRealms, aiContextConfig, worldConfig.startingDate)}
+${rulesSection}
 
 ${startTimeCommand}
 

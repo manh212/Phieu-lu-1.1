@@ -56,6 +56,10 @@ export const VIETNAMESE_TRANSLATIONS = {
   upcomingEventsTab: "Sắp Diễn Ra", // NEW
   ongoingEventsTab: "Đang Diễn Ra", // NEW
   finishedEventsTab: "Đã Kết Thúc", // NEW
+  stagedActionsTab: "Hành Động Chờ",
+  noStagedActions: "Không có hành động chờ nào được sắp đặt.",
+  stagedActionTrigger: "Điều kiện kích hoạt",
+  stagedActionDescription: "Mô tả hành động",
   noUpcomingEvents: "Không có sự kiện nào sắp diễn ra.", // NEW
   noOngoingEvents: "Không có sự kiện nào đang diễn ra.", // NEW
   noFinishedEvents: "Chưa có sự kiện nào kết thúc.", // NEW

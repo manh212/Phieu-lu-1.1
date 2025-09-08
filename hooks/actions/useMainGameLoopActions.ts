@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 // FIX: Correct import path for types
 import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, AiChoice, NPC, FindLocationParams } from '../../types/index';
 // FIX: Corrected import path for services
@@ -91,6 +91,14 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         const gameMessagesAtActionStart = [...gameMessages];
         const turnOfPlayerAction = knowledgeBase.playerStats.turn + 1;
 
+        // NEW: Handle Narrative Directive & Rewrite Turn
+        const narrativeDirective = knowledgeBase.narrativeDirectiveForNextTurn;
+        if (narrativeDirective) {
+            // Clear the directive from the state snapshot that will be saved to history.
+            // This prevents it from being re-applied on rollback.
+            knowledgeBaseAtActionStart.narrativeDirectiveForNextTurn = undefined;
+        }
+
         const playerActionMessage: GameMessage = {
             id: Date.now().toString() + Math.random(), type: 'player_action',
             content: action, timestamp: Date.now(), isPlayerInput: !isChoice,
@@ -121,15 +129,26 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
             const { response, rawText } = await generateNextTurn(
                 knowledgeBase, action, inputType, responseLength,
                 currentPageMessagesLog, previousPageSummaries, isStrictMode,
-                lastNarrationFromPreviousPage, retrievedContext, logSentPromptCallback
+                lastNarrationFromPreviousPage, retrievedContext, logSentPromptCallback,
+                narrativeDirective // Pass the directive to the service
             );
             setRawAiResponsesLog(prev => [rawText, ...prev].slice(0, 50));
             
             let currentTurnKb = JSON.parse(JSON.stringify(knowledgeBaseAtActionStart));
-            const { newKb: kbAfterTags, systemMessagesFromTags, turnIncrementedByTag } = await performTagProcessing(
+
+            // NEW: Manually clear the directive from the current working state as well,
+            // so it's not present for the next turn.
+            if (narrativeDirective) {
+                currentTurnKb.narrativeDirectiveForNextTurn = undefined;
+            }
+
+            const { newKb: kbAfterTags, systemMessagesFromTags, turnIncrementedByTag, rewriteTurnDirective } = await performTagProcessing(
                 currentTurnKb, response.tags, turnOfPlayerAction, setKnowledgeBase, logNpcAvatarPromptCallback
             );
             
+            // Rewrite Turn logic is handled by the calling function in the Copilot Panel now.
+            // This function's responsibility is now only to process the turn normally.
+
             let finalKbForThisTurn = kbAfterTags;
             let combinedSystemMessages = [...systemMessagesFromTags];
             
@@ -266,6 +285,57 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         setSentGeneralSubLocationPromptsLog, setReceivedGeneralSubLocationResponsesLog,
         executeWorldTick, isAutoPlaying, setIsAutoPlaying, setKnowledgeBase, logSummarizationResponseCallback
     ]);
+
+    const handleRewriteTurn = useCallback(async (directive: string) => {
+        if (isLoadingApi) return;
+    
+        const history = knowledgeBase.turnHistory;
+        if (!history || history.length < 1) {
+            showNotification("Lỗi viết lại: Không có lịch sử để quay lại.", 'error');
+            return;
+        }
+    
+        const turnToRewrite = knowledgeBase.playerStats.turn;
+        const lastPlayerActionMessage = [...gameMessages].reverse().find(msg => msg.type === 'player_action' && msg.turnNumber === turnToRewrite);
+    
+        if (!lastPlayerActionMessage || typeof lastPlayerActionMessage.content !== 'string') {
+            showNotification("Lỗi viết lại: Không tìm thấy hành động của người chơi cho lượt này.", 'error');
+            return;
+        }
+    
+        setIsLoadingApi(true);
+        resetApiError();
+    
+        const stateToRestore = history[history.length - 1];
+        const newHistory = history.slice(0, -1);
+    
+        // Temporarily set the state back to before the turn
+        const kbForRewrite = {
+            ...stateToRestore.knowledgeBaseSnapshot,
+            turnHistory: newHistory,
+            narrativeDirectiveForNextTurn: directive
+        };
+        
+        // Remove the messages from the turn we are rewriting
+        const messagesBeforeRewrite = gameMessages.filter(m => m.turnNumber < turnToRewrite);
+        setGameMessages(messagesBeforeRewrite);
+        setKnowledgeBase(kbForRewrite);
+    
+        // Use a timeout to allow React state to update before re-running the action.
+        // This is a common pattern for "state-then-action" sequences without async state setters.
+        setTimeout(() => {
+            // Re-execute the player's last action, but now the KB has the new directive.
+            handlePlayerAction(
+                lastPlayerActionMessage.content as string,
+                !lastPlayerActionMessage.isPlayerInput,
+                'action', // Assume 'action' type for simplicity in rewrite.
+                'default', // Assume 'default' length.
+                false // Assume not strict mode.
+            );
+        }, 100);
+    
+    }, [isLoadingApi, knowledgeBase, gameMessages, showNotification, setKnowledgeBase, setGameMessages, handlePlayerAction, resetApiError]);
+    
     
     const handleFindLocation = useCallback(async (params: FindLocationParams) => {
         setIsLoadingApi(true);
@@ -364,12 +434,49 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         }
     }, [isLoadingApi, gameMessages, knowledgeBase, showNotification, setIsLoadingApi, resetApiError, logSentPromptCallback, setRawAiResponsesLog, setApiErrorWithTimeout, setGameMessages]);
 
+    const onRollbackTurn = useCallback(() => {
+        if (!knowledgeBase.turnHistory || knowledgeBase.turnHistory.length < 2) {
+            showNotification(VIETNAMESE.cannotRollbackFurther, 'error');
+            return;
+        }
+
+        const newHistory = [...knowledgeBase.turnHistory];
+        const stateToRestore = newHistory.pop(); 
+
+        if (!stateToRestore) {
+            showNotification("Lỗi: Không tìm thấy trạng thái để lùi về.", 'error');
+            return;
+        }
+
+        setKnowledgeBase({
+            ...stateToRestore.knowledgeBaseSnapshot,
+            turnHistory: newHistory
+        });
+        setGameMessages(stateToRestore.gameMessagesSnapshot);
+
+        const newTurn = stateToRestore.knowledgeBaseSnapshot.playerStats.turn;
+        const historyForPageCalc = stateToRestore.knowledgeBaseSnapshot.currentPageHistory || [1];
+        let newPage = 1;
+        for (let i = historyForPageCalc.length - 1; i >= 0; i--) {
+            if (newTurn >= historyForPageCalc[i]) {
+                newPage = i + 1;
+                break;
+            }
+        }
+        setCurrentPageDisplay(newPage);
+
+        showNotification(VIETNAMESE.rollbackSuccess, 'success');
+    }, [knowledgeBase, gameMessages, setKnowledgeBase, setGameMessages, setCurrentPageDisplay, showNotification]);
+
+
     return {
       handlePlayerAction,
+      onRollbackTurn,
       handleFindLocation,
       isSummarizingNextPageTransition,
       handleRefreshChoices,
       handleCheckTokenCount,
       logSentPromptCallback,
+      handleRewriteTurn,
     };
 };

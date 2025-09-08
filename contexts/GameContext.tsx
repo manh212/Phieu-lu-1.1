@@ -111,10 +111,13 @@ export interface GameContextType {
     activeSlaveMarketModal: {locationId: string} | null;
 
     // Actions (will be populated by allActions)
+    resetCopilotConversation: () => void; // NEW
     [key: string]: any; // Index signature to allow dynamic action properties
 }
 
 export const GameContext = createContext<GameContextType | null>(null);
+
+const clamp = (num: number, min: number, max: number) => Math.min(Math.max(num, min), max);
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const gameplayScrollPosition = useRef(0);
@@ -162,6 +165,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCurrentScreen(GameScreen.Initial);
         setIsAutoPlaying(false);
       }, [gameData.resetGameData, setCurrentScreen, setIsAutoPlaying]);
+
+    const resetCopilotConversation = useCallback(() => {
+        gameData.setAiCopilotMessages([]);
+        gameData.setSentCopilotPromptsLog([]);
+        showNotification("Cuộc trò chuyện với Siêu Trợ Lý đã được làm mới.", "info");
+    }, [gameData.setAiCopilotMessages, gameData.setSentCopilotPromptsLog, showNotification]);
 
     const lastPageNumberForPrompt = (gameData.knowledgeBase.currentPageHistory?.length || 1) - 1;
     let lastNarrationFromPreviousPage: string | undefined = undefined;
@@ -224,6 +233,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const logNpcAvatarPromptCallback = useCallback((prompt: string) => {
         setSentNpcAvatarPromptsLog(prev => [prompt, ...prev].slice(0, 10));
     }, []);
+
+    const onGoToPrevPage = useCallback(() => {
+        if (isSummarizingNextPageTransition) return;
+        gameData.setCurrentPageDisplay(prev => clamp(prev - 1, 1, gameData.totalPages));
+    }, [gameData, isSummarizingNextPageTransition]);
+
+    const onGoToNextPage = useCallback(() => {
+        if (isSummarizingNextPageTransition) return;
+        gameData.setCurrentPageDisplay(prev => clamp(prev + 1, 1, gameData.totalPages));
+    }, [gameData, isSummarizingNextPageTransition]);
+    
+    const onJumpToPage = useCallback((page: number) => {
+        if (isSummarizingNextPageTransition) return;
+        gameData.setCurrentPageDisplay(clamp(page, 1, gameData.totalPages));
+    }, [gameData, isSummarizingNextPageTransition]);
     
     // *** RESTRUCTURED COMPOSITION ROOT TO FIX DEPENDENCY ISSUES ***
 
@@ -442,9 +466,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setActiveSlaveMarketModal,
         ...allActions,
         onQuit,
+        resetCopilotConversation,
         isCurrentlyActivePage,
         gameplayScrollPosition,
         justLoadedGame,
+        onGoToPrevPage,
+        onGoToNextPage,
+        onJumpToPage,
     };
 
     return <GameContext.Provider value={contextValue}>{children}</GameContext.Provider>;

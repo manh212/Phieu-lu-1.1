@@ -7,6 +7,7 @@ import Button from '../ui/Button';
 import Spinner from '../ui/Spinner';
 import { generateArchitectResponse } from '../../services';
 import { processSetupTags } from '../../utils/setupTagProcessor';
+import ToggleSwitch from '../ui/ToggleSwitch';
 
 interface AIArchitectModalProps {
     isOpen: boolean;
@@ -27,6 +28,7 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
     const [history, setHistory] = useState<ArchitectChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isActionModus, setIsActionModus] = useState(true);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -53,7 +55,7 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
                 .map(msg => `${msg.sender === 'user' ? 'User' : 'AI'}: ${msg.text}`)
                 .join('\n');
             
-            const rawResponse = await generateArchitectResponse(settingsJSON, chatHistoryString, userMessage.text);
+            const rawResponse = await generateArchitectResponse(settingsJSON, chatHistoryString, userMessage.text, isActionModus);
             
             let aiText = rawResponse;
             let tags: string[] = [];
@@ -145,7 +147,21 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
                     )}
                     <div ref={chatEndRef} />
                 </div>
-                <div className="flex-shrink-0 p-2 border-t border-gray-700">
+                <div className="flex-shrink-0 p-2 border-t border-gray-700 space-y-2">
+                    <div className="flex justify-between items-center px-1 py-1">
+                        <ToggleSwitch
+                            id="architect-mode-toggle"
+                            checked={isActionModus}
+                            onChange={setIsActionModus}
+                            disabled={isLoading}
+                        />
+                        <div className="text-sm font-semibold">
+                            <span>Chế độ: </span>
+                            <span className={isActionModus ? 'text-indigo-400' : 'text-gray-400'}>
+                                {isActionModus ? 'Hành Động' : 'Thảo Luận'}
+                            </span>
+                        </div>
+                    </div>
                     <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
                         <textarea
                             value={input}

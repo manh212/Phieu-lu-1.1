@@ -1,7 +1,3 @@
-
-
-
-
 import { AIContextConfig } from '../types/index';
 
 // NEW: AI Context Settings Logic
@@ -43,7 +39,7 @@ export * from './statsCalculationUtils';
 export * from './tagProcessingUtils';
 export * from './turnHistoryUtils'; // Will export addTurnHistoryEntryRaw
 export * from './paginationUtils';
-export * from './parseTagValue'; 
+export * from './parseTagValue';
 export * from './vectorStore';
 export * from './ragUtils';
 export * from './dateUtils'; // NEW: Export date utilities
@@ -63,6 +59,12 @@ export * from './tagProcessors/worldConfigTagProcessor'; // NEW
 export * from './tagProcessors/relationshipEventTagProcessor'; // NEW
 export * from './tagProcessors/npcActionLogTagProcessor'; // NEW
 export * from './tagProcessors/npcItemProcessor'; // NEW
+export * from './tagProcessors/stagedActionTagProcessor'; // NEW
+export * from './tagProcessors/userPromptTagProcessor'; // NEW
+export * from './tagProcessors/narrativeDirectiveTagProcessor'; // NEW
+export * from './tagProcessors/aiContextTagProcessor'; // NEW
+export * from './tagProcessors/aiRulebookTagProcessor'; // NEW
+export * from './tagProcessors/rewriteTurnTagProcessor'; // NEW
 
 // Other Tag Processors
 export * from './tagProcessors/statusEffectTagProcessor'; 

@@ -1,6 +1,31 @@
 // types/config.ts
 import { HarmCategory, HarmBlockThreshold } from "@google/genai";
 
+export interface AIRulebook {
+    // Rules from storytellingRulesSection
+    narrationAndVividness: string;
+    proactiveNpc: string;
+    rumorMill: string;
+    // Individual rules from continuePromptSystemRules
+    formattingRules: string;
+    timeRules: string;
+    statRules: string;
+    itemRules: string;
+    skillRules: string;
+    questRules: string;
+    creationRules: string;
+    updateRules: string;
+    deletionRules: string;
+    specialStatusRules: string;
+    choiceRules: string;
+    turnRules: string;
+    statusEffectRules: string;
+    combatStartRules: string;
+    simpleCompanionRules: string;
+    worldProgressionRules: string;
+    specialEventRules: string;
+}
+
 export interface AIContextConfig {
     // Context
     sendRagContext: boolean;
@@ -14,8 +39,8 @@ export interface AIContextConfig {
     sendNsfwGuidance: boolean;
     // Rules
     sendFormattingRules: boolean;
-    sendShowDontTellRule: boolean;
-    sendProactiveNpcRule: boolean;
+    sendShowDontTellRule: boolean; // Corresponds to narrationAndVividness
+    sendProactiveNpcRule: boolean; // Corresponds to proactiveNpc
     sendRumorMillRule: boolean;
     sendWorldProgressionRules: boolean;
     sendTimeRules: boolean;
@@ -29,6 +54,7 @@ export interface AIContextConfig {
     sendSpecialStatusRules: boolean;
     sendChoiceRules: boolean;
     sendTurnRules: boolean;
+    // New defaults
     sendStatusEffectRules: boolean;
     sendCombatStartRules: boolean;
     sendSpecialEventRules: boolean;

@@ -1,7 +1,5 @@
 import { useCallback } from 'react';
-// FIX: Correct import path for types
 import { KnowledgeBase, GameMessage } from '../../types/index';
-// FIX: Corrected import path for services
 import { generateCopilotResponse, getApiSettings } from '../../services';
 
 export interface UseCopilotActionsProps {
@@ -16,8 +14,6 @@ export interface UseCopilotActionsProps {
     sentPromptsLog: string[];
     sentCopilotPromptsLog: string[];
     setSentCopilotPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
-    handleProcessDebugTags: (narration: string, tags: string) => Promise<void>;
-    showNotification: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
 }
 
 export const useCopilotActions = (props: UseCopilotActionsProps) => {
@@ -27,10 +23,9 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
         resetApiError, setApiErrorWithTimeout,
         aiCopilotMessages, setAiCopilotMessages,
         sentPromptsLog, sentCopilotPromptsLog, setSentCopilotPromptsLog,
-        handleProcessDebugTags, showNotification
     } = props;
 
-    const handleCopilotQuery = useCallback(async (userQuestion: string, context?: string) => {
+    const handleCopilotQuery = useCallback(async (userQuestion: string, context?: string, isActionModus: boolean = true) => {
         setIsLoadingApi(true);
         resetApiError();
         const userMessageContent = context ? `${userQuestion}\n\n**Bối cảnh:**\n${context}` : userQuestion;
@@ -42,12 +37,13 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
         setAiCopilotMessages(newCopilotMessages);
 
         try {
-            // FIX: Removed aiCopilotMessages from this destructuring as it's not part of knowledgeBase
+            // Destructure to remove large/unnecessary parts for the prompt
             const { turnHistory, ragVectorStore, userPrompts, ...kbSnapshot } = knowledgeBase;
+            
             const last20Messages = gameMessages.slice(-20).map(msg => {
-                if (msg.type === 'player_action') return `${knowledgeBase.worldConfig?.playerName || 'Người chơi'}: ${msg.content}`;
-                if (msg.type === 'narration') return `AI: ${msg.content}`;
-                return `[${msg.type.toUpperCase()}]: ${msg.content}`;
+                if (msg.type === 'player_action') return `${knowledgeBase.worldConfig?.playerName || 'Người chơi'}: ${typeof msg.content === 'string' ? msg.content : '[Hành động phức tạp]'}`;
+                if (msg.type === 'narration') return `AI: ${typeof msg.content === 'string' ? msg.content : '[Diễn biến phức tạp]'}`;
+                return `[${msg.type.toUpperCase()}]: ${typeof msg.content === 'string' ? msg.content : '[Nội dung hệ thống]'}`;
             }).join('\n');
 
             const copilotChatHistory = newCopilotMessages.slice(0, -1).map(msg => {
@@ -58,18 +54,18 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
             const activeCopilotConfig = knowledgeBase.aiCopilotConfigs.find(c => c.id === knowledgeBase.activeAICopilotConfigId);
             const copilotModel = activeCopilotConfig?.model || getApiSettings().model;
             
-            const { response: copilotResponse, constructedPrompt } = await generateCopilotResponse(
+            const { response: copilotResponse, rawText, constructedPrompt } = await generateCopilotResponse(
                 kbSnapshot, last20Messages, copilotChatHistory, userMessageContent,
                 latestGameplayPrompt, userPrompts || [],
                 (prompt) => setSentCopilotPromptsLog(prev => [prompt, ...prev].slice(0, 10)),
-                copilotModel
+                copilotModel,
+                isActionModus
             );
 
-            setSentCopilotPromptsLog(prev => [constructedPrompt, ...prev].slice(0, 10));
-
-            let narration = copilotResponse.narration;
+            // The rawText is the full response from AI. We need to parse it here.
+            let narration = rawText;
             let actionTags: string[] = [];
-            const changesMatch = narration.match(/<GAME_CHANGES>([\s\S]*?)<\/GAME_CHANGES>/);
+            const changesMatch = rawText.match(/<GAME_CHANGES>([\s\S]*?)<\/GAME_CHANGES>/);
             
             if (changesMatch && changesMatch[1]) {
                 const tagsBlock = changesMatch[1].trim();
@@ -78,7 +74,7 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
                 while ((match = tagRegex.exec(tagsBlock)) !== null) {
                     actionTags.push(match[0]);
                 }
-                narration = narration.replace(/<GAME_CHANGES>[\s\S]*?<\/GAME_CHANGES>/, '').trim();
+                narration = rawText.replace(/<GAME_CHANGES>[\s\S]*?<\/GAME_CHANGES>/, '').trim();
                 if (!narration) narration = "Tôi đã chuẩn bị các thay đổi bạn yêu cầu. Nhấn 'Áp Dụng Thay Đổi' để xác nhận.";
             }
 
@@ -101,8 +97,7 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
             setIsLoadingApi(false);
         }
     }, [knowledgeBase, gameMessages, aiCopilotMessages, setAiCopilotMessages, setIsLoadingApi, resetApiError, setApiErrorWithTimeout, setSentCopilotPromptsLog, sentPromptsLog]);
-
-
+    
     return {
         handleCopilotQuery,
     };

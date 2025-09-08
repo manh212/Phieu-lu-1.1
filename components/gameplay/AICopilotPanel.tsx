@@ -2,57 +2,94 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useGame } from '../../hooks/useGame';
 import OffCanvasPanel from '../ui/OffCanvasPanel';
 import Button from '../ui/Button';
-import InputField from '../ui/InputField';
-// FIX: Correct import path for types
 import { GameMessage } from '../../types/index';
 import Spinner from '../ui/Spinner';
-import Modal from '../ui/Modal';
-import { AVAILABLE_MODELS } from '../../constants';
-// FIX: Corrected import path for services
-import { getApiSettings } from '../../services';
+import { parseTagValue } from '../../utils/gameLogicUtils';
+import ToggleSwitch from '../ui/ToggleSwitch';
 
 interface AICopilotPanelProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+// Helper to parse tags for a user-friendly summary
+const parseActionTagsForSummary = (tags: string[]): React.ReactNode[] => {
+    return tags.map((tag, index) => {
+        const match = tag.match(/\[(.*?):(.*)\]/s);
+        if (!match) return <li key={index} className="text-gray-400">Thẻ không hợp lệ: {tag}</li>;
+
+        const tagName = match[1].trim().toUpperCase();
+        const params = parseTagValue(match[2].trim());
+        const name = params.name || params.title || 'Không rõ';
+
+        let summary = '';
+        let colorClass = 'text-gray-300';
+        let icon = 'ℹ️';
+
+        if (tagName.includes('ADD') || tagName.includes('ACQUIRED') || tagName.startsWith('NPC') && !tagName.includes('UPDATE')) {
+            colorClass = 'text-green-400';
+            icon = '➕';
+            if (tagName.includes('ITEM')) summary = `Thêm vật phẩm: ${name} (x${params.quantity || 1})`;
+            else if (tagName.includes('NPC')) summary = `Thêm NPC: ${name}`;
+            else if (tagName.includes('SKILL')) summary = `Thêm kỹ năng: ${name}`;
+            else if (tagName === 'USER_PROMPT_ADD') summary = `Thêm lời nhắc mới cho AI: "${params.text}"`;
+            else summary = `Thêm mới: ${name}`;
+        } else if (tagName.includes('UPDATE')) {
+            colorClass = 'text-yellow-400';
+            icon = '🔄';
+            if (tagName.includes('STATS')) {
+                const changes = Object.entries(params).map(([key, value]) => `${key} ${value}`).join(', ');
+                summary = `Cập nhật chỉ số: ${changes}`;
+            } else if (tagName === 'REWRITE_TURN') {
+                colorClass = 'text-cyan-400';
+                icon = '✍️';
+                summary = `Viết lại lượt kể với chỉ dẫn mới.`;
+            } else {
+                summary = `Cập nhật: ${name}`;
+            }
+        } else if (tagName.includes('REMOVE') || tagName.includes('DELETE')) {
+            colorClass = 'text-red-400';
+            icon = '➖';
+            summary = `Xóa: ${name}`;
+        } else if (tagName.includes('EVENT')) {
+            colorClass = 'text-cyan-400';
+            icon = '🗓️';
+            summary = `Sự kiện: ${params.title}`;
+        } else if (tagName.includes('STAGED_ACTION')) {
+            colorClass = 'text-purple-400';
+            icon = '🎭';
+            summary = `Đạo diễn: ${params.description}`;
+        }
+        else {
+            summary = `Hành động: ${tagName}`;
+        }
+
+        return (
+            <li key={index} className={`flex items-start ${colorClass}`}>
+                <span className="mr-2">{icon}</span>
+                <span>{summary}</span>
+            </li>
+        );
+    });
+};
+
+
 const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
   const {
     handleCopilotQuery,
     aiCopilotMessages,
-    knowledgeBase,
-    setKnowledgeBase,
     isLoadingApi,
-    sentCopilotPromptsLog,
     handleProcessDebugTags,
     showNotification,
+    sentPromptsLog, // Get the log of sent prompts
+    handleRewriteTurn, // Get the new function from context
+    resetCopilotConversation,
   } = useGame();
 
-  const [mode, setMode] = useState<'chat' | 'promptEditor'>('chat');
   const [userInput, setUserInput] = useState('');
-  const [editingPrompt, setEditingPrompt] = useState<{ index: number; text: string } | null>(null);
-  const [showLastPrompt, setShowLastPrompt] = useState(false);
-
+  const [isActionModus, setIsActionModus] = useState(true);
+  const [appliedChanges, setAppliedChanges] = useState<Set<string>>(new Set());
   const chatEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // Ensure there's a default copilot config if one doesn't exist on older saves
-    if (isOpen && (!knowledgeBase.aiCopilotConfigs || knowledgeBase.aiCopilotConfigs.length === 0)) {
-        const DEFAULT_COPILOT_CONFIG_ID = 'default-copilot';
-        const { model: defaultModel } = getApiSettings();
-        const newDefaultConfig = {
-            id: DEFAULT_COPILOT_CONFIG_ID,
-            name: 'Siêu Trợ Lý Mặc Định',
-            model: defaultModel,
-            systemInstruction: ''
-        };
-        setKnowledgeBase(prevKb => ({
-            ...prevKb,
-            aiCopilotConfigs: [newDefaultConfig],
-            activeAICopilotConfigId: DEFAULT_COPILOT_CONFIG_ID
-        }));
-    }
-  }, [isOpen, knowledgeBase.aiCopilotConfigs, setKnowledgeBase]);
 
   useEffect(() => {
     if (isOpen) {
@@ -60,213 +97,145 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
     }
   }, [aiCopilotMessages, isOpen]);
 
-  const activeCopilotConfig = useMemo(() => {
-    return knowledgeBase.aiCopilotConfigs.find(c => c.id === knowledgeBase.activeAICopilotConfigId);
-  }, [knowledgeBase.aiCopilotConfigs, knowledgeBase.activeAICopilotConfigId]);
-
-  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const newModel = e.target.value;
-      if (activeCopilotConfig) {
-          setKnowledgeBase(prevKb => {
-              const newConfigs = prevKb.aiCopilotConfigs.map(c => 
-                  c.id === activeCopilotConfig.id ? { ...c, model: newModel } : c
-              );
-              return { ...prevKb, aiCopilotConfigs: newConfigs };
-          });
-      }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (userInput.trim()) {
-      handleCopilotQuery(userInput.trim());
+      handleCopilotQuery(userInput.trim(), undefined, isActionModus);
       setUserInput('');
+    }
+  };
+  
+  const handleReset = () => {
+    if (window.confirm("Bạn có chắc chắn muốn làm mới cuộc trò chuyện này không? Toàn bộ lịch sử sẽ bị xóa.")) {
+        resetCopilotConversation();
     }
   };
 
   const handleQuickAction = (question: string, context?: string) => {
-    handleCopilotQuery(question, context);
+    handleCopilotQuery(question, context, isActionModus);
+    setUserInput('');
   };
 
-  const handleApplyChanges = async (tags: string[]) => {
+  const handleApplyChanges = async (tags: string[], messageId: string) => {
+    setAppliedChanges(prev => new Set(prev).add(messageId));
+
+    const rewriteTag = tags.find(t => t.toUpperCase().startsWith('[REWRITE_TURN'));
+    
+    if (rewriteTag) {
+        const params = parseTagValue(rewriteTag.substring(rewriteTag.indexOf(':') + 1, rewriteTag.lastIndexOf(']')).trim());
+        const directive = params.prompt;
+        if (directive) {
+            await handleRewriteTurn(directive);
+            showNotification("Đang yêu cầu AI viết lại lượt...", "info");
+            onClose(); // Close the panel to see the result
+            return;
+        } else {
+            showNotification("Lỗi: Thẻ viết lại lượt không có chỉ dẫn.", "error");
+        }
+    }
+
+    // If not a rewrite tag, process normally
     const narrationForProcessing = "Thay đổi được áp dụng từ Siêu Trợ Lý AI.";
     const tagsString = tags.join('\n');
     await handleProcessDebugTags(narrationForProcessing, tagsString);
     showNotification("Các thay đổi từ Siêu Trợ Lý đã được áp dụng!", "success");
   };
-
-  // Prompt Editor Handlers
-  const handleAddPrompt = () => {
-    if (userInput.trim()) {
-      setKnowledgeBase(prevKb => ({
-        ...prevKb,
-        userPrompts: [...(prevKb.userPrompts || []), userInput.trim()]
-      }));
-      setUserInput('');
-    }
-  };
-
-  const handleUpdatePrompt = () => {
-    if (editingPrompt) {
-      setKnowledgeBase(prevKb => {
-        const newPrompts = [...(prevKb.userPrompts || [])];
-        newPrompts[editingPrompt.index] = editingPrompt.text;
-        return { ...prevKb, userPrompts: newPrompts };
-      });
-      setEditingPrompt(null);
-    }
-  };
-
-  const handleRemovePrompt = (indexToRemove: number) => {
-    setKnowledgeBase(prevKb => ({
-      ...prevKb,
-      userPrompts: (prevKb.userPrompts || []).filter((_, index) => index !== indexToRemove)
-    }));
-  };
-
-  const renderChatMode = () => (
-    <div className="flex flex-col h-full">
-      <div className="flex-grow overflow-y-auto custom-scrollbar p-2 space-y-4">
-        <p className="text-xs text-center text-gray-400 bg-gray-700/50 p-2 rounded-md">Đây là Siêu Trợ Lý AI. Bạn có thể hỏi về trạng thái game, debug prompt, hoặc yêu cầu AI **trực tiếp thay đổi game** (ví dụ: "thêm một NPC mới", "cho tôi một thanh kiếm").</p>
-        {(aiCopilotMessages || []).map((msg, index) => (
-          <div key={msg.id || index} className={`flex ${msg.isPlayerInput ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.type === 'error' ? 'bg-red-800 text-red-100' : (msg.isPlayerInput ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200')}`}>
-              {/* FIX: Ensure content is a string before rendering */}
-              <p className="text-sm whitespace-pre-wrap">{typeof msg.content === 'string' ? msg.content : null}</p>
-              {msg.actionTags && msg.actionTags.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-500/50">
-                  <p className="text-xs text-amber-300 mb-2">AI đề xuất các thay đổi sau:</p>
-                  <pre className="text-xs bg-gray-800 p-2 rounded max-h-24 overflow-y-auto custom-scrollbar">
-                      {msg.actionTags.join('\n')}
-                  </pre>
-                  <Button 
-                      variant="primary" 
-                      size="sm" 
-                      className="w-full mt-2 bg-green-600 hover:bg-green-700"
-                      onClick={() => handleApplyChanges(msg.actionTags!)}
-                      disabled={isLoadingApi}
-                  >
-                      Áp Dụng Thay Đổi
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-        {isLoadingApi && (
-            <div className="flex justify-start">
-                 <div className="max-w-xs md:max-w-md p-3 rounded-lg bg-gray-700 text-gray-200">
-                    <Spinner size="sm" text="AI đang phân tích..."/>
-                 </div>
-            </div>
-        )}
-        <div ref={chatEndRef} />
-      </div>
-      <div className="flex-shrink-0 p-2 border-t border-gray-700 space-y-2">
-        <div className="flex items-center gap-2 text-xs">
-            <label htmlFor="copilot-model-select" className="text-gray-400 flex-shrink-0">Model:</label>
-            <select
-                id="copilot-model-select"
-                value={activeCopilotConfig?.model || ''}
-                onChange={handleModelChange}
-                disabled={!activeCopilotConfig || isLoadingApi}
-                className="flex-grow p-1 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white text-xs"
-            >
-                {AVAILABLE_MODELS.map(model => (
-                    <option key={model.id} value={model.id}>{model.name}</option>
-                ))}
-            </select>
-        </div>
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <textarea
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Hỏi AI hoặc yêu cầu thay đổi game..."
-            className="flex-grow p-2 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white placeholder-gray-400 resize-none text-sm"
-            rows={2}
-            disabled={isLoadingApi}
-          />
-          <Button type="submit" disabled={isLoadingApi || !userInput.trim()}>Gửi</Button>
-        </form>
-      </div>
-    </div>
-  );
-
-  const renderPromptEditorMode = () => (
-    <div className="flex flex-col h-full p-2 space-y-4">
-      <Button variant="ghost" size="sm" onClick={() => setMode('chat')}>← Quay lại Chat</Button>
-      <div className="flex-grow overflow-y-auto custom-scrollbar space-y-2">
-        <h3 className="text-lg font-semibold">Chỉnh Sửa Lời Nhắc Cho AI Kể Chuyện</h3>
-        {(knowledgeBase.userPrompts || []).length > 0 ? (
-          (knowledgeBase.userPrompts || []).map((prompt, index) => (
-            <div key={index} className="bg-gray-700 p-2 rounded-md">
-              {editingPrompt?.index === index ? (
-                <div className="space-y-2">
-                  <textarea
-                    value={editingPrompt.text}
-                    onChange={(e) => setEditingPrompt({ ...editingPrompt, text: e.target.value })}
-                    className="w-full p-2 bg-gray-600 border border-gray-500 rounded-md text-white text-sm"
-                    rows={3}
-                  />
-                  <div className="flex gap-2 justify-end">
-                    <Button size="sm" variant="ghost" onClick={() => setEditingPrompt(null)}>Hủy</Button>
-                    <Button size="sm" variant="primary" onClick={handleUpdatePrompt}>Lưu</Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-gray-200 flex-grow mr-2">{prompt}</p>
-                  <div className="flex gap-1 flex-shrink-0">
-                    <Button size="sm" variant="secondary" onClick={() => setEditingPrompt({ index, text: prompt })}>Sửa</Button>
-                    <Button size="sm" variant="danger" onClick={() => handleRemovePrompt(index)}>Xóa</Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-400 italic">Chưa có lời nhắc nào.</p>
-        )}
-      </div>
-      <div className="flex-shrink-0 p-2 border-t border-gray-700">
-        <form onSubmit={(e) => { e.preventDefault(); handleAddPrompt(); }} className="flex gap-2">
-          <InputField
-            label=""
-            id="new-prompt-input"
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Thêm lời nhắc mới..."
-            className="flex-grow !mb-0"
-          />
-          <Button type="submit" disabled={!userInput.trim()}>Thêm</Button>
-        </form>
-      </div>
-    </div>
-  );
+  
+  const quickActions = [
+      { label: "Túi đồ của tôi có gì?", query: "Liệt kê các vật phẩm trong túi đồ của tôi." },
+      { label: "Nhiệm vụ của tôi là gì?", query: "Liệt kê tất cả các nhiệm vụ tôi đang làm." },
+      { label: "Các NPC gần đây?", query: "Những NPC nào đang ở cùng địa điểm với tôi?" },
+      { label: "Tại sao AI lại kể như vậy?", query: "Phân tích prompt cuối cùng và giải thích tại sao AI lại có hành động/lời kể như vậy.", contextProvider: () => sentPromptsLog[0] || "Không có prompt nào được ghi lại." },
+  ];
 
   return (
-    <>
-      <OffCanvasPanel
-        isOpen={isOpen}
-        onClose={onClose}
-        title="Siêu Trợ Lý AI"
-        position="right"
-      >
-        {mode === 'chat' ? renderChatMode() : renderPromptEditorMode()}
-      </OffCanvasPanel>
-
-      {showLastPrompt && (sentCopilotPromptsLog || []).length > 0 && (
-          <Modal
-              isOpen={showLastPrompt}
-              onClose={() => setShowLastPrompt(false)}
-              title="Bối Cảnh Cuối Cùng Gửi Đến Trợ Lý AI"
-          >
-              <pre className="whitespace-pre-wrap break-all bg-gray-700 p-3 rounded-md text-xs text-gray-200 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                  {sentCopilotPromptsLog[0]}
-              </pre>
-          </Modal>
-      )}
-    </>
+    <OffCanvasPanel isOpen={isOpen} onClose={onClose} title="Siêu Trợ Lý AI" position="right">
+      <div className="flex flex-col h-full">
+        <div className="flex-grow overflow-y-auto custom-scrollbar p-2 space-y-4">
+          {(aiCopilotMessages || []).map((msg) => (
+            <div key={msg.id} className={`flex ${msg.isPlayerInput ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-xs md:max-w-md p-3 rounded-lg shadow ${msg.isPlayerInput ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}>
+                <p className="text-sm whitespace-pre-wrap">{typeof msg.content === 'string' ? msg.content : null}</p>
+                {msg.actionTags && msg.actionTags.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-gray-500/50 bg-gray-800/50 -m-3 p-3 rounded-b-lg">
+                    <h4 className="text-sm font-semibold text-amber-300 mb-2">Đề Xuất Thay Đổi</h4>
+                    <ul className="text-xs space-y-1">
+                        {parseActionTagsForSummary(msg.actionTags)}
+                    </ul>
+                    <Button 
+                        variant="primary" 
+                        size="sm" 
+                        className="w-full mt-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-500"
+                        onClick={() => handleApplyChanges(msg.actionTags!, msg.id)}
+                        disabled={isLoadingApi || appliedChanges.has(msg.id)}
+                    >
+                        {appliedChanges.has(msg.id) ? 'Đã Áp Dụng' : 'Áp Dụng Thay Đổi'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          {isLoadingApi && (
+              <div className="flex justify-start">
+                   <div className="max-w-xs md:max-w-md p-3 rounded-lg bg-gray-700 text-gray-200">
+                      <Spinner size="sm" text="AI đang suy nghĩ..."/>
+                   </div>
+              </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+        <div className="flex-shrink-0 p-2 border-t border-gray-700 space-y-2">
+            <div className="flex justify-between items-center px-1 py-1">
+                <ToggleSwitch
+                    id="copilot-mode-toggle"
+                    checked={isActionModus}
+                    onChange={setIsActionModus}
+                    disabled={isLoadingApi}
+                />
+                <div className="text-sm font-semibold">
+                    <span>Chế độ: </span>
+                    <span className={isActionModus ? 'text-indigo-400' : 'text-gray-400'}>
+                        {isActionModus ? 'Hành Động' : 'Thảo Luận'}
+                    </span>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+                {quickActions.map(action => (
+                    <Button key={action.label} variant="ghost" size="sm" className="!p-1.5 text-xs" onClick={() => handleQuickAction(action.query, action.contextProvider ? action.contextProvider() : undefined)} disabled={isLoadingApi}>
+                        {action.label}
+                    </Button>
+                ))}
+            </div>
+            <form onSubmit={handleSubmit} className="flex gap-2">
+            <textarea
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              placeholder="Hỏi hoặc ra lệnh cho AI..."
+              className="flex-grow p-2 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white placeholder-gray-400 resize-none text-sm"
+              rows={3}
+              disabled={isLoadingApi}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e); } }}
+            />
+            <div className="flex flex-col gap-1">
+                <Button type="submit" disabled={isLoadingApi || !userInput.trim()} className="flex-grow">Gửi</Button>
+                <Button
+                    type="button"
+                    variant="secondary"
+                    className="!p-2"
+                    onClick={handleReset}
+                    disabled={isLoadingApi}
+                    title="Làm mới cuộc trò chuyện"
+                >
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.667 0l3.181-3.183m-4.991-2.691v4.992h-4.992m0 0l-3.181-3.183a8.25 8.25 0 0111.667 0l3.181 3.183" />
+                    </svg>
+                </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </OffCanvasPanel>
   );
 };
 

@@ -211,7 +211,7 @@ export const GameplayScreen: React.FC = () => {
 
 
     const isSaveDisabled = game.isSavingGame || isLoadingUi || isSummarizingUi;
-    const isStopButtonDisabled = isSummarizingUi || (!isLoadingUi && !(game.knowledgeBase.turnHistory && game.knowledgeBase.turnHistory.length > 1));
+    const isStopButtonDisabled = isSummarizingUi || !(game.knowledgeBase.turnHistory && game.knowledgeBase.turnHistory.length > 1);
 
     const gameTitleDisplay = game.knowledgeBase.manualSaveName || game.knowledgeBase.worldConfig?.saveGameName || game.knowledgeBase.worldConfig?.theme || "Role Play AI";
 

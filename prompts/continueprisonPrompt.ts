@@ -1,5 +1,6 @@
 import { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, DIALOGUE_MARKER, Master, AIContextConfig } from '../types/index';
 import { VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, WEAPON_TYPES_FOR_VO_Y, TU_CHAT_TIERS, ALL_FACTION_ALIGNMENTS, SUB_REALM_NAMES } from '../constants';
+import { DEFAULT_AI_RULEBOOK } from '../constants/systemRulesNormal'; // CORRECTED IMPORT PATH
 import * as GameTemplates from '../types/index';
 import { prisonContinuePromptSystemRules } from '../constants/systemRulesPrison';
 import { getWorldDateDifferenceString } from '../utils/dateUtils';
@@ -17,6 +18,7 @@ export const generateContinuePrisonPrompt = (
   retrievedContext?: string // NEW: Added for RAG
 ): string => {
   const aiContextConfig = knowledgeBase.aiContextConfig || DEFAULT_AI_CONTEXT_CONFIG;
+  const rulebook = knowledgeBase.aiRulebook || DEFAULT_AI_RULEBOOK;
   const { worldConfig, worldDate, playerStats, master, userPrompts } = knowledgeBase;
   const genre = worldConfig?.genre || "Tu Tiên (Mặc định)";
   const customGenreName = worldConfig?.customGenreName;
@@ -343,6 +345,6 @@ ${nsfwGuidanceCombined}
 Hãy cố gắng điều chỉnh độ dài của lời kể và mô tả cho phù hợp với yêu cầu này của người chơi, nhưng vẫn đảm bảo tính tự nhiên và logic của câu chuyện.
 
 **E. CÁC QUY TẮC SỬ DỤNG TAG (CỰC KỲ QUAN TRỌNG):**
-${prisonContinuePromptSystemRules(worldConfig, statusType, mainRealms, aiContextConfig, worldDate)}
+${prisonContinuePromptSystemRules(worldConfig, statusType, mainRealms, aiContextConfig, worldDate, rulebook)}
 `;
 };

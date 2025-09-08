@@ -10,22 +10,23 @@ import { getWorldDateDifferenceString } from '../utils/dateUtils';
 
 const EventsScreen: React.FC = () => {
     const { knowledgeBase, setCurrentScreen } = useGame();
-    const [activeTab, setActiveTab] = useState<'upcoming' | 'ongoing' | 'finished'>('upcoming');
+    const [activeTab, setActiveTab] = useState<'upcoming' | 'ongoing' | 'finished' | 'staged'>('upcoming');
     const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
 
-    const { gameEvents, worldDate, discoveredLocations } = knowledgeBase;
+    const { gameEvents, worldDate, discoveredLocations, stagedActions } = knowledgeBase;
 
     const discoveredEvents = useMemo(() => {
         return gameEvents.filter(event => event.isDiscovered);
     }, [gameEvents]);
 
     const filteredEvents = useMemo(() => {
+        if (activeTab === 'staged') return []; // Staged actions are handled separately
         const statusMap = {
             upcoming: 'Sắp diễn ra',
             ongoing: 'Đang diễn ra',
             finished: 'Đã kết thúc',
         };
-        return discoveredEvents.filter(event => event.status === statusMap[activeTab]);
+        return discoveredEvents.filter(event => event.status === statusMap[activeTab as 'upcoming' | 'ongoing' | 'finished']);
     }, [discoveredEvents, activeTab]);
 
     const getEventLocationName = (event: GameEvent) => {
@@ -71,6 +72,25 @@ const EventsScreen: React.FC = () => {
         );
     };
 
+    const renderStagedActions = () => {
+        if (!stagedActions || Object.keys(stagedActions).length === 0) {
+            return <p className="text-center text-gray-400 italic mt-8">{VIETNAMESE.noStagedActions}</p>;
+        }
+
+        return (
+            <div className="space-y-3">
+                {Object.entries(stagedActions).map(([trigger, action]) => (
+                    <div key={trigger} className="bg-gray-800 p-4 rounded-lg shadow-md border border-purple-700/60">
+                        <p className="font-bold text-lg text-purple-300">{action.description}</p>
+                        <p className="text-xs text-gray-400 mt-2">
+                            <span className="font-semibold">{VIETNAMESE.stagedActionTrigger}:</span> <span className="font-mono bg-gray-700 px-1.5 py-0.5 rounded">{trigger}</span>
+                        </p>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
     return (
         <>
             <div className="min-h-screen flex flex-col bg-gray-800 p-4 sm:p-6 text-gray-100">
@@ -85,13 +105,24 @@ const EventsScreen: React.FC = () => {
                     </header>
                     
                     <div className="flex border-b border-gray-700 flex-shrink-0 px-4">
-                        <button onClick={() => setActiveTab('upcoming')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'upcoming' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-gray-400 hover:text-white'}`}>{VIETNAMESE.upcomingEventsTab}</button>
-                        <button onClick={() => setActiveTab('ongoing')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'ongoing' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-gray-400 hover:text-white'}`}>{VIETNAMESE.ongoingEventsTab}</button>
-                        <button onClick={() => setActiveTab('finished')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'finished' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-gray-400 hover:text-white'}`}>{VIETNAMESE.finishedEventsTab}</button>
+                        {(['upcoming', 'ongoing', 'finished', 'staged'] as const).map(tab => (
+                            <button 
+                                key={tab} 
+                                onClick={() => setActiveTab(tab)} 
+                                className={`flex-1 py-2 text-sm font-semibold ${activeTab === tab ? 'text-amber-400 border-b-2 border-amber-400' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                {
+                                    tab === 'upcoming' ? VIETNAMESE.upcomingEventsTab :
+                                    tab === 'ongoing' ? VIETNAMESE.ongoingEventsTab :
+                                    tab === 'finished' ? VIETNAMESE.finishedEventsTab :
+                                    VIETNAMESE.stagedActionsTab
+                                }
+                            </button>
+                        ))}
                     </div>
 
                     <div className="flex-grow overflow-y-auto custom-scrollbar p-4">
-                        {renderEventList()}
+                        {activeTab === 'staged' ? renderStagedActions() : renderEventList()}
                     </div>
                 </div>
             </div>

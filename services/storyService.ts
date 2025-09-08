@@ -27,7 +27,8 @@ export async function generateNextTurn(
     isStrictMode: boolean,
     lastNarrationFromPreviousPage: string | undefined,
     retrievedContext: string | undefined,
-    onPromptConstructed?: (prompt: string) => void
+    onPromptConstructed?: (prompt: string) => void,
+    narrativeDirective?: string // NEW
 ): Promise<{response: ParsedAiResponse, rawText: string}> {
     const { model } = getApiSettings();
     const prompt = PROMPT_FUNCTIONS.continue(
@@ -39,7 +40,8 @@ export async function generateNextTurn(
         previousPageSummaries,
         isStrictMode,
         lastNarrationFromPreviousPage,
-        retrievedContext
+        retrievedContext,
+        narrativeDirective // NEW
     );
     incrementApiCallCount('STORY_GENERATION');
     const { response, rawText } = await generateContentWithRateLimit(prompt, model, onPromptConstructed);

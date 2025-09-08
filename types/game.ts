@@ -4,10 +4,10 @@ import type { NPC, Wife, Slave, Prisoner, Master, PlayerStats } from './entities
 import type { Item, EquipmentSlotId } from './entities';
 import type { Skill } from './entities';
 import type { Quest, GameLocation, Faction, WorldLoreEntry, Region, GameEvent, WorldDate } from './entities';
-import type { CombatEndPayload } from './features';
+import type { CombatEndPayload, StagedAction } from './features';
 import type { AuctionState, SlaveAuctionState } from './features';
 import type { WorldSettings } from './setup';
-import type { AIContextConfig, AICopilotConfig } from './config';
+import type { AIContextConfig, AICopilotConfig, AIRulebook } from './config';
 
 export interface TurnHistoryEntry {
   turnNumber: number;
@@ -146,10 +146,13 @@ export interface KnowledgeBase {
   gameEvents: GameEvent[];
   ragVectorStore?: VectorStore;
   aiContextConfig: AIContextConfig;
+  aiRulebook?: AIRulebook; // NEW: The rulebook for editable rules
   aiCopilotConfigs: AICopilotConfig[];
   activeAICopilotConfigId: string | null;
+  stagedActions?: Record<string, StagedAction>;
   isWorldTicking: boolean;
   lastWorldTickDate: WorldDate;
+  narrativeDirectiveForNextTurn?: string; // NEW: For Narrative Directive & Rewrite Turn feature
 }
 
 export interface FindLocationParams {

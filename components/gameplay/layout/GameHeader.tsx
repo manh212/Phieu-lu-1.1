@@ -92,11 +92,11 @@ const GameHeader: React.FC<GameHeaderProps> = ({
             variant="secondary"
             size="sm"
             disabled={isStopButtonDisabled}
-            title={isLoading ? "Dừng nhận phản hồi và lùi lượt" : VIETNAMESE.rollbackTurn}
-            aria-label={isLoading ? "Dừng nhận phản hồi và lùi lượt" : VIETNAMESE.rollbackTurn}
+            title={VIETNAMESE.rollbackTurn}
+            aria-label={VIETNAMESE.rollbackTurn}
             className="border-amber-500 text-amber-300 hover:bg-amber-700 hover:text-white px-2 sm:px-3"
           >
-            <span className="sm:hidden">⏪</span><span className="hidden sm:inline">{VIETNAMESE.stopButtonShort || VIETNAMESE.stopButton}</span>
+            <span className="sm:hidden">⏪</span><span className="hidden sm:inline">{VIETNAMESE.rollbackTurn}</span>
           </Button>
 
           <Button

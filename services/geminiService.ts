@@ -89,8 +89,8 @@ export async function analyzeWritingStyle(textToAnalyze: string): Promise<string
     
     // FIX: Use shared getAiClient instead of creating a new instance
     const ai = getAiClient();
-    // FIX: Corrected generateContent call for text-only prompt per guidelines. Although a string is valid, the error suggests an array of parts is expected.
-    const response = await ai.models.generateContent({ model, contents: prompt });
+    // FIX: Corrected generateContent call for text-only prompt per guidelines. Consistent with other calls in the app.
+    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
     return response.text;
 }
 
@@ -99,10 +99,10 @@ export async function countTokens(text: string): Promise<number> {
     const ai = getAiClient();
     const { model } = getApiSettings();
     incrementApiCallCount('TOKEN_COUNT');
-    // FIX: The countTokens API expects a `GenerateContentParameters` object. The `contents` property can be a simple string.
+    // FIX: The countTokens API expects a `GenerateContentParameters` object. The `contents` property should be an array of Content objects.
     const response = await ai.models.countTokens({
         model,
-        contents: text,
+        contents: [{ parts: [{ text }] }],
     });
     return response.totalTokens;
 }
