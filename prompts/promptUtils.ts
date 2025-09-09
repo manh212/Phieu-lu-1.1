@@ -1,6 +1,6 @@
 // FIX: Corrected import paths for types.
 import { WorldSettings } from '../types/index';
-import { VIETNAMESE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, DEFAULT_NSFW_DESCRIPTION_STYLE } from '../constants';
+import { VIETNAMESE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, DEFAULT_NSFW_DESCRIPTION_STYLE, nsfwGuidanceCustomDefault } from '../constants';
 
 /**
  * Lấy chuỗi hướng dẫn NSFW cuối cùng để chèn vào prompt.
@@ -10,7 +10,7 @@ import { VIETNAMESE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, DEFAULT_NSFW_DE
  */
 export function getNsfwGuidance(worldConfig: WorldSettings | null): string {
   if (!worldConfig?.nsfwMode) {
-    return "LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đang TẮT. Vui lòng duy trì nội dung phù hợp với mọi lứa tuổi, tập trung vào phiêu lưu và phát triển nhân vật. Tránh các chủ đề nhạy cảm, bạo lực quá mức hoặc tình dục.";
+    return "";
   }
 
   // Logic Ghi Đè của "Phòng Tối AI"
@@ -22,8 +22,8 @@ HƯỚNG DẪN 18+ TÙY CHỈNH TỪ NGƯỜI CHƠI (PHÒNG TỐI AI - ƯU TIÊN
 ${worldConfig.customNsfwPrompt}
 `.trim();
     }
-    // Nếu người dùng chọn "Tùy Chỉnh" nhưng để trống -> Fallback an toàn
-    return "LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đang TẮT.";
+    // Nếu người dùng chọn "Tùy Chỉnh" nhưng để trống -> Dùng prompt mặc định đã được thiết kế sẵn
+    return nsfwGuidanceCustomDefault;
   }
 
   const currentNsfwStyle = worldConfig.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE;

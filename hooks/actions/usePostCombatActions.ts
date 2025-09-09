@@ -53,40 +53,44 @@ export const usePostCombatActions = (props: UsePostCombatActionsProps) => {
     const handleCombatEnd = useCallback(async (result: CombatEndPayload) => {
         setIsLoadingApi(true);
         resetApiError();
-        // The player's stats have already been updated by the combat context.
-        // We just clear the postCombatState from the hook's perspective.
-        const kbForConsequence = { ...knowledgeBase, postCombatState: null };
-        setKnowledgeBase(kbForConsequence);
+        
+        let workingKb = { ...knowledgeBase };
 
         try {
-            // Add a summary message to the log for context
             const summaryMessage: GameMessage = {
                 id: 'combat-summary-' + Date.now(), type: 'event_summary',
                 content: `Tóm tắt trận chiến: ${result.summary || 'Trận chiến đã kết thúc.'}`,
-                timestamp: Date.now(), turnNumber: kbForConsequence.playerStats.turn
+                timestamp: Date.now(), turnNumber: workingKb.playerStats.turn
             };
-            addMessageAndUpdateState([summaryMessage], kbForConsequence);
+            addMessageAndUpdateState([summaryMessage], workingKb);
 
             const { response: consequenceResponse, rawText } = await generateCombatConsequence(
-                kbForConsequence, result, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage,
+                workingKb, result, currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage,
                 (prompt) => setSentVictoryConsequencePromptsLog(prev => [prompt, ...prev].slice(0, 10))
             );
             setReceivedVictoryConsequenceResponsesLog(prev => [rawText, ...prev].slice(0, 10));
 
-            const turnForTags = kbForConsequence.playerStats.turn + 1;
+            const turnForTags = workingKb.playerStats.turn + 1;
             const { newKb: kbAfterTags, systemMessagesFromTags } = await performTagProcessing(
-                kbForConsequence, consequenceResponse.tags, turnForTags, setKnowledgeBase, logNpcAvatarPromptCallback
+                workingKb, consequenceResponse.tags, turnForTags, setKnowledgeBase, logNpcAvatarPromptCallback
             );
+
+            const finalKbState = {
+                ...kbAfterTags,
+                postCombatState: null
+            };
 
             const finalMessages: GameMessage[] = [ ...systemMessagesFromTags, {
                 id: 'combat-consequence-' + Date.now(), type: 'narration', content: consequenceResponse.narration,
-                timestamp: Date.now(), choices: consequenceResponse.choices, turnNumber: kbAfterTags.playerStats.turn
+                timestamp: Date.now(), choices: consequenceResponse.choices, turnNumber: finalKbState.playerStats.turn
             }];
-            addMessageAndUpdateState(finalMessages, kbAfterTags);
+            
+            addMessageAndUpdateState(finalMessages, finalKbState);
 
         } catch (error) {
             const errorMsg = `Lỗi tạo hậu quả sau trận chiến: ${error instanceof Error ? error.message : String(error)}`;
             setApiErrorWithTimeout(errorMsg);
+            setKnowledgeBase(prev => ({...prev, postCombatState: null}));
         } finally {
             setIsLoadingApi(false);
         }

@@ -99,6 +99,20 @@ const WorldSettingsTab: React.FC = () => {
                   value={settings.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE}
                   onChange={handleChange}
                 />
+                {settings.nsfwDescriptionStyle === 'Tùy Chỉnh (Phòng Tối AI)' && (
+                    <div className="md:col-span-2">
+                        <InputField
+                            label={VIETNAMESE.customNsfwPromptLabel}
+                            id="customNsfwPrompt-worldsettings"
+                            name="customNsfwPrompt"
+                            value={settings.customNsfwPrompt || ''}
+                            onChange={handleChange}
+                            textarea
+                            rows={4}
+                            placeholder={VIETNAMESE.customNsfwPromptNote}
+                        />
+                    </div>
+                )}
                 <InputField
                   label={VIETNAMESE.violenceLevelLabel}
                   id="violenceLevel-worldsettings"

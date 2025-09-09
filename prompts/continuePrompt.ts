@@ -7,6 +7,93 @@ import { getWorldDateDifferenceString } from '../utils/dateUtils';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
 import { getNsfwGuidance } from './promptUtils';
 
+const STRICT_MODE_GUIDANCE = `
+CHÚ Ý:
+CHẾ ĐỘ NGHIÊM NGẶT ĐANG BẬT. CÁC QUY TẮC DƯỚI ĐÂY SẼ GHI ĐÈ LÊN MỌI HƯỚNG DẪN KỂ CHUYỆN THÔNG THƯỜNG KHÁC.
+
+1. PHÂN BIỆT HÀNH ĐỘNG LỚN VÀ HÀNH ĐỘNG NHỎ
+
+Hành động lớn (Chính):
+Là những quyết định quan trọng, thay đổi cục diện hoặc hướng đi của câu chuyện.
+(Ví dụ: mở một cánh cửa, bắt đầu một cuộc trò chuyện, chọn rời đi, đọc một bức thư…)
+
+QUY TẮC:
+
+TUYỆT ĐỐI KHÔNG được tự ý thực hiện hay thêm bất kỳ hành động lớn nào.
+
+Chỉ được phép xảy ra khi có lệnh trực tiếp từ người chơi.
+
+Hành động nhỏ (Phụ):
+Là những phản ứng, động tác hoặc chi tiết phụ xoay quanh hành động lớn.
+Chúng có thể:
+
+Mở rộng, nhấn mạnh hoặc kéo dài hành động lớn.
+
+Thêm phản xạ, thói quen, cảm giác, chi tiết môi trường.
+
+Tạo gợi ý tinh tế (người chơi có thể chú ý hoặc bỏ qua).
+
+QUY TẮC:
+
+ĐƯỢC PHÉP thoải mái sáng tạo.
+
+Có thể chuỗi nhiều hành động nhỏ liên tiếp.
+
+Miễn là không tự biến thành một hành động lớn mới.
+
+Nguyên tắc an toàn: hành động nhỏ không bao giờ tự ý thay đổi cốt truyện.
+
+2. NỘI TÂM & CẢM XÚC
+
+KHÔNG bắt buộc phải mô tả trong mọi lượt.
+
+ĐƯỢC PHÉP dùng để nhấn mạnh hoặc làm rõ bối cảnh bên trong.
+
+ƯU TIÊN thay thế bằng hành động nhỏ + phản ứng NPC/môi trường để tạo nhịp tự nhiên.
+
+3. NPC & MÔI TRƯỜNG
+
+NPC và môi trường phản ứng tự nhiên, thoải mái, không hạn chế.
+
+Có thể thêm hành động nhỏ, biểu cảm, chi tiết phụ.
+
+Chỉ cần đảm bảo: không làm thay người chơi quyết định hành động lớn.
+
+4. LỰA CHỌN
+
+Các lựa chọn được đưa ra theo cú pháp [CHOICE: "..."].
+
+Chúng PHẢI là những hành động vật lý cụ thể mà nhân vật chính có thể thực hiện tiếp theo.
+
+Không được đưa ra lựa chọn trừu tượng (ví dụ: “cảm thấy thế nào”, “suy nghĩ gì”), mà phải gắn liền với hành động thực tế.
+
+VÍ DỤ CỤ THỂ
+
+Ví dụ 1: TƯƠNG TÁC VẬT THỂ
+
+Bối cảnh: Người chơi đứng trước một cánh cửa gỗ cũ.
+
+Hành động người chơi: "Tôi mở cánh cửa."
+
+❌ PHẢN HỒI SAI (VI PHẠM QUY TẮC):
+Bạn đẩy cánh cửa rồi bước hẳn vào trong phòng.
+
+✅ PHẢN HỒI ĐÚNG (TUÂN THỦ QUY TẮC):
+Bạn đẩy cánh cửa gỗ nặng nề, nó kêu lên kẽo kẹt và hé ra một khoảng tối mờ. Luồng gió ẩm lạnh phả ra khiến bạn hơi rùng mình. Ngón tay bạn vô thức siết chặt mép cửa, rồi khẽ giữ lại để nó không bật ngược. Bụi mịn bay lơ lửng trong khe sáng hẹp.
+
+Ví dụ 2: GIAO TIẾP
+
+Bối cảnh: NPC vừa nói một tin bất ngờ.
+
+Hành động người chơi: "Tôi hỏi hắn điều đó có thật không?"
+
+❌ PHẢN HỒI SAI (VI PHẠM QUY TẮC):
+Bạn hỏi xong rồi lập tức bắt đầu thuyết phục hắn đi theo mình.
+
+✅ PHẢN HỒI ĐÚNG (TUÂN THỦ QUY TẮC):
+Bạn hỏi hắn điều đó có thật không. Giọng bạn hơi khàn, nhưng ánh mắt không rời khuôn mặt đối phương. Một thoáng im lặng trôi qua, bạn lặp lại câu hỏi, lần này chắc giọng hơn. Ngay sau đó, bạn khẽ nghiêng đầu, chờ phản ứng. Hắn nhướn mày, rồi cười nhẹ đầy ẩn ý.
+`;
+
 export const generateContinuePrompt = (
   knowledgeBase: KnowledgeBase,
   playerActionText: string,
@@ -109,6 +196,15 @@ ${JSON.stringify(stagedActions, null, 2)}
   finalPrompt += `
 ---
 **PHẦN 2: HƯỚNG DẪN HÀNH ĐỘNG**`;
+
+  if (isStrictMode) {
+    finalPrompt += `
+---
+**HƯỚNG DẪN CHẾ ĐỘ NGHIÊM NGẶT (ƯU TIÊN TUYỆT ĐỐI)**
+${STRICT_MODE_GUIDANCE}
+---
+`;
+  }
 
   if (aiContextConfig.sendUserPrompts && userPrompts && userPrompts.length > 0) {
       finalPrompt += `
