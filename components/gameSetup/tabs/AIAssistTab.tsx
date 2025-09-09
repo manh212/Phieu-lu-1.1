@@ -5,7 +5,7 @@ import Button from '../../ui/Button';
 import InputField from '../../ui/InputField';
 import Spinner from '../../ui/Spinner';
 import Modal from '../../ui/Modal';
-import { VIETNAMESE, MAX_TOKENS_FANFIC } from '../../../constants';
+import { VIETNAMESE, MAX_TOKENS_FANFIC, NSFW_DESCRIPTION_STYLES, DEFAULT_NSFW_DESCRIPTION_STYLE, VIOLENCE_LEVELS, DEFAULT_VIOLENCE_LEVEL, STORY_TONES, DEFAULT_STORY_TONE } from '../../../constants';
 import { WorldSettings } from '../../../types/index';
 
 
@@ -167,19 +167,6 @@ const AIAssistTab: React.FC<AIAssistTabProps> = ({ setIsArchitectModalOpen }) =>
                   <Button onClick={handleApplyStyle} variant="secondary" size="sm" className="w-full">Áp Dụng Văn Phong này cho AI</Button>
               </div>
           )}
-      </div>
-
-      {/* NSFW Toggle */}
-      <div className="border border-red-500 p-4 rounded-lg bg-gray-800/30">
-        <h3 className="text-xl font-semibold text-red-400 mb-2">Cài Đặt Nội Dung Người Lớn (18+)</h3>
-        <InputField
-            label={VIETNAMESE.nsfwModeLabel}
-            id="nsfwMode-master"
-            name="nsfwMode"
-            type="checkbox"
-            checked={settings.nsfwMode || false}
-            onChange={(e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'nsfwMode', value: (e.target as HTMLInputElement).checked }})}
-        />
       </div>
 
       {/* Story Idea */}

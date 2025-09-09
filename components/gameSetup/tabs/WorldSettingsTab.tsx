@@ -76,6 +76,51 @@ const WorldSettingsTab: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* NSFW Section Moved to the end */}
+      <div className="md:col-span-2 border-t border-gray-700 pt-4 mt-2">
+        <div className="border border-red-500 p-4 rounded-lg bg-gray-800/30">
+            <InputField
+                label={VIETNAMESE.nsfwModeLabel}
+                id="nsfwMode-worldsettings"
+                name="nsfwMode"
+                type="checkbox"
+                checked={settings.nsfwMode || false}
+                onChange={handleChange}
+            />
+            {settings.nsfwMode && (
+              <div className="mt-4 pt-4 border-t border-gray-700/50 space-y-4">
+                <InputField
+                  label={VIETNAMESE.nsfwDescriptionStyleLabel}
+                  id="nsfwDescriptionStyle-worldsettings"
+                  name="nsfwDescriptionStyle"
+                  type="select"
+                  options={[...NSFW_DESCRIPTION_STYLES]}
+                  value={settings.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE}
+                  onChange={handleChange}
+                />
+                <InputField
+                  label={VIETNAMESE.violenceLevelLabel}
+                  id="violenceLevel-worldsettings"
+                  name="violenceLevel"
+                  type="select"
+                  options={[...VIOLENCE_LEVELS]}
+                  value={settings.violenceLevel || DEFAULT_VIOLENCE_LEVEL}
+                  onChange={handleChange}
+                />
+                <InputField
+                  label={VIETNAMESE.storyToneLabel}
+                  id="storyTone-worldsettings"
+                  name="storyTone"
+                  type="select"
+                  options={[...STORY_TONES]}
+                  value={settings.storyTone || DEFAULT_STORY_TONE}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+        </div>
+      </div>
     </div>
   );
 };
