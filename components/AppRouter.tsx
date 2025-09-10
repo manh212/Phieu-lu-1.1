@@ -26,6 +26,7 @@ import EventsScreen from './EventsScreen';
 import CombatScreen from './screens/CombatScreen'; // NEW: Import CombatScreen
 import { VIETNAMESE } from '../constants';
 import ApiUsageScreen from './ApiUsageScreen';
+import ParameterSettingsScreen from './ParameterSettingsScreen';
 
 const AppRouter: React.FC = () => {
     const game = useGame();
@@ -114,6 +115,11 @@ const AppRouter: React.FC = () => {
             return <ApiSettingsScreen 
                 setCurrentScreen={game.setCurrentScreen}
                 onSettingsSavedNotification={() => game.showNotification(VIETNAMESE.settingsSavedMessage, 'success')}
+            />;
+        case GameScreen.ParameterSettings:
+            return <ParameterSettingsScreen 
+                setCurrentScreen={game.setCurrentScreen}
+                onSettingsSavedNotification={() => game.showNotification(VIETNAMESE.parameterSettingsSavedMessage, 'success')}
             />;
         case GameScreen.LoadGameSelection:
             return <LoadGameScreen 

@@ -56,6 +56,12 @@ export const getApiSettings = (): ApiConfig => {
         autoGenerateNpcAvatars: parsed.autoGenerateNpcAvatars === undefined ? DEFAULT_API_CONFIG.autoGenerateNpcAvatars : parsed.autoGenerateNpcAvatars,
         avatarGenerationEngine: avatarEngineExists ? parsed.avatarGenerationEngine : DEFAULT_API_CONFIG.avatarGenerationEngine,
         ragTopK: ragTopKIsValid ? parsed.ragTopK : DEFAULT_API_CONFIG.ragTopK,
+        temperature: parsed.temperature ?? DEFAULT_API_CONFIG.temperature,
+        topK: parsed.topK ?? DEFAULT_API_CONFIG.topK,
+        topP: parsed.topP ?? DEFAULT_API_CONFIG.topP,
+        thinkingBudget: parsed.thinkingBudget ?? DEFAULT_API_CONFIG.thinkingBudget,
+        maxOutputTokens: parsed.maxOutputTokens ?? DEFAULT_API_CONFIG.maxOutputTokens,
+        seed: parsed.seed ?? DEFAULT_API_CONFIG.seed,
       };
     } catch (e) {
       console.error("Failed to parse API settings from localStorage, using defaults:", e);
@@ -106,11 +112,37 @@ export const getAiClient = (): GoogleGenAI => {
   return ai;
 };
 
+export const getGenerationConfig = (modelId?: string) => {
+    const { safetySettings, temperature, topK, topP, thinkingBudget, maxOutputTokens, seed } = getApiSettings();
+    const config: any = { safetySettings };
+    if (temperature !== undefined) config.temperature = temperature;
+    if (topK !== undefined) config.topK = topK;
+    if (topP !== undefined) config.topP = topP;
+    if (seed !== undefined) config.seed = seed;
+    
+    // Handle thinking and token budget specifically for gemini-2.5-flash
+    if (modelId === 'gemini-2.5-flash') {
+      if (maxOutputTokens !== undefined) {
+          config.maxOutputTokens = maxOutputTokens;
+          // IMPORTANT: As per Gemini docs, thinkingBudget must be less than maxOutputTokens
+          if (thinkingBudget !== undefined) {
+              config.thinkingConfig = { thinkingBudget: Math.min(thinkingBudget, maxOutputTokens - 1) };
+          }
+      } else if (thinkingBudget !== undefined) {
+         config.thinkingConfig = { thinkingBudget: thinkingBudget };
+      }
+    }
+    return config;
+}
+
 export async function generateContentAndCheck(
     params: { model: string, contents: any, config?: any }
 ): Promise<GenerateContentResponse> {
     const ai = getAiClient();
-    const response = await ai.models.generateContent(params);
+    const baseConfig = getGenerationConfig(params.model);
+    const finalConfig = { ...baseConfig, ...params.config };
+    
+    const response = await ai.models.generateContent({ ...params, config: finalConfig });
     
     if (!response.text || response.text.trim() === '') {
         throw new Error("Phản hồi từ AI trống. Điều này có thể do bộ lọc nội dung. Vui lòng thử một hành động khác hoặc lùi lượt.");
@@ -134,8 +166,6 @@ export async function generateContentWithRateLimit(
     modelId: string, 
     onPromptConstructed?: (prompt: string) => void
 ): Promise<{response: ParsedAiResponse, rawText: string, constructedPrompt: string}> {
-    const { safetySettings } = getApiSettings();
-
     if (onPromptConstructed) {
         onPromptConstructed(prompt);
     }
@@ -143,9 +173,6 @@ export async function generateContentWithRateLimit(
     const response = await generateContentAndCheck({
         model: modelId,
         contents: [{ parts: [{ text: prompt }] }],
-        config: {
-            safetySettings: safetySettings,
-        },
     });
     const rawText = response.text;
     const parsedResponse = parseAiResponseText(rawText);

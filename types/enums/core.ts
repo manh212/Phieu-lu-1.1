@@ -12,6 +12,7 @@ export enum GameScreen {
   AICopilotPanel = 'AICopilotPanel',
   Combat = 'Combat',
   ApiUsage = 'ApiUsage',
+  ParameterSettings = 'ParameterSettings',
 }
 
 export type PlayerActionInputType = 'action' | 'story';

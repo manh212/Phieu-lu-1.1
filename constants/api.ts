@@ -1,5 +1,3 @@
-
-
 import { HarmCategory, HarmBlockThreshold } from "@google/genai";
 // FIX: Correct import path for types
 import type { ApiConfig, SafetySetting, AvatarGenerationEngine } from '../types/index';
@@ -51,4 +49,10 @@ export const DEFAULT_API_CONFIG: ApiConfig = {
   autoGenerateNpcAvatars: DEFAULT_AUTO_GENERATE_NPC_AVATARS,
   avatarGenerationEngine: DEFAULT_AVATAR_GENERATION_ENGINE,
   ragTopK: 25,
+  temperature: 1,
+  topK: 64,
+  topP: 0.95,
+  thinkingBudget: undefined,
+  maxOutputTokens: undefined,
+  seed: undefined,
 };

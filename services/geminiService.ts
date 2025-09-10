@@ -8,7 +8,7 @@ import { parseGeneratedWorldDetails } from '../utils/responseParser';
 // FIX: Add imports for default setting constants
 import { VIETNAMESE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, DEFAULT_NSFW_DESCRIPTION_STYLE } from "@/constants/index";
 import { incrementApiCallCount } from "../utils/apiUsageTracker";
-import { generateContentWithRateLimit } from "./api/geminiClient";
+import { generateContentWithRateLimit, generateContentAndCheck } from "./api/geminiClient";
 
 // This file centralizes calls to the Gemini API for world generation.
 
@@ -87,10 +87,7 @@ export async function analyzeWritingStyle(textToAnalyze: string): Promise<string
     const prompt = PROMPT_FUNCTIONS.analyzeStyle(textToAnalyze);
     incrementApiCallCount('STYLE_ANALYSIS');
     
-    // FIX: Use shared getAiClient instead of creating a new instance
-    const ai = getAiClient();
-    // FIX: Corrected generateContent call for text-only prompt per guidelines. Consistent with other calls in the app.
-    const response = await ai.models.generateContent({ model, contents: [{ parts: [{ text: prompt }] }] });
+    const response = await generateContentAndCheck({ model, contents: [{ parts: [{ text: prompt }] }] });
     return response.text;
 }
 

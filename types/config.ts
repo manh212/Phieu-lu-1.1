@@ -85,6 +85,12 @@ export interface ApiConfig {
     autoGenerateNpcAvatars: boolean;
     avatarGenerationEngine: AvatarGenerationEngine;
     ragTopK: number;
+    temperature?: number;
+    topK?: number;
+    topP?: number;
+    thinkingBudget?: number;
+    maxOutputTokens?: number;
+    seed?: number;
 }
 
 export type AvatarGenerationEngine = 'imagen-4.0-generate-001';

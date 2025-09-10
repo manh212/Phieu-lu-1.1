@@ -76,6 +76,16 @@ const InitialScreen: React.FC<InitialScreenProps> = ({ setCurrentScreen }) => {
               {VIETNAMESE.apiSettings}
             </Button>
           </li>
+           <li>
+            <Button 
+                variant="ghost" 
+                size="md" 
+                className="w-full" 
+                onClick={() => setCurrentScreen(GameScreen.ParameterSettings)}
+              >
+              {VIETNAMESE.parameterSettings}
+            </Button>
+          </li>
           <li>
             <Button 
                 variant="ghost" 
