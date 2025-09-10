@@ -113,11 +113,16 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [aiCopilotMessages, isOpen]);
+  
+  const activeCopilotConfig = useMemo(() => {
+    if (!knowledgeBase.aiCopilotConfigs || !knowledgeBase.activeAICopilotConfigId) return null;
+    return knowledgeBase.aiCopilotConfigs.find(c => c.id === knowledgeBase.activeAICopilotConfigId);
+  }, [knowledgeBase.aiCopilotConfigs, knowledgeBase.activeAICopilotConfigId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (userInput.trim()) {
-      handleCopilotQuery(userInput.trim(), undefined, isActionModus);
+      handleCopilotQuery(userInput.trim(), undefined, isActionModus, activeCopilotConfig?.model);
       setUserInput('');
     }
   };
@@ -129,7 +134,7 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
   };
 
   const handleQuickAction = (question: string, context?: string) => {
-    handleCopilotQuery(question, context, isActionModus);
+    handleCopilotQuery(question, context, isActionModus, activeCopilotConfig?.model);
     setUserInput('');
   };
 
@@ -158,11 +163,6 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
     showNotification("Các thay đổi từ Siêu Trợ Lý đã được áp dụng!", "success");
   };
 
-  const activeCopilotConfig = useMemo(() => {
-    if (!knowledgeBase.aiCopilotConfigs || !knowledgeBase.activeAICopilotConfigId) return null;
-    return knowledgeBase.aiCopilotConfigs.find(c => c.id === knowledgeBase.activeAICopilotConfigId);
-  }, [knowledgeBase.aiCopilotConfigs, knowledgeBase.activeAICopilotConfigId]);
-  
   const handleModelSelect = (modelId: string) => {
     if (!activeCopilotConfig) return;
 

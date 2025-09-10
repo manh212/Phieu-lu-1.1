@@ -1,3 +1,4 @@
+// src/hooks/actions/useCopilotActions.ts
 import { useCallback } from 'react';
 import { KnowledgeBase, GameMessage } from '../../types/index';
 import { generateCopilotResponse, getApiSettings } from '../../services';
@@ -25,7 +26,7 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
         sentPromptsLog, sentCopilotPromptsLog, setSentCopilotPromptsLog,
     } = props;
 
-    const handleCopilotQuery = useCallback(async (userQuestion: string, context?: string, isActionModus: boolean = true) => {
+    const handleCopilotQuery = useCallback(async (userQuestion: string, context?: string, isActionModus: boolean = true, modelOverride?: string) => {
         setIsLoadingApi(true);
         resetApiError();
         const userMessageContent = context ? `${userQuestion}\n\n**Bối cảnh:**\n${context}` : userQuestion;
@@ -52,13 +53,13 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
             
             const latestGameplayPrompt = sentPromptsLog[0] || "";
             const activeCopilotConfig = knowledgeBase.aiCopilotConfigs.find(c => c.id === knowledgeBase.activeAICopilotConfigId);
-            const copilotModel = activeCopilotConfig?.model || getApiSettings().model;
+            const modelToUse = modelOverride || activeCopilotConfig?.model || getApiSettings().model;
             
             const { response: copilotResponse, rawText, constructedPrompt } = await generateCopilotResponse(
                 kbSnapshot, last20Messages, copilotChatHistory, userMessageContent,
                 latestGameplayPrompt, userPrompts || [],
                 (prompt) => setSentCopilotPromptsLog(prev => [prompt, ...prev].slice(0, 10)),
-                copilotModel,
+                modelToUse,
                 isActionModus
             );
 
