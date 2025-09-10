@@ -37,13 +37,15 @@ export async function generateArchitectResponse(
     chatHistory: string,
     userRequest: string,
     isActionModus: boolean,
+    modelOverride?: string, // NEW: Added model override parameter
 ): Promise<string> {
     const { model } = getApiSettings();
+    const modelToUse = modelOverride || model; // Use override if provided
     const prompt = PROMPT_FUNCTIONS.architect(settingsJSON, chatHistory, userRequest, isActionModus);
     
     // Using generateContentAndCheck to ensure a valid response is returned
     const response = await generateContentAndCheck({
-        model,
+        model: modelToUse, // Use the selected model
         contents: [{ parts: [{ text: prompt }] }],
     });
 

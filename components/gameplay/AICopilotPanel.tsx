@@ -93,6 +93,20 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
   const [isActionModus, setIsActionModus] = useState(true);
   const [appliedChanges, setAppliedChanges] = useState<Set<string>>(new Set());
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
+  const modelSelectorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
+            setIsModelSelectorOpen(false);
+        }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [modelSelectorRef]);
 
   useEffect(() => {
     if (isOpen) {
@@ -148,19 +162,19 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
     if (!knowledgeBase.aiCopilotConfigs || !knowledgeBase.activeAICopilotConfigId) return null;
     return knowledgeBase.aiCopilotConfigs.find(c => c.id === knowledgeBase.activeAICopilotConfigId);
   }, [knowledgeBase.aiCopilotConfigs, knowledgeBase.activeAICopilotConfigId]);
+  
+  const handleModelSelect = (modelId: string) => {
+    if (!activeCopilotConfig) return;
 
-  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const newModel = e.target.value;
-      if (!activeCopilotConfig) return;
-
-      setKnowledgeBase(prevKb => {
-          const newKb = JSON.parse(JSON.stringify(prevKb));
-          const configToUpdate = newKb.aiCopilotConfigs.find((c: any) => c.id === newKb.activeAICopilotConfigId);
-          if (configToUpdate) {
-              configToUpdate.model = newModel;
-          }
-          return newKb;
-      });
+    setKnowledgeBase(prevKb => {
+        const newKb = JSON.parse(JSON.stringify(prevKb));
+        const configToUpdate = newKb.aiCopilotConfigs.find((c: any) => c.id === newKb.activeAICopilotConfigId);
+        if (configToUpdate) {
+            configToUpdate.model = modelId;
+        }
+        return newKb;
+    });
+    setIsModelSelectorOpen(false);
   };
   
   const quickActions = [
@@ -240,20 +254,40 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e); } }}
                 />
                 <div className="flex gap-2 items-center justify-end">
-                    <div className="flex items-center gap-1">
-                        <select
-                            id="copilot-model-selector"
-                            aria-label="Chọn model cho Siêu Trợ Lý"
-                            value={activeCopilotConfig?.model || ''}
-                            onChange={handleModelChange}
+                    <div className="relative" ref={modelSelectorRef}>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="!p-2"
+                            onClick={() => setIsModelSelectorOpen(prev => !prev)}
                             disabled={isLoadingApi}
-                            className="p-1 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white text-xs"
-                            style={{ maxWidth: '150px' }}
+                            title="Chọn model Gemini"
+                            aria-haspopup="true"
+                            aria-expanded={isModelSelectorOpen}
                         >
-                            {AVAILABLE_MODELS.map(model => (
-                                <option key={model.id} value={model.id}>{model.name}</option>
-                            ))}
-                        </select>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                            </svg>
+                        </Button>
+                        {isModelSelectorOpen && (
+                            <div className="absolute bottom-full right-0 mb-2 w-56 bg-gray-700 rounded-lg shadow-lg z-20 border border-gray-600">
+                                <ul className="py-1" role="menu">
+                                    {AVAILABLE_MODELS.map(model => (
+                                        <li key={model.id} role="none">
+                                            <button
+                                                type="button"
+                                                role="menuitem"
+                                                className={`w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-indigo-500 ${activeCopilotConfig?.model === model.id ? 'bg-indigo-600 font-semibold' : ''}`}
+                                                onClick={() => handleModelSelect(model.id)}
+                                            >
+                                                {model.name}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-1">
                         <ToggleSwitch
