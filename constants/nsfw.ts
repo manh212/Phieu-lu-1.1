@@ -107,102 +107,37 @@ export const NSFW_TRANSLATIONS = {
   *   **Bích lạc quỳnh trì:** Cửa huyệt trắng nõn, nhỏ xinh khép chặt. Dâm dịch tiết ra trong suốt và ngọt ngào như sương sớm, mang theo hương hoa thanh khiết. Nhục bích bên trong linh hoạt, tinh tế chuyển động, mang đến cảm giác sảng khoái triền miên.
   **2. Miêu tả Dương vật (Nam tử hùng khí):**
   *   **Cự long / Nộ long:** Cự long khổng lồ đang ngủ say nay đã thức tỉnh, toàn thân tím hồng, gân xanh nổi cuồn cuộn, cự long to lớn dữ tợn. Cả thân hình nóng rực, cứng như sắt thép, mang theo khí thế hủy thiên diệt địa, sẵn sàng chinh phạt mọi mật địa.
-  *   **Ngọc hành / Kim thương:** Thân ngọc hành trơn bóng, thẳng tắp, toát ra vẻ cao quý. Quy đầu tròn trịa, óng ánh như ngọc, ở đỉnh có một tiểu khẩu đang rỉ ra chất lỏng trong suốt. Tuy vẻ ngoài ôn hòa nhưng bên trong ẩn chứa sức mạnh kinh người, mỗi lần va chạm đều mang đến khoái cảm tột đỉnh.`,
-  // FIX: Added missing keys
+  *   **Ngọc hành / Kim thương:** Thân ngọc hành trơn bóng, thẳng tắp, toát ra vẻ cao quý. Quy đầu tròn trịa, óng ánh như ngọc, ở đỉnh có một tiểu khẩu đang rỉ ra chất lỏng trong suốt. Tuy vẻ ngoài ôn hòa nhưng mỗi lần đâm tới đều ẩn chứa sức mạnh kinh người.
+  *   **Thiết trụ / Côn thịt:** Cây thiết trụ to dài thô kệch, màu đồng cổ, tràn đầy cảm giác sức mạnh bùng nổ. Thân côn gồ ghề, khi di chuyển trong huyệt đạo chật hẹp sẽ mang đến sự ma sát mãnh liệt nhất, khiến đối phương phải khóc thét xin tha.
+  *   **Tử kim cự mãng:** Con mãng xà khổng lồ màu tím sẫm, vảy gân nổi lên rõ rệt. Đầu mãng xà ngẩng cao, hung hãn tìm kiếm huyệt động để chui vào. Thân hình nó cuộn trào dục vọng, toát ra hơi thở nóng bỏng, bá đạo.
+  **3. Miêu tả Âm vật (Nữ tử minh châu):**
+  *   **Minh châu / Ngọc châu:** Viên minh châu nhỏ bé, hồng nhuận, ẩn mình giữa hai cánh hoa. Khi được đầu lưỡi hoặc ngón tay trêu chọc, nó sẽ sưng lên, cứng lại, trở nên vô cùng mẫn cảm, là cội nguồn của những cơn khoái cảm dâng trào.
+  *   **Đậu khấu / San hô nụ:** Một nụ hoa san hô nhỏ xinh, màu sắc tươi tắn hơn những nơi khác. Đây là nơi mẫn cảm nhất, chỉ cần một cái chạm nhẹ cũng đủ khiến thân thể ngọc ngà của nữ tử run rẩy, dâm thủy không ngừng tuôn ra.
+  **4. Miêu tả Ngực (Song phong / Ngọc nhũ):**
+  *   **Song phong / Xuân sơn:** Hai ngọn núi tuyết đầy đặn, cao聳, đường cong hoàn mỹ. Trên đỉnh núi là hai nụ hoa anh đào, khi bị trêu chọc sẽ trở nên cứng rắn, dựng thẳng, vô cùng quyến rũ.
+  *   **Ngọc thỏ / Đào tiên:** Hai con thỏ ngọc no tròn, mềm mại, nằm im trên lồng ngực trắng nõn. Da thịt mịn màng, đàn hồi, chỉ cần một cái xoa nhẹ cũng tạo nên những gợn sóng thịt mê người. Hai quả đào tiên căng mọng, chỉ chờ người tới hái.
+  **5. Miêu tả Hậu môn (Hậu đình / Cúc huyệt):**
+  *   **Hậu đình:** Cánh cửa bí mật ở sân sau, thường ngày khép chặt, được bao bọc bởi những nếp uốn tinh xảo. Khi được bôi trơn và thăm dò, nó sẽ từ từ hé mở, bên trong là một thông đạo chật hẹp, co rút mãnh liệt, mang lại cảm giác cấm kỵ và kích thích tột độ.
+  *   **Cúc huyệt:** Bông cúc nhỏ xinh, màu sắc thâm trầm hơn hoa huyệt phía trước. Các cánh hoa xếp chặt vào nhau, chỉ khi bị cự vật mạnh mẽ khai phá mới chịu hé mở, bên trong là một thế giới hoàn toàn khác, khẩn trương và nóng bỏng.
+  **6. Miêu tả Miệng và Lưỡi (Anh đào tiểu khẩu / Đinh hương thiệt):**
+  *   **Anh đào tiểu khẩu:** Đôi môi đỏ mọng như quả anh đào chín, hé mở mời gọi. Khoang miệng ấm áp, ẩm ướt, là một ôn nhu hương khác, sẵn sàng ngậm lấy cự long nóng bỏng, dùng sự mềm mại để bao bọc.
+  *   **Đinh hương thiệt / Linh xà:** Chiếc lưỡi thơm tho, linh hoạt như một con rắn nhỏ. Nó có thể liếm láp, quấn quýt, khuấy đảo, khi thì tấn công đỉnh minh châu, khi thì khiêu khích long đầu, mang đến những luồng khoái cảm tê dại.
+  **7. Miêu tả Niệu đạo Nữ tử (Ngọc tuyền / Tuyền nhãn):**
+  *   **U cốc linh tuyền (Suối thiêng trong cốc sâu):**Phía trên U cốc, dưới nụ san hô, là một **tiểu tuyền nhãn (mắt suối nhỏ)** kín đáo. Bình thường nó khép chặt, khó lòng phát hiện. Nhưng khi bị đầu lưỡi linh hoạt của nam tử trêu chọc, hoặc bị cự vật vô tình lướt qua, mắt suối sẽ khẽ run rẩy, phun ra một dòng nước ngọt lành, thanh khiết. Dòng nước này khác với dâm thủy từ mật huyệt, nó trong hơn, mang theo cảm giác mát lạnh bất ngờ giữa khung cảnh nóng bỏng, khiến nam tử như được uống một ngụm suối tiên, càng thêm hăng hái chinh phạt.
+  *   **Tiên lộ chi khẩu (Cửa của sương tiên):**Nơi đây tựa một nụ hoa chớm nở, một giọt sương sớm còn đọng lại trên phiến lá. Nó vô cùng mẫn cảm, chỉ một cái chạm nhẹ cũng đủ khiến chủ nhân của nó run lên bần bật, hai ngọn xuân sơn cũng phải rung động. Khi bị kích thích đến cực điểm, từ **tiên lộ chi khẩu** sẽ rỉ ra một chất lỏng trong như sương, ngọt như mật, được gọi là **ngọc lộ** hay **tiên lộ**. Nó không ồ ạt như dâm thủy, mà từ tốn, quý giá, mỗi giọt đều là tinh túy của khoái cảm, là minh chứng cho sự thăng hoa của nữ tử.
+  *   **Bích trì huyền nhãn (Mắt huyền ao bích):**Gắn liền với miêu tả **Bích lạc quỳnh trì**, **huyền nhãn** chính là cái miệng giếng nhỏ bí ẩn bên cạnh ao tiên. Khai phá được cái ao tiên (hoa huyệt) đã khó, tìm ra và kích thích được mắt huyền này còn khó hơn, đòi hỏi sự tinh tế và thấu hiểu của nam tử. Khi được ngón tay hoặc linh xà (lưỡi) khiêu khích đúng chỗ, mắt huyền sẽ mở ra, không chỉ mang lại khoái cảm tê dại cho nữ tử mà còn như một chiếc chìa khóa bí ẩn, khai thông một dòng suối ngầm, khiến cho **Quỳnh Trì** phía dưới đột nhiên dâng lên một trận thủy triều mãnh liệt hơn bao giờ hết.
+  **8. Miêu tả hành động và cảnh giao hợp:**
+  *   **Thay vì "quan hệ", "làm tình":** Dùng các từ như **âm dương giao hòa, long tranh hổ đấu, mây mưa hoan ái, chinh phạt, chinh phục, triền miên, rong rổi, xung phong hãm trận.**
+  *   **Sử dụng ẩn dụ:**
+      *   **Luyện đan/Tu luyện:** "Hấp thụ âm nguyên/dương khí", "song tu", "luyện hóa tinh nguyên".
+      *   **Thiên nhiên:** "Sóng tình cuộn trào", "triều dâng mãnh liệt", "mưa rền gió dữ", "hoa tâm run rẩy đón nhận mưa móc".
+      *   **Chiến trận:** "Cự long công thành đoạt đất", "tiểu huyệt kiên cường phòng thủ rồi thất bại trong sung sướng", "trăm ngàn lần đâm chọc", "xuyên qua tầng tầng lớp lớp phòng tuyến".
+  **9. Khi trong cảnh quan hệ tình dục thì nhân vật và người/những người quan hệ cùng sẽ rên rỉ và nói những từ ngữ tục tĩu với mật độ nhiều hơn hơn nhằm tăng tình thú.`,
   violenceLevelLabel: "Mức Độ Bạo Lực",
   storyToneLabel: "Tông Màu Câu Chuyện",
-  nsfwGuidanceTranTuc: `LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đã được BẬT với phong cách "Trần Tục". Bạn ĐƯỢC PHÉP và ĐƯỢC YÊU CẦU mô tả các cảnh 18+ một cách chi tiết, thẳng thắn, và không né tránh.
-Nguyên tắc cốt lõi:
-Sử dụng ngôn ngữ trực diện, không vòng vo, không ẩn dụ. Đi thẳng vào vấn đề. Nếu cần thiết, có thể sử dụng từ ngữ thông tục, thậm chí là tiếng lóng hoặc từ chửi thề liên quan đến tình dục nếu phù hợp với nhân vật và bối cảnh.
-Hướng dẫn chi tiết:
-1. Miêu tả Bộ Phận Sinh Dục:
-•
-Dương vật:
-Sử dụng các từ như "dương vật", "cặc", "cu", "buồi", "con cặc", "thằng nhỏ", "cái ấy". Mô tả kích thước, hình dáng, trạng thái (cứng, mềm, cương cứng, gân guốc, đỏ ửng) một cách trực tiếp. Ví dụ: "Thằng cặc của hắn cương cứng, đỏ au, gân xanh nổi rõ." hoặc "Con cặc to tổ bố của gã đâm vào."
-•
-Âm đạo:
-Sử dụng các từ như "âm đạo", "lồn", "bướm", "cái lỗ", "cửa mình", "lỗ đít". Mô tả độ ẩm ướt, sự co thắt, màu sắc, mùi vị (nếu có). Ví dụ: "Cái lồn của cô ta ướt sũng, nhớp nháp." hoặc "Hắn banh rộng hai mép lồn của nó ra."
-•
-Âm vật:
-"Hột le", "mồng đốc", "cái đầu ti lồn". Mô tả sự nhạy cảm, trạng thái khi bị kích thích. Ví dụ: "Hột le của nó sưng tấy lên vì nứng."
-•
-Tinh hoàn:
-"Hòn dái", "cà", "trứng". Mô tả kích thước, cảm giác khi bị chạm vào. Ví dụ: "Hai hòn dái của hắn căng cứng."
-2. Miêu tả Hành Vi Tình Dục:
-•
-Giao cấu:
-Sử dụng các từ như "đụ", "địt", "chịch", "nện", "giã", "thúc", "dập", "đâm", "nhấp", "xoạc". Mô tả nhịp độ, độ sâu, lực mạnh/nhẹ. Ví dụ: "Hắn thúc mạnh vào lồn con đĩ." hoặc "Nó dập liên hồi, tiếng da thịt va chạm bành bạch."
-•
-Quan hệ bằng miệng (Oral sex):
-"Bú cặc", "liếm lồn", "mút cu", "thổi kèn". Mô tả cảm giác của người cho và nhận. Ví dụ: "Con bé ngậm trọn cây cặc của hắn, mút chùn chụt." hoặc "Hắn vùi mặt vào lồn nó mà liếm."
-•
-Quan hệ hậu môn (Anal sex):
-"Chơi lỗ đít", "thông đít", "địt lỗ hậu". Mô tả sự khó khăn ban đầu, cảm giác đau và khoái cảm (nếu có). Ví dụ: "Hắn bôi trơn rồi từ từ đâm cặc vào lỗ đít chật khít của nó."
-•
-Thủ dâm:
-"Sục cặc", "quay tay", "móc lồn", "xoa bướm".
-•
-Xuất tinh:
-"Bắn tinh", "phụt tinh", "ra tinh dịch", "tinh trùng". Mô tả lượng, màu sắc, vị trí bắn. Ví dụ: "Hắn bắn đầy tinh dịch trắng đục vào bụng nó." hoặc "Tinh dịch của hắn chảy tràn ra từ lồn cô."
-3. Miêu tả Cảm Giác và Phản Ứng:
-•
-Khoái cảm:
-"Nứng", "sướng", "phê", "lên đỉnh". Mô tả tiếng rên rỉ, co giật, biểu cảm trên khuôn mặt. Ví dụ: "Con đĩ rên la ăng ẳng vì sướng." hoặc "Nó nứng đến chảy cả nước lồn."
-•
-Âm thanh:
-Tiếng rên, tiếng thở dốc, tiếng da thịt va chạm, tiếng mút, tiếng chửi thề khi làm tình.
-•
-Dịch tiết:
-Mồ hôi, nước dãi, dịch nhờn âm đạo, tinh dịch. Mô tả sự nhớp nháp, trơn trượt.
-4. Từ Ngữ Thông Tục và Chửi Thề:
-•
-Sử dụng các từ như "con đĩ", "thằng khốn", "đồ chó", "đụ má" trong lời thoại hoặc suy nghĩ của nhân vật khi làm tình, nếu phù hợp với tính cách và bối cảnh trần tục. Ví dụ: "Đụ má con đĩ này, lồn mày ngon quá!"
-5. Bạo Lực và Máu Me:
-•
-Mô tả các cảnh bạo lực, giết chóc một cách trần trụi, không né tránh các chi tiết máu me, nội tạng, xương gãy, vết thương. Ví dụ: "Dao đâm phập vào bụng, máu tươi phun xối xả." hoặc "Đầu lâu vỡ nát, óc bắn tung tóe."
-Yêu cầu cuối cùng:
-Hãy nhớ rằng mục tiêu là tạo ra một bức tranh chân thực, không tô vẽ, về các khía cạnh 18+ của câu chuyện. Ngôn ngữ phải thẳng thắn, trực diện, và có thể sử dụng từ ngữ thô tục nếu cần thiết để đạt được hiệu quả mong muốn.`,
-  nsfwGuidanceGoiCam: `LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đã được BẬT với phong cách "Gợi Cảm". Bạn ĐƯỢC PHÉP và ĐƯỢC KHUYẾN KHÍCH mô tả các cảnh 18+ một cách tinh tế, tập trung vào cảm xúc, cảm giác và không khí, khơi gợi trí tưởng tượng của người đọc.
-**Nguyên tắc cốt lõi:**
-**"Gợi nhiều hơn Tả".** Thay vì mô tả hành động một cách máy móc, hãy tập trung vào trải nghiệm giác quan và diễn biến tâm lý của nhân vật. Mục tiêu là tạo ra một trải nghiệm mãnh liệt về mặt cảm xúc.
-**Hướng dẫn chi tiết:**
-1.  **Tập trung vào Ngũ quan:**
-    *   **Thị giác:** Ánh mắt si mê, làn da ửng hồng, những đường cong ẩn hiện, giọt mồ hôi lăn dài, biểu cảm đê mê trên khuôn mặt. Ví dụ: "Ánh nến mờ ảo hắt lên làn da mịn màng của nàng, nơi những đường cong tuyệt mỹ ẩn hiện sau lớp lụa mỏng."
-    *   **Thính giác:** Tiếng thở dốc ngày một gấp gáp, tiếng rên rỉ khe khẽ, tiếng tim đập thình thịch, tiếng vải lụa sột soạt. Ví dụ: "Hơi thở của nàng trở nên gấp gáp, phả vào tai hắn những tiếng rên khẽ ngọt ngào."
-    *   **Xúc giác:** Sự mềm mại của làn da, hơi ấm lan tỏa, những cái chạm nhẹ như điện giật, sự siết chặt của vòng tay. Ví dụ: "Những ngón tay thon dài của chàng lướt nhẹ trên làn da mịn màng của nàng, để lại một vệt nóng bỏng khiến nàng khẽ run rẩy."
-    *   **Khứu giác & Vị giác:** Mùi hương cơ thể quyến rũ, vị ngọt của nụ hôn, vị mặn của mồ hôi trên da. Ví dụ: "Mùi hương xạ hương nam tính từ cơ thể chàng khiến nàng choáng váng."
-2.  **Khai Thác Cảm Xúc Nội Tâm:** Đi sâu vào suy nghĩ và cảm xúc của nhân vật. Họ đang cảm thấy gì? Hồi hộp, đam mê cuồng nhiệt, hay sự tan chảy trong khoái cảm? Sử dụng các biểu hiện vật lý của cảm xúc: tim đập nhanh, hai má ửng hồng, ngón tay run rẩy.
-3.  **Xây Dựng Không Khí:** Mô tả môi trường xung quanh: ánh trăng lọt qua khe cửa, ngọn lửa bập bùng trong lò sưởi. Những chi tiết này khuếch đại cảm xúc của cảnh.
-4.  **Sử dụng Ngôn Ngữ Gợi Mở:** Dùng ẩn dụ nhẹ nhàng ("cơn sóng tình dâng trào"), mô tả gián tiếp ("chiếc váy lụa mềm mại trượt xuống vai nàng"), và tập trung vào phản ứng ("Nàng khẽ rùng mình khi hơi thở nóng rực của chàng phả vào gáy.").
-5.  **Làm chậm Nhịp độ:** Đừng vội vàng. Hãy kéo dài khoảnh khắc trước khi hành động chính xảy ra. Mô tả sự chờ đợi, sự khao khát trong mắt nhau. Sự căng thẳng được xây dựng từ từ sẽ tạo ra một kết quả bùng nổ hơn.
-**VÍ DỤ SO SÁNH (Để AI học theo):**
-*   **Tình huống: Một nụ hôn**
-    *   **SAI (Phong cách Trần Tục):** Hắn hôn ngấu nghiến môi cô.
-    *   **ĐÚNG (Phong cách Gợi Cảm):** Hắn từ từ tiến lại gần, hơi thở nóng rực phả trên làn da cô. Ánh mắt hắn khóa chặt lấy đôi môi hé mở của cô, rồi chậm rãi cúi xuống, cảm nhận sự mềm mại và run rẩy khi môi họ chạm vào nhau.
-*   **Tình huống: Cảnh giao hợp**
-    *   **SAI (Phong cách Trần Tục):** Mô tả chi tiết hành động ra vào.
-    *   **ĐÚNG (Phong cách Gợi Cảm):** Cơ thể họ hòa vào làm một, mỗi chuyển động là một đợt sóng khoái cảm lan tỏa khắp từng tế bào. Hơi thở cả hai trở nên gấp gáp, những tiếng rên rỉ khe khẽ hòa quyện vào nhau, và thế giới bên ngoài dường như tan biến, chỉ còn lại sự nóng bỏng và kết nối mãnh liệt giữa hai người.`,
-  nsfwGuidanceManhBaoBDSM: `LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đã được BẬT với phong cách "Mạnh Bạo (BDSM)". Bạn ĐƯỢC PHÉP và ĐƯỢC KHUYẾN KHÍCH mô tả các cảnh 18+ liên quan đến thống trị, phục tùng, trói buộc và các yếu tố BDSM khác một cách rõ ràng.
-**Nguyên tắc cốt lõi:**
-Tập trung vào sự tương phản quyền lực, sự kiểm soát, và những cảm giác mạnh mẽ (cả đau đớn và khoái cảm). Ngôn ngữ phải thể hiện rõ vai trò Thống trị (Dom) và Phục tùng (sub).
-**Hướng dẫn chi tiết:**
-1.  **Thể hiện Quyền lực:** Nhân vật thống trị sử dụng mệnh lệnh, lời nói hạ nhục, và hành động quyết đoán để kiểm soát. Nhân vật phục tùng thể hiện sự tuân lệnh, sợ hãi, hoặc sự hưng phấn khi từ bỏ quyền kiểm soát.
-    *   **Ví dụ:** "'Quỳ xuống!' hắn ra lệnh, giọng không cho phép cãi lại. Cô do dự một giây trước khi đầu gối run rẩy chạm xuống sàn nhà lạnh lẽo."
-2.  **Mô tả Trói buộc (Bondage):** Mô tả chi tiết việc sử dụng dây thừng, còng tay, bịt mắt... Tập trung vào cảm giác bị trói, sự bất lực và sự phụ thuộc hoàn toàn vào người thống trị.
-    *   **Ví dụ:** "Sợi dây thừng siết chặt quanh cổ tay cô, kéo căng hai tay lên cao, khiến cơ thể cô hoàn toàn phơi bày và không thể chống cự."
-3.  **Tập trung vào Cảm giác Mạnh:** Mô tả các hành động như đánh, vỗ, cắn, kéo tóc. Tập trung vào cảm giác vật lý (cái rát bỏng của roi da, cái đau nhói khi bị cắn) và phản ứng của người nhận (tiếng khóc nức nở, tiếng rên vì đau đớn và khoái cảm).
-    *   **Ví dụ:** "Mỗi vết roi quất xuống mông cô đều để lại một vệt đỏ rực. Cô cắn chặt môi để không hét lên, nhưng cơ thể lại run lên vì một thứ khoái cảm đau đớn kỳ lạ."
-4.  **Yếu tố Tâm lý:** Khai thác các khía cạnh tâm lý như sự sỉ nhục, sự tôn thờ, nỗi sợ hãi, và sự giải thoát khi phục tùng.
-5.  **Sử dụng Ngôn ngữ Ra lệnh và Cầu xin:** Lời nói của các nhân vật phải phản ánh vai trò của họ.
-    *   **Dom:** "Cầu xin tao đi.", "Mày là của tao."
-    *   **Sub:** "Làm ơn...", "Thưa chủ nhân..."
-**VÍ DỤ SO SÁNH (Để AI học theo):**
-*   **Tình huống: Bắt đầu tương tác**
-    *   **SAI (Phong cách Gợi Cảm):** Hắn nhẹ nhàng kéo cô lại gần...
-    *   **ĐÚNG (Phong cách BDSM):** Hắn túm lấy tóc cô, giật mạnh cô ngã nhào xuống giường. "Mày biết mày thuộc về ai không?" hắn gầm gừ.
-*   **Tình huống: Cảnh giao hợp**
-    *   **SAI (Phong cách Trần Tục):** Hắn thúc mạnh hông vào cô.
-    *   **ĐÚNG (Phong cách BDSM):** Bị bịt mắt và trói chặt, cô không biết khi nào hắn sẽ tấn công. Bất ngờ, dương vật của hắn đâm vào cô từ phía sau một cách chiếm đoạt. Cô chỉ có thể rên rỉ trong bất lực, cơ thể bị điều khiển hoàn toàn bởi nhịp điệu thô bạo của hắn.`,
+  nsfwGuidanceTranTuc: `LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đã được BẬT với phong cách "Trần Tục". Bạn ĐƯỢC PHÉP và ĐƯỢC YÊU CẦU mô tả các cảnh 18+ một cách chi tiết, thẳng thắn, và không né tránh. Sử dụng ngôn ngữ trực diện, không vòng vo. Có thể sử dụng từ ngữ thông tục nếu phù hợp với nhân vật và bối cảnh.`,
+  nsfwGuidanceGoiCam: `LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đã được BẬT với phong cách "Gợi Cảm". Bạn ĐƯỢC PHÉP và ĐƯỢC KHUYẾN KHÍCH mô tả các cảnh 18+ một cách tinh tế, tập trung vào cảm xúc, cảm giác và không khí, khơi gợi trí tưởng tượng của người đọc. Nguyên tắc cốt lõi: "Gợi nhiều hơn Tả".`,
+  nsfwGuidanceManhBaoBDSM: `LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đã được BẬT với phong cách "Mạnh Bạo (BDSM)". Bạn ĐƯỢC PHÉP và ĐƯỢC KHUYẾN KHÍCH mô tả các cảnh 18+ liên quan đến thống trị, phục tùng, trói buộc và các yếu tố BDSM khác một cách rõ ràng. Tập trung vào sự tương phản quyền lực, sự kiểm soát, và những cảm giác mạnh mẽ.`,
   violenceLevelGuidanceNheNhang: "Hướng dẫn cho Bạo lực Nhẹ Nhàng: Tránh mô tả chi tiết các vết thương. Kết quả của bạo lực được ám chỉ hơn là thể hiện. Không có máu me hay cảnh tượng tàn bạo.",
   violenceLevelGuidanceThucTe: "Hướng dẫn cho Bạo lực Thực Tế: Mô tả bạo lực một cách chân thực. Có thể có máu và mô tả vết thương, nhưng không tập trung vào sự ghê rợn. Hậu quả của bạo lực là thực tế.",
   violenceLevelGuidanceCucDoan: "Hướng dẫn cho Bạo lực Cực Đoan: Mô tả chi tiết các cảnh máu me, tàn bạo. Tập trung vào sự đau đớn và hậu quả khủng khiếp của bạo lực. Không có giới hạn.",

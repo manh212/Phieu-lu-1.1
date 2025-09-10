@@ -1,6 +1,5 @@
-// FIX: Correct import path for types
+// constants/knowledgeBase.ts
 import type { KnowledgeBase, AIContextConfig } from '@/types/index';
-// FIX: Correct import for DEFAULT_PLAYER_STATS
 import { DEFAULT_PLAYER_STATS } from './character';
 import { MAX_AUTO_SAVE_SLOTS } from './game';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
@@ -48,7 +47,6 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   auctionState: null,
   slaveAuctionState: null, // New
   postCombatState: null, // NEW
-  // FIX: Renamed 'pendingCombat' to 'pendingOpponentIdsForCombat' to match the KnowledgeBase type.
   pendingOpponentIdsForCombat: null, // NEW for combat init
   userPrompts: [], // NEW
   // New Entities
@@ -62,9 +60,9 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   aiRulebook: { ...DEFAULT_AI_RULEBOOK }, // NEW: Initialize with default rule content
   aiCopilotConfigs: [], // NEW
   activeAICopilotConfigId: null, // NEW
-  
+  stagedActions: {},
   // NEW: Living World State
   isWorldTicking: false,
-  // FIX: Changed lastWorldTickTurn to lastWorldTickDate to match the KnowledgeBase type.
   lastWorldTickDate: { day: 1, month: 1, year: 1, hour: 0, minute: 0 },
+  narrativeDirectiveForNextTurn: undefined,
 };

@@ -61,13 +61,13 @@ export const getSeason = (date: WorldDate): string => {
 
 export const getTimeOfDayContext = (date: WorldDate): string => {
     const hour = date.hour;
-    if (hour >= 5 && hour < 8) return `Bình minh đang lên, trời se lạnh. NPC thường thức dậy, chuẩn bị cho ngày mới.`;
-    if (hour >= 8 && hour < 12) return `Trời sáng rõ, nắng ấm. NPC đang làm việc, các khu chợ và cửa hàng đông đúc.`;
-    if (hour >= 12 && hour < 14) return `Giữa trưa, nắng gắt. Nhiều NPC nghỉ ngơi, quán ăn và tửu điếm đông khách.`;
-    if (hour >= 14 && hour < 18) return `Buổi chiều, nắng dịu. NPC tiếp tục công việc, một số bắt đầu trở về nhà.`;
-    if (hour >= 18 && hour < 20) return `Hoàng hôn, trời tối dần. Đèn đuốc được thắp lên. NPC tan làm, các hoạt động giải trí ban đêm bắt đầu.`;
-    if (hour >= 20 && hour < 24) return `Đêm khuya, đường phố vắng vẻ. Hầu hết NPC đã về nhà nghỉ ngơi. Các hoạt động mờ ám có thể diễn ra.`;
-    return `Canh khuya, trời tối đen như mực. Hầu hết mọi người đã ngủ say. Đây là thời điểm nguy hiểm nhất.`;
+    if (hour >= 5 && hour < 8) return `**Bình minh (05:00-08:00):** Ánh sáng yếu ớt, trời se lạnh, có thể có sương mù. Các NPC nông dân, phu khuân vác bắt đầu ngày làm việc. Chợ và cửa hàng đang dọn hàng. Thích hợp cho việc quan sát, phục kích kẻ địch rời thành, hoặc hành động lén lút.`;
+    if (hour >= 8 && hour < 12) return `**Buổi sáng (08:00-12:00):** Trời sáng rõ, nắng ấm, tầm nhìn tốt. Đường phố và chợ đông đúc, các cửa tiệm, cơ quan hành chính đều mở cửa. Thời điểm tốt nhất để mua sắm, giao nhiệm vụ công khai, và thu thập thông tin. Các hành động mờ ám dễ bị phát hiện.`;
+    if (hour >= 12 && hour < 14) return `**Buổi trưa (12:00-14:00):** Nắng có thể gay gắt, nhiệt độ cao nhất trong ngày. Nhiều NPC nghỉ trưa, các quán ăn và tửu điếm đông khách. Lính canh có thể lơ là hơn. Thời điểm tốt để tìm các NPC cụ thể tại các điểm ăn uống, nghỉ ngơi.`;
+    if (hour >= 14 && hour < 18) return `**Buổi chiều (14:00-18:00):** Nắng dịu, không khí mát mẻ hơn. NPC tiếp tục công việc buổi chiều nhưng có thể đã mệt mỏi. Một số người bắt đầu tan làm và trở về nhà. Ánh sáng yếu dần về cuối buổi, tạo điều kiện cho các hoạt động cần che giấu.`;
+    if (hour >= 18 && hour < 20) return `**Hoàng hôn (18:00-20:00):** Ánh sáng vàng cam, bóng tối dài ra. Đèn đuốc trong thành được thắp lên. Lính canh đổi gác. Các hoạt động giải trí về đêm như tửu điếm, kỹ viện bắt đầu nhộn nhịp. Thời điểm chuyển giao, lý tưởng cho các cuộc phục kích hoặc đột nhập.`;
+    if (hour >= 20 && hour < 24) return `**Buổi tối (20:00-00:00):** Trời tối hẳn, đường phố vắng vẻ hơn. Hầu hết các cửa tiệm thông thường đã đóng cửa, chỉ còn các tụ điểm giải trí về đêm hoạt động. Các hoạt động của thế giới ngầm, giao dịch mờ ám diễn ra. Nguy cơ bị tấn công trên đường vắng cao hơn.`;
+    return `**Nửa đêm (00:00-05:00):** Trời tối đen như mực, tĩnh lặng. Hầu hết mọi người đã ngủ say, chỉ có lính canh tuần tra và các sinh vật bóng đêm hoạt động. Đây là thời điểm nguy hiểm nhất nhưng cũng là lý tưởng nhất cho các hành động đột nhập, ám sát hoặc yêu cầu sự lén lút tuyệt đối.`;
 };
 
 export const parseDurationString = (durationStr: string): { days: number } => {

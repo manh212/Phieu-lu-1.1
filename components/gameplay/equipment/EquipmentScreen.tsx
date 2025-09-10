@@ -216,7 +216,6 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
               })}
             </div>
           </div>
-          {/* FIX: Removed incorrect and unnecessary props. `onPlayerAvatarUploadRequest` is for the character side panel context, not here. */}
           <PlayerStatsWithEquipment
             personId={'player'}
             playerStats={knowledgeBase.playerStats}

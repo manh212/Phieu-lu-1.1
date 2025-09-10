@@ -6,6 +6,7 @@ import { GameMessage } from '../../types/index';
 import Spinner from '../ui/Spinner';
 import { parseTagValue } from '../../utils/gameLogicUtils';
 import ToggleSwitch from '../ui/ToggleSwitch';
+import { AVAILABLE_MODELS } from '../../constants';
 
 interface AICopilotPanelProps {
   isOpen: boolean;
@@ -84,6 +85,8 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
     sentPromptsLog, // Get the log of sent prompts
     handleRewriteTurn, // Get the new function from context
     resetCopilotConversation,
+    knowledgeBase,
+    setKnowledgeBase,
   } = useGame();
 
   const [userInput, setUserInput] = useState('');
@@ -139,6 +142,25 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
     const tagsString = tags.join('\n');
     await handleProcessDebugTags(narrationForProcessing, tagsString);
     showNotification("Các thay đổi từ Siêu Trợ Lý đã được áp dụng!", "success");
+  };
+
+  const activeCopilotConfig = useMemo(() => {
+    if (!knowledgeBase.aiCopilotConfigs || !knowledgeBase.activeAICopilotConfigId) return null;
+    return knowledgeBase.aiCopilotConfigs.find(c => c.id === knowledgeBase.activeAICopilotConfigId);
+  }, [knowledgeBase.aiCopilotConfigs, knowledgeBase.activeAICopilotConfigId]);
+
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newModel = e.target.value;
+      if (!activeCopilotConfig) return;
+
+      setKnowledgeBase(prevKb => {
+          const newKb = JSON.parse(JSON.stringify(prevKb));
+          const configToUpdate = newKb.aiCopilotConfigs.find((c: any) => c.id === newKb.activeAICopilotConfigId);
+          if (configToUpdate) {
+              configToUpdate.model = newModel;
+          }
+          return newKb;
+      });
   };
   
   const quickActions = [
@@ -207,29 +229,46 @@ const AICopilotPanel: React.FC<AICopilotPanelProps> = ({ isOpen, onClose }) => {
                     </Button>
                 ))}
             </div>
-            <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-2">
                 <textarea
                   value={userInput}
                   onChange={(e) => setUserInput(e.target.value)}
                   placeholder="Hỏi hoặc ra lệnh cho AI..."
-                  className="flex-grow p-2 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white placeholder-gray-400 resize-none text-sm"
+                  className="w-full p-2 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white placeholder-gray-400 resize-none text-sm"
                   rows={3}
                   disabled={isLoadingApi}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e); } }}
                 />
-                <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                    <ToggleSwitch
-                        id="copilot-mode-toggle"
-                        checked={isActionModus}
-                        onChange={setIsActionModus}
-                        disabled={isLoadingApi}
-                    />
-                    <label htmlFor="copilot-mode-toggle" className="text-xs text-gray-400 cursor-pointer">
-                        {isActionModus ? 'Hành Động' : 'Thảo Luận'}
-                    </label>
+                <div className="flex gap-2 items-center justify-end">
+                    <div className="flex items-center gap-1">
+                        <select
+                            id="copilot-model-selector"
+                            aria-label="Chọn model cho Siêu Trợ Lý"
+                            value={activeCopilotConfig?.model || ''}
+                            onChange={handleModelChange}
+                            disabled={isLoadingApi}
+                            className="p-1 bg-gray-600 border border-gray-500 rounded-md focus:ring-indigo-500 text-white text-xs"
+                            style={{ maxWidth: '150px' }}
+                        >
+                            {AVAILABLE_MODELS.map(model => (
+                                <option key={model.id} value={model.id}>{model.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <ToggleSwitch
+                            id="copilot-mode-toggle"
+                            checked={isActionModus}
+                            onChange={setIsActionModus}
+                            disabled={isLoadingApi}
+                        />
+                        <label htmlFor="copilot-mode-toggle" className="text-xs text-gray-400 cursor-pointer">
+                            {isActionModus ? 'Hành Động' : 'Thảo Luận'}
+                        </label>
+                    </div>
+                    <Button type="submit" disabled={isLoadingApi || !userInput.trim()}>Gửi</Button>
                 </div>
-                <Button type="submit" disabled={isLoadingApi || !userInput.trim()} className="self-stretch">Gửi</Button>
-          </form>
+            </form>
         </div>
       </div>
     </OffCanvasPanel>

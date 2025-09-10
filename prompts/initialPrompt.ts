@@ -168,6 +168,10 @@ Hiện tại người chơi đã chọn độ khó: **${worldConfig.difficulty}*
 **CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH:**
 ${nsfwGuidanceCombined}
 
+---
+**PHẦN 3: QUY TẮC VÀ HƯỚNG DẪN CHI TIẾT**
+Đây là các quy tắc bạn phải tuân theo để tạo ra phản hồi hợp lệ.
+
 **QUY TẮC HỆ THỐNG (CHO VIỆC KHỞI TẠO BAN ĐẦU):**
 1.  **Khởi tạo Chỉ số Nhân Vật:** Dựa vào thông tin trên, hãy quyết định các chỉ số ban đầu cho nhân vật. Trả về dưới dạng tag \\\`[PLAYER_STATS_INIT: sinhLuc=X,${isCultivationEnabled ? 'linhLuc=Y,thoNguyen=A,maxThoNguyen=B,' : ''}kinhNghiem=0,realm="${effectiveStartingRealm}",currency=${worldConfig.startingCurrency},turn=1${isCultivationEnabled ? `,hieuUngBinhCanh=false,spiritualRoot="${worldConfig.playerSpiritualRoot || 'Phàm Căn'}",specialPhysique="${worldConfig.playerSpecialPhysique || 'Phàm Thể'}"` : ''}]\`\\\`.
     **QUAN TRỌNG:**

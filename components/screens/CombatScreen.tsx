@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useCombat } from '../../hooks/useCombat';
 import { useGame } from '../../hooks/useGame';
@@ -70,7 +71,6 @@ const CombatScreen: React.FC = () => {
         }
 
         // All remaining actions require the user to select a target from the UI.
-        // The old `if (targetType === 'none')` block is removed as it was unreachable code.
         setPendingAction(selection);
         setInteractionState('selecting_target');
         setIsPlayerTargetable(targetType === 'self');

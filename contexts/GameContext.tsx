@@ -1,6 +1,5 @@
 import React, { createContext, ReactNode, useRef, useState, useCallback, useEffect } from 'react';
 import * as jsonpatch from 'fast-json-patch';
-// FIX: Corrected import paths for types and removed unused imports.
 import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction, CombatLogContent } from '@/types/index';
 import { INITIAL_KNOWLEDGE_BASE, VIETNAMESE, APP_VERSION, MAX_AUTO_SAVE_SLOTS, TURNS_PER_PAGE, DEFAULT_TIERED_STATS, KEYFRAME_INTERVAL, EQUIPMENT_SLOTS_CONFIG } from '@/constants/index';
 import { saveGameToIndexedDB, loadGamesFromIndexedDB, loadSpecificGameFromIndexedDB, deleteGameFromIndexedDB, importGameToIndexedDB, resetDBConnection as resetIndexedDBConnection } from '../services/indexedDBService';
@@ -21,12 +20,10 @@ import {
     generateWorldTickUpdate,
     generateImageUnified,
     generateCopilotResponse,
-    countTokens,
     getApiSettings as getGeminiApiSettings
 } from '../services';
 import { uploadImageToCloudinary } from '../services/cloudinaryService';
 import { isValidImageUrl } from '../utils/imageValidationUtils';
-// FIX: Add missing utility function imports.
 import { performTagProcessing, handleLevelUps, calculateEffectiveStats, addTurnHistoryEntryRaw, updateGameEventsStatus, handleLocationEntryEvents } from '../utils/gameLogicUtils';
 
 // Import action hooks
@@ -38,7 +35,7 @@ import { useCharacterActions } from '../hooks/actions/useCharacterActions';
 import { usePostCombatActions } from '../hooks/actions/usePostCombatActions';
 import { useLivingWorldActions } from '../hooks/actions/useLivingWorldActions';
 import { useCopilotActions } from '../hooks/actions/useCopilotActions';
-import { useGameActions } from '../hooks/useGameActions'; // NEW IMPORT
+import { useGameActions } from '../hooks/useGameActions';
 
 
 // Define the shape of the context value
@@ -48,7 +45,7 @@ export interface GameContextType {
     knowledgeBase: KnowledgeBase;
     gameMessages: GameMessage[];
     aiCopilotMessages: GameMessage[];
-    sentCopilotPromptsLog: string[]; // NEW
+    sentCopilotPromptsLog: string[];
     styleSettings: StyleSettings;
     storageSettings: StorageSettings;
     isInitialLoading: boolean;
@@ -84,13 +81,11 @@ export interface GameContextType {
     receivedPrisonerResponsesLog: string[];
     sentCompanionPromptsLog: string[];
     receivedCompanionResponsesLog: string[];
-    retrievedRagContextLog: string[]; // NEW
-    // New log states
+    retrievedRagContextLog: string[];
     sentCombatSummaryPromptsLog: string[];
     receivedCombatSummaryResponsesLog: string[];
     sentVictoryConsequencePromptsLog: string[];
     receivedVictoryConsequenceResponsesLog: string[];
-    // Living World Debug States (Phase 4)
     sentLivingWorldPromptsLog: string[];
     rawLivingWorldResponsesLog: string[];
     lastScoredNpcsForTick: { npc: NPC, score: number }[];
@@ -98,7 +93,6 @@ export interface GameContextType {
     totalPages: number;
     messageIdBeingEdited: string | null;
 
-    // New Context Strings for Prompts
     currentPageMessagesLog: string;
     previousPageSummaries: string[];
     lastNarrationFromPreviousPage?: string;
@@ -106,12 +100,12 @@ export interface GameContextType {
     // Modal State
     selectedEntity: { type: GameEntityType; entity: GameEntity } | null;
     isStyleSettingsModalOpen: boolean;
-    isAiContextModalOpen: boolean; // NEW
+    isAiContextModalOpen: boolean;
     activeEconomyModal: {type: 'marketplace' | 'shopping_center', locationId: string} | null;
     activeSlaveMarketModal: {locationId: string} | null;
 
     // Actions (will be populated by allActions)
-    resetCopilotConversation: () => void; // NEW
+    resetCopilotConversation: () => void;
     [key: string]: any; // Index signature to allow dynamic action properties
 }
 
@@ -249,49 +243,50 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         gameData.setCurrentPageDisplay(clamp(page, 1, gameData.totalPages));
     }, [gameData, isSummarizingNextPageTransition]);
     
-    // *** RESTRUCTURED COMPOSITION ROOT TO FIX DEPENDENCY ISSUES ***
 
-    // Step 1: Instantiate independent action hooks first.
-    const gameActions = useGameActions({
-        ...gameData,
-        showNotification, // PASSED IN
-        setCurrentScreen,
-        justLoadedGame,
-        setIsSummarizingOnLoad,
-    });
+    const gameActions = useGameActions({ ...gameData, showNotification, setCurrentScreen, justLoadedGame, setIsSummarizingOnLoad });
 
-    // Step 2: Create a base props object for hooks that have dependencies.
-    const basePropsForDependentHooks = {
-        ...gameData,
-        showNotification, // PASSED IN
-        setCurrentScreen,
-        onQuit,
-        isLoadingApi,
-        setIsLoadingApi,
-        isCultivating,
-        setIsCultivating,
-        isAutoPlaying,
-        setIsAutoPlaying,
-        resetApiError,
-        setApiErrorWithTimeout,
-        logNpcAvatarPromptCallback,
-        currentPageMessagesLog,
-        previousPageSummaries: previousPageSummariesContent,
-        lastNarrationFromPreviousPage,
-    };
-    
-    // Step 3: Instantiate hooks that are dependencies for other actions.
     const postCombatActions = usePostCombatActions({
-        ...basePropsForDependentHooks,
-        setRawAiResponsesLog: gameData.setRawAiResponsesLog,
-        setSentPromptsLog: gameData.setSentPromptsLog,
+        ...gameData, showNotification, setCurrentScreen, onQuit, isLoadingApi, setIsLoadingApi,
+        resetApiError, setApiErrorWithTimeout, logNpcAvatarPromptCallback,
+        setRawAiResponsesLog: gameData.setRawAiResponsesLog, setSentPromptsLog: gameData.setSentPromptsLog,
         setSentCombatSummaryPromptsLog: gameData.setSentCombatSummaryPromptsLog,
         setReceivedCombatSummaryResponsesLog: gameData.setReceivedCombatSummaryResponsesLog,
         setSentVictoryConsequencePromptsLog: gameData.setSentVictoryConsequencePromptsLog,
-        setReceivedVictoryConsequenceResponsesLog: gameData.setReceivedVictoryConsequenceResponsesLog
-    } as any);
+        setReceivedVictoryConsequenceResponsesLog: gameData.setReceivedVictoryConsequenceResponsesLog,
+// FIX: Changed 'previousPageSummaries' to 'previousPageSummariesContent' to match the declared variable.
+        currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
+    });
 
-    // Step 4: Define callbacks that have complex dependencies, passing dependencies explicitly.
+    const livingWorldActions = useLivingWorldActions({
+        ...gameData, showNotification, logNpcAvatarPromptCallback,
+        setSentLivingWorldPromptsLog: gameData.setSentLivingWorldPromptsLog,
+        setRawLivingWorldResponsesLog: gameData.setRawLivingWorldResponsesLog,
+        setLastScoredNpcsForTick: gameData.setLastScoredNpcsForTick,
+    });
+
+    const mainGameLoopActions = useMainGameLoopActions({
+// FIX: Added missing 'setCurrentPageDisplay' prop.
+        ...gameData, showNotification, setCurrentPageDisplay: gameData.setCurrentPageDisplay, onQuit, isLoadingApi, setIsLoadingApi,
+        resetApiError, setApiErrorWithTimeout, isAutoPlaying, setIsAutoPlaying,
+        executeSaveGame: gameActions.onSaveGame as any,
+        logNpcAvatarPromptCallback,
+        handleNonCombatDefeat: postCombatActions.handleNonCombatDefeat,
+        executeWorldTick: livingWorldActions.executeWorldTick,
+// FIX: Changed 'previousPageSummaries' to 'previousPageSummariesContent' to match the declared variable.
+        currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
+        setRawAiResponsesLog: gameData.setRawAiResponsesLog,
+        sentPromptsLog: gameData.sentPromptsLog,
+        setSentPromptsLog: gameData.setSentPromptsLog,
+        setLatestPromptTokenCount: gameData.setLatestPromptTokenCount,
+        setSummarizationResponsesLog: gameData.setSummarizationResponsesLog,
+        isSummarizingNextPageTransition, setIsSummarizingNextPageTransition,
+        setRetrievedRagContextLog: gameData.setRetrievedRagContextLog,
+        // FIX: Pass the missing log setters from gameData to the main game loop actions hook.
+        setSentGeneralSubLocationPromptsLog: gameData.setSentGeneralSubLocationPromptsLog,
+        setReceivedGeneralSubLocationResponsesLog: gameData.setReceivedGeneralSubLocationResponsesLog,
+    });
+
     const handleProcessDebugTags = useCallback(async (narration: string, tags: string) => {
         setIsLoadingApi(true);
         try {
@@ -302,10 +297,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             const turnForMessages = gameData.knowledgeBase.playerStats.turn;
     
-            const { newKb: kbAfterTags, systemMessagesFromTags } = await performTagProcessing(
+            const { newKb: kbAfterTags, systemMessagesFromTags, rewriteTurnDirective } = await performTagProcessing(
                 gameData.knowledgeBase, tagArray, turnForMessages,
                 gameData.setKnowledgeBase, logNpcAvatarPromptCallback
             );
+
+            // NEW: Handle Rewrite Turn directive from Copilot
+            if (rewriteTurnDirective) {
+                await mainGameLoopActions.handleRewriteTurn(rewriteTurnDirective);
+                return; // Stop further processing for this call
+            }
     
             let finalKb = handleLevelUps(kbAfterTags).updatedKb;
             finalKb.playerStats = calculateEffectiveStats(finalKb.playerStats, finalKb.equippedItems, finalKb.inventory);
@@ -333,146 +334,68 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } finally {
             setIsLoadingApi(false);
         }
-    }, [gameData, setIsLoadingApi, showNotification, logNpcAvatarPromptCallback, postCombatActions.handleNonCombatDefeat]);
+    }, [gameData, setIsLoadingApi, showNotification, logNpcAvatarPromptCallback, postCombatActions.handleNonCombatDefeat, mainGameLoopActions.handleRewriteTurn]);
     
-    // Step 5: Instantiate the rest of the action hooks, now that their dependencies are defined.
-    const livingWorldActions = useLivingWorldActions({
-        ...basePropsForDependentHooks,
-        setSentLivingWorldPromptsLog: gameData.setSentLivingWorldPromptsLog,
-        setRawLivingWorldResponsesLog: gameData.setRawLivingWorldResponsesLog,
-        setLastScoredNpcsForTick: gameData.setLastScoredNpcsForTick,
-    } as any);
-
-    const mainGameLoopActions = useMainGameLoopActions({
-        ...basePropsForDependentHooks,
-        executeSaveGame: gameActions.onSaveGame,
-        handleNonCombatDefeat: postCombatActions.handleNonCombatDefeat,
-        executeWorldTick: livingWorldActions.executeWorldTick,
-        handleProcessDebugTags,
-        isSummarizingNextPageTransition,
-        setIsSummarizingNextPageTransition,
-        // Pass all log setters
-        setRawAiResponsesLog: gameData.setRawAiResponsesLog,
-        sentPromptsLog: gameData.sentPromptsLog,
-        setSentPromptsLog: gameData.setSentPromptsLog,
-        setLatestPromptTokenCount: gameData.setLatestPromptTokenCount,
-        setSummarizationResponsesLog: gameData.setSummarizationResponsesLog,
-        setSentEconomyPromptsLog: gameData.setSentEconomyPromptsLog,
-        setReceivedEconomyResponsesLog: gameData.setReceivedEconomyResponsesLog,
-        setSentGeneralSubLocationPromptsLog: gameData.setSentGeneralSubLocationPromptsLog,
-        setReceivedGeneralSubLocationResponsesLog: gameData.setReceivedGeneralSubLocationResponsesLog,
-        setRetrievedRagContextLog: gameData.setRetrievedRagContextLog
-    } as any);
-
     const setupActions = useSetupActions({
-        ...basePropsForDependentHooks,
+        setIsLoadingApi, resetApiError, setKnowledgeBase: gameData.setKnowledgeBase,
+        setCurrentPageDisplay: gameData.setCurrentPageDisplay, setCurrentScreen,
+        addMessageAndUpdateState: gameData.addMessageAndUpdateState,
         logSentPromptCallback: mainGameLoopActions.logSentPromptCallback,
         setRawAiResponsesLog: gameData.setRawAiResponsesLog,
-    } as any);
-
+        setApiErrorWithTimeout, logNpcAvatarPromptCallback,
+    });
+    
     const auctionActions = useAuctionActions({
-        ...basePropsForDependentHooks,
+        ...gameData, showNotification, setCurrentScreen, isLoadingApi, setIsLoadingApi,
+        resetApiError, setApiErrorWithTimeout, logNpcAvatarPromptCallback,
         setSentEconomyPromptsLog: gameData.setSentEconomyPromptsLog,
         setReceivedEconomyResponsesLog: gameData.setReceivedEconomyResponsesLog,
-    } as any);
-
+    });
+    
     const cultivationActions = useCultivationActions({
-        ...basePropsForDependentHooks,
+// FIX: Removed incorrect 'isCultivating' prop. 'setIsCultivating' is correct and already present.
+        ...gameData, showNotification, setCurrentScreen, setIsCultivating,
+        resetApiError, setApiErrorWithTimeout, logNpcAvatarPromptCallback,
         setSentCultivationPromptsLog: gameData.setSentCultivationPromptsLog,
         setReceivedCultivationResponsesLog: gameData.setReceivedCultivationResponsesLog,
-    } as any);
+// FIX: Changed 'previousPageSummaries' to 'previousPageSummariesContent' to match the declared variable.
+        currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
+    });
 
     const characterActions = useCharacterActions({
-        ...basePropsForDependentHooks,
-        handleProcessDebugTags,
-        // Pass prisoner/companion log setters
-        prisonerInteractionLog: gameData.prisonerInteractionLog,
-        setPrisonerInteractionLog: gameData.setPrisonerInteractionLog,
-        sentPrisonerPromptsLog: gameData.sentPrisonerPromptsLog,
-        setSentPrisonerPromptsLog: gameData.setSentPrisonerPromptsLog,
-        receivedPrisonerResponsesLog: gameData.receivedPrisonerResponsesLog,
-        setReceivedPrisonerResponsesLog: gameData.setReceivedPrisonerResponsesLog,
-        companionInteractionLog: gameData.companionInteractionLog,
-        setCompanionInteractionLog: gameData.setCompanionInteractionLog,
-        sentCompanionPromptsLog: gameData.sentCompanionPromptsLog,
-        setSentCompanionPromptsLog: gameData.setSentCompanionPromptsLog,
-        receivedCompanionResponsesLog: gameData.receivedCompanionResponsesLog,
-        setReceivedCompanionResponsesLog: gameData.setReceivedCompanionResponsesLog,
-    } as any);
+        ...gameData, showNotification, setCurrentScreen, isLoadingApi, setIsLoadingApi,
+        resetApiError, setApiErrorWithTimeout, logNpcAvatarPromptCallback,
+// FIX: Changed 'previousPageSummaries' to 'previousPageSummariesContent' to match the declared variable.
+        handleProcessDebugTags, currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
+        prisonerInteractionLog: gameData.prisonerInteractionLog, setPrisonerInteractionLog: gameData.setPrisonerInteractionLog,
+        sentPrisonerPromptsLog: gameData.sentPrisonerPromptsLog, setSentPrisonerPromptsLog: gameData.setSentPrisonerPromptsLog,
+        receivedPrisonerResponsesLog: gameData.receivedPrisonerResponsesLog, setReceivedPrisonerResponsesLog: gameData.setReceivedPrisonerResponsesLog,
+        companionInteractionLog: gameData.companionInteractionLog, setCompanionInteractionLog: gameData.setCompanionInteractionLog,
+        sentCompanionPromptsLog: gameData.sentCompanionPromptsLog, setSentCompanionPromptsLog: gameData.setSentCompanionPromptsLog,
+        receivedCompanionResponsesLog: gameData.receivedCompanionResponsesLog, setReceivedCompanionResponsesLog: gameData.setReceivedCompanionResponsesLog,
+    });
     
     const copilotActions = useCopilotActions({
-        ...basePropsForDependentHooks,
-        handleProcessDebugTags,
+        ...gameData, isLoadingApi, setIsLoadingApi,
+        resetApiError, setApiErrorWithTimeout,
         sentPromptsLog: gameData.sentPromptsLog,
-        sentCopilotPromptsLog: gameData.sentCopilotPromptsLog,
-        setSentCopilotPromptsLog: gameData.setSentCopilotPromptsLog,
-    } as any);
+    });
 
-    // Step 6: Combine all actions into a single object for the context value.
-    const allActions = {
-        ...setupActions,
-        ...mainGameLoopActions,
-        ...auctionActions,
-        ...cultivationActions,
-        ...characterActions,
-        ...postCombatActions,
-        ...livingWorldActions,
-        ...copilotActions,
-        ...gameActions,
-        handleProcessDebugTags, // Expose the standalone function
-    };
-
+    const allActions = { ...setupActions, ...mainGameLoopActions, ...auctionActions, ...cultivationActions, ...characterActions, ...postCombatActions, ...livingWorldActions, ...copilotActions, ...gameActions, handleProcessDebugTags };
     const isCurrentlyActivePage = gameData.currentPageDisplay === gameData.totalPages;
     
     const contextValue: GameContextType = {
-        ...gameData,
-        currentScreen,
-        styleSettings,
-        storageSettings,
-        isInitialLoading,
-        storageInitError,
-        notification,
-        showNotification,
-        apiError,
-        isLoadingApi,
-        isSummarizingNextPageTransition,
-        isAutoPlaying,
-        isSavingGame,
-        isAutoSaving,
-        isSummarizingOnLoad,
-        isCraftingItem,
-        isUploadingAvatar,
-        isCultivating,
-        sentNpcAvatarPromptsLog,
-        currentPageMessagesLog,
-        previousPageSummaries: previousPageSummariesContent,
-        lastNarrationFromPreviousPage,
-        selectedEntity,
-        isStyleSettingsModalOpen,
-        isAiContextModalOpen,
-        activeEconomyModal,
-        activeSlaveMarketModal,
-        setCurrentScreen,
-        setKnowledgeBase: gameData.setKnowledgeBase,
-        setGameMessages: gameData.setGameMessages,
-        setStyleSettings,
-        openEntityModal,
-        closeModal,
-        closeEconomyModal,
-        closeSlaveMarketModal,
-        setIsStyleSettingsModalOpen,
-        setIsAiContextModalOpen,
-        setActiveEconomyModal,
-        setActiveSlaveMarketModal,
-        ...allActions,
-        onQuit,
-        resetCopilotConversation,
-        isCurrentlyActivePage,
-        gameplayScrollPosition,
-        justLoadedGame,
-        onGoToPrevPage,
-        onGoToNextPage,
-        onJumpToPage,
+        ...gameData, currentScreen, styleSettings, storageSettings, isInitialLoading, storageInitError,
+        notification, showNotification, apiError, isLoadingApi, isSummarizingNextPageTransition,
+        isAutoPlaying, isSavingGame, isAutoSaving, isSummarizingOnLoad, isCraftingItem,
+        isUploadingAvatar, isCultivating, sentNpcAvatarPromptsLog, currentPageMessagesLog,
+        previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
+        selectedEntity, isStyleSettingsModalOpen, isAiContextModalOpen, activeEconomyModal, activeSlaveMarketModal,
+        setCurrentScreen, setKnowledgeBase: gameData.setKnowledgeBase, setGameMessages: gameData.setGameMessages,
+        setStyleSettings, openEntityModal, closeModal, closeEconomyModal, closeSlaveMarketModal,
+        setIsStyleSettingsModalOpen, setIsAiContextModalOpen, setActiveEconomyModal, setActiveSlaveMarketModal,
+        ...allActions, onQuit, resetCopilotConversation, isCurrentlyActivePage, gameplayScrollPosition, justLoadedGame,
+        onGoToPrevPage, onGoToNextPage, onJumpToPage,
     };
 
     return <GameContext.Provider value={contextValue}>{children}</GameContext.Provider>;

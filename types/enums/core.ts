@@ -17,4 +17,4 @@ export enum GameScreen {
 export type PlayerActionInputType = 'action' | 'story';
 export type ResponseLength = 'default' | 'short' | 'medium' | 'long';
 
-export const DIALOGUE_MARKER = '§';
+export const DIALOGUE_MARKER = '"';

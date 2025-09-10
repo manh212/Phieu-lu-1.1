@@ -30,6 +30,7 @@ const contextConfigToRulebookKeyMap: Partial<Record<keyof AIContextConfig, keyof
     sendSimpleCompanionRules: 'simpleCompanionRules',
     sendWorldProgressionRules: 'worldProgressionRules',
     sendSpecialEventRules: 'specialEventRules',
+    sendCultivationRules: 'cultivationRules', // NEW
 };
 
 
@@ -194,6 +195,7 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                              <ToggleRow id="toggle-rule-formatting" label="Quy Tắc Định Dạng & Hội Thoại" description="Bao gồm cấm tag trong lời kể và quy tắc đánh dấu hội thoại." isEnabled={settings.sendFormattingRules} onToggle={() => handleToggle('sendFormattingRules')} onEdit={() => setEditingRule({ key: 'formattingRules', label: 'Quy Tắc Định Dạng & Hội Thoại' })}/>
                              <ToggleRow id="toggle-rule-time" label="Quy Tắc Về Thời Gian ([CHANGE_TIME])" description="Gửi hướng dẫn về việc sử dụng tag thời gian." isEnabled={settings.sendTimeRules} onToggle={() => handleToggle('sendTimeRules')} onEdit={() => setEditingRule({ key: 'timeRules', label: 'Quy Tắc Về Thời Gian ([CHANGE_TIME])' })}/>
                              <ToggleRow id="toggle-rule-stats" label="Quy Tắc Về Chỉ Số ([STATS_UPDATE])" description="Gửi hướng dẫn về việc cập nhật chỉ số người chơi." isEnabled={settings.sendStatRules} onToggle={() => handleToggle('sendStatRules')} onEdit={() => setEditingRule({ key: 'statRules', label: 'Quy Tắc Về Chỉ Số ([STATS_UPDATE])' })}/>
+                             <ToggleRow id="toggle-rule-cultivation" label="Quy Tắc Về Tu Luyện" description="Gửi hướng dẫn về các tag đặc thù của tu luyện (vd: Bình Cảnh)." isEnabled={settings.sendCultivationRules} onToggle={() => handleToggle('sendCultivationRules')} onEdit={() => setEditingRule({ key: 'cultivationRules', label: 'Quy Tắc Về Tu Luyện' })}/>
                              <ToggleRow id="toggle-rule-items" label="Quy Tắc Về Vật Phẩm ([ITEM_*])" description="Gửi hướng dẫn về việc tạo, dùng, cập nhật vật phẩm." isEnabled={settings.sendItemRules} onToggle={() => handleToggle('sendItemRules')} onEdit={() => setEditingRule({ key: 'itemRules', label: 'Quy Tắc Về Vật Phẩm ([ITEM_*])' })}/>
                              <ToggleRow id="toggle-rule-skills" label="Quy Tắc Về Kỹ Năng ([SKILL_*])" description="Gửi hướng dẫn về việc học và cập nhật kỹ năng." isEnabled={settings.sendSkillRules} onToggle={() => handleToggle('sendSkillRules')} onEdit={() => setEditingRule({ key: 'skillRules', label: 'Quy Tắc Về Kỹ Năng ([SKILL_*])' })}/>
                              <ToggleRow id="toggle-rule-quests" label="Quy Tắc Về Nhiệm Vụ ([QUEST_*])" description="Gửi hướng dẫn về việc quản lý nhiệm vụ." isEnabled={settings.sendQuestRules} onToggle={() => handleToggle('sendQuestRules')} onEdit={() => setEditingRule({ key: 'questRules', label: 'Quy Tắc Về Nhiệm Vụ ([QUEST_*])' })}/>

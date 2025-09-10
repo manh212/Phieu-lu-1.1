@@ -1,9 +1,7 @@
-// FIX: Correct import path for types
+// constants/systemRulesNormal.ts
 import { WorldSettings, DIALOGUE_MARKER, TU_CHAT_TIERS, AIContextConfig, WorldDate, AIRulebook } from '../types/index';
-// FIX: Correct import path for types
 import * as GameTemplates from '../types/index';
 import { WEAPON_TYPES_FOR_VO_Y } from './character';
-// FIX: Correct import path for types
 import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../types/index';
 import { getTimeOfDayContext, getSeason } from '../utils/dateUtils';
 
@@ -29,10 +27,10 @@ export const DEFAULT_AI_RULEBOOK: AIRulebook = {
     rumorMill: `*   **A.4. CHỈ THỊ "CỐI XAY TIN ĐỒN"**
     *   Nội dung hội thoại của NPC phải đa dạng (chính trị, kinh tế, sự kiện, nhân vật nổi tiếng, chuyện lạ).
     *   **ĐỘ TIN CẬY:** Tin đồn có thể là **chính xác**, **bị phóng đại**, hoặc **hoàn toàn sai lệch**.`,
-    formattingRules: `**0. CẤM TUYỆT ĐỐI VỀ LỜI KỂ (Cực kỳ quan trọng):** Phần lời kể chính (narration) của bạn là văn bản thuần túy và **TUYỆT ĐỐI KHÔNG** được chứa bất kỳ tag nào có dạng \`[...]\`. Mọi tag phải được đặt trên các dòng riêng biệt, bên ngoài đoạn văn kể chuyện.\n**1.  Đánh Dấu Hội Thoại/Âm Thanh (QUAN TRỌNG):** Khi nhân vật nói chuyện, rên rỉ khi làm tình, hoặc kêu la khi chiến đấu, hãy đặt toàn bộ câu nói/âm thanh đó vào giữa hai dấu ngoặc kép và dấu '${DIALOGUE_MARKER}', hãy cho nhân vật và npc nói chuyện ở múc độ vừa phải ở những cuộc hội thoại bình thường và chiến đấu nhưng khi quan hệ tình dục thì hãy chèn thêm nhiều câu rên rỉ và những lời tục tĩu tăng tình thú giữa các hành động.
-    *   Ví dụ lời nói: AI kể: Hắn nhìn cô và nói ${DIALOGUE_MARKER}Em có khỏe không?${DIALOGUE_MARKER}.
-    *   Ví dụ tiếng rên: AI kể: Cô ấy khẽ rên ${DIALOGUE_MARKER}Ah...~${DIALOGUE_MARKER} khi bị chạm vào.
-    *   Ví dụ tiếng hét chiến đấu: AI kể: Tiếng hét ${DIALOGUE_MARKER}Xung phong!${DIALOGUE_MARKER} vang vọng chiến trường.
+    formattingRules: `**0. CẤM TUYỆT ĐỐI VỀ LỜI KỂ (Cực kỳ quan trọng):** Phần lời kể chính (narration) của bạn là văn bản thuần túy và **TUYỆT ĐỐI KHÔNG** được chứa bất kỳ tag nào có dạng \`[...]\`. Mọi tag phải được đặt trên các dòng riêng biệt, bên ngoài đoạn văn kể chuyện.\n**1.  Đánh Dấu Hội Thoại/Âm Thanh (QUAN TRỌNG):** Khi nhân vật nói chuyện, rên rỉ khi làm tình, hoặc kêu la khi chiến đấu, hãy đặt toàn bộ câu nói/âm thanh đó vào giữa hai dấu ngoặc kép và dấu '"', hãy cho nhân vật và npc nói chuyện ở múc độ vừa phải ở những cuộc hội thoại bình thường và chiến đấu nhưng khi quan hệ tình dục thì hãy chèn thêm nhiều câu rên rỉ và những lời tục tĩu tăng tình thú giữa các hành động.
+    *   Ví dụ lời nói: AI kể: Hắn nhìn cô và nói "Em có khỏe không?".
+    *   Ví dụ tiếng rên: AI kể: Cô ấy khẽ rên "Ah...~" khi bị chạm vào.
+    *   Ví dụ tiếng hét chiến đấu: AI kể: Tiếng hét "Xung phong!" vang vọng chiến trường.
     *   Phần văn bản bên ngoài các cặp marker này vẫn là lời kể bình thường của bạn. Chỉ nội dung *bên trong* cặp marker mới được coi là lời nói/âm thanh trực tiếp.`,
     timeRules: `**2.  Tag Thay Đổi Thời Gian & Bối Cảnh Môi Trường (CỰC KỲ QUAN TRỌNG):**
     *   **Bối cảnh thời gian & Môi trường:**
@@ -236,7 +234,17 @@ Nhiệm vụ của bạn là cung cấp tổng cộng 5-6 lựa chọn hành đ�
     worldProgressionRules: `**19. Quy Tắc Thế Giới Vận Động (World Progression Rule):**
 *   **Diễn Biến Phe Phái:** Cứ sau khoảng 5-10 lượt chơi, hãy xem xét các phe phái (\`discoveredFactions\`) trong game. Dựa trên bản chất (Chính/Tà/Trung Lập) và mục tiêu của họ, hãy tạo ra một sự kiện nhỏ mà họ thực hiện "off-screen" và tạo ra sự kiện đó bằng tag [EVENT_TRIGGERED: title="Tên sự kiện", description="Mô tả", type="Chiến Tranh", timeToStart="X ngày", duration="Y ngày", locationName="Tên Địa Điểm Chính Liên Quan"]. Ví dụ: [EVENT_TRIGGERED: title="Hắc Phong Trại Mở Rộng", description="Hắc Phong Trại đang mở rộng địa bàn về phía nam, gây xung đột với các thương hội.", type="Chiến Tranh", timeToStart="5 ngày", duration="10 ngày", locationName="Thành Phía Nam"]. Điều này tạo ra các mối đe dọa hoặc cơ hội mới.
 *   **Sự Kiện Môi Trường:** Thỉnh thoảng (khoảng 10-15 lượt một lần hoặc khi người chơi di chuyển đến một địa điểm mới), hãy tạo ra một sự kiện môi trường ngẫu nhiên để làm thế giới sống động hơn. Ví dụ: một cơn bão bất chợt, một thương nhân quý hiếm xuất hiện, hoặc một hiện tượng thiên văn kỳ lạ. Hãy mô tả nó trong lời kể hoặc dùng tag [EVENT_TRIGGERED: ...] nếu đó là một sự kiện có cấu trúc. Ví dụ: [EVENT_TRIGGERED: title="Bão Lớn Sắp Tới", description="Một cơn bão lớn đang hình thành ngoài biển, dự kiến sẽ đổ bộ trong 3 ngày tới.", type="Thiên Tai", timeToStart="3 ngày", duration="2 ngày", locationName="Vùng Biển Phía Đông"].
-*   **SỰ KIỆN Ở XA (QUAN TRỌNG):** Khi tạo sự kiện động, bạn được phép và được khuyến khích đặt sự kiện ở những địa điểm mà người chơi **chưa khám phá**. Điều này tạo ra mục tiêu và lý do để người chơi đi thám hiểm thế giới. Hệ thống sẽ tự động tạo ra một địa điểm placeholder nếu nó không tồn tại.`,
+*   **SỰ KIỆN Ở XA (QUAN TRỌNG):** Khi tạo sự kiện động, bạn được phép và được khuyến khích đặt sự kiện ở những địa điểm mà người chơi **chưa khám phá**. Điều này tạo ra mục tiêu và lý do để người chơi đi thám hiểm thế giới. Hệ thống sẽ tự động tạo ra một địa điểm placeholder nếu nó không tồn tại.
+
+**20. QUY TẮC MỚI VỀ SỰ KIỆN ĐỘNG:**
+*   **[EVENT_TRIGGERED: title="Tên sự kiện", description="Mô tả", type="Loại", timeToStart="X ngày/tháng", duration="Y ngày", locationName="Tên Địa Điểm Chính"]**: Dùng để tạo một sự kiện mới. \`locationName\` phải là một địa điểm lớn đã tồn tại.
+*   **[EVENT_UPDATE: eventTitle="Tên sự kiện cần tìm", newTitle="Tên mới", newDescription="Mô tả mới", newStartDate="X ngày/tháng", newDuration="Y ngày/tháng", newLocationName="Địa điểm CỤ THỂ mới", createLocationIfNeeded=true]**: Dùng để cập nhật một sự kiện đã có. \`eventTitle\` là tên để tìm. Nếu bạn muốn chỉ định một địa điểm CỤ THỂ bên trong địa điểm chính (ví dụ: "Vạn Bảo Lâu" trong "Thần Thành"), hãy dùng \`newLocationName\`. Nếu bạn thêm \`createLocationIfNeeded=true\`, hệ thống sẽ tự tạo địa điểm đó nếu nó chưa tồn tại.
+*   **[EVENT_DETAIL_REVEALED: eventTitle="Tên sự kiện cần tìm", detail="Nội dung thông tin mới"]**: Dùng để hé lộ một mẩu thông tin mới về sự kiện.
+*   **VÍ DỤ LUỒNG SỰ KIỆN:**
+    1.  Người chơi nghe tin đồn -> Bạn tạo: \`[EVENT_TRIGGERED: title="Đại Hội Luyện Đan", ..., locationName="Dược Vương Cốc", timeToStart="7 ngày", duration="3 ngày"]\`
+    2.  Có diễn biến bất ngờ -> Lời kể của bạn: "...đại hội được đẩy lên sớm hơn!" -> Bạn tạo tag: \`[EVENT_UPDATE: eventTitle="Đại Hội Luyện Đan", newStartDate="3 ngày"]\`
+    3.  Người chơi hỏi thăm -> Lời kể: "...bạn biết được đại hội sẽ diễn ra tại Đan Lôi Đài." -> Bạn tạo tag: \`[EVENT_UPDATE: eventTitle="Đại Hội Luyện Đan", newLocationName="Đan Lôi Đài", createLocationIfNeeded=true]\`
+    4.  Người chơi tiếp tục hỏi thăm -> Lời kể: "...nghe nói phần thưởng cuối cùng là một viên Thượng Cổ Thần Đan." -> Bạn tạo tag: \`[EVENT_DETAIL_REVEALED: eventTitle="Đại Hội Luyện Đan", detail="Phần thưởng cuối cùng là Thượng Cổ Thần Đan."]\``,
     specialEventRules: `**21. QUY TẮC VỀ HÀNH ĐỘNG CHỜ (STAGED ACTIONS):**
 *   Kiểm tra mục "HÀNH ĐỘNG CHỜ" trong bối cảnh.
 *   Nếu lời kể của bạn đáp ứng điều kiện kích hoạt của một hành động (ví dụ: người chơi đang trong tình thế nguy hiểm và có \`trigger="onNextDanger"\`), bạn **BẮT BUỘC** phải:
@@ -244,6 +252,8 @@ Nhiệm vụ của bạn là cung cấp tổng cộng 5-6 lựa chọn hành đ�
     2.  Chèn toàn bộ chuỗi tag(s) từ thuộc tính \`actionTags\` của hành động đó vào phản hồi của bạn.
     3.  Tạo ra một tag **\`[STAGED_ACTION_CLEAR: trigger="..."]\`** với đúng trigger vừa được kích hoạt để xóa nó đi.
 *   **VÍ DỤ:** Nếu người chơi sắp bị đánh bại và có hành động chờ "onNextDanger", bạn phải kể về việc sư phụ xuất hiện, đồng thời chèn tag \`[NPC: ...]\` và \`[STAGED_ACTION_CLEAR: trigger="onNextDanger"]\` vào phản hồi.`,
+    cultivationRules: `**15. Tag \\\`[REMOVE_BINH_CANH_EFFECT: kinhNghiemGain=X]\` (Chỉ khi \`isCultivationEnabled=true\`):** Dùng khi nhân vật có cơ duyên đột phá khỏi bình cảnh. \`X\` là lượng kinh nghiệm nhỏ (ví dụ 1 hoặc 10) được cộng thêm để vượt qua giới hạn cũ. Tag này sẽ tự động đặt \`hieuUngBinhCanh=false\`.
+    *   **VÍ DỤ (Allowed):** \\\`[REMOVE_BINH_CANH_EFFECT: kinhNghiemGain=10]\``,
 };
 
 /**
@@ -306,10 +316,10 @@ export const buildRulesSection = (
     if (config.sendUpdateRules) systemRules.push(rulebook.updateRules);
     if (config.sendDeletionRules) systemRules.push(rulebook.deletionRules);
     if (config.sendSpecialStatusRules) systemRules.push(rulebook.specialStatusRules);
-// FIX: Corrected a typo in the property name from 'simpleCompanionRules' to 'sendSimpleCompanionRules' to match the AIContextConfig type definition.
     if (config.sendSimpleCompanionRules) systemRules.push(rulebook.simpleCompanionRules);
     if (config.sendStatusEffectRules) systemRules.push(rulebook.statusEffectRules);
     if (config.sendCombatStartRules) systemRules.push(rulebook.combatStartRules);
+    if (config.sendCultivationRules) systemRules.push(rulebook.cultivationRules);
     if (config.sendChoiceRules) systemRules.push(rulebook.choiceRules);
     if (config.sendTurnRules) systemRules.push(rulebook.turnRules);
     if (config.sendWorldProgressionRules) systemRules.push(rulebook.worldProgressionRules);

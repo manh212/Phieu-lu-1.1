@@ -1,3 +1,4 @@
+
 import type { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, AIContextConfig } from '@/types/index';
 import { DIALOGUE_MARKER } from '@/types/index';
 import { SUB_REALM_NAMES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, NSFW_DESCRIPTION_STYLES, TU_CHAT_TIERS, SPECIAL_EVENT_INTERVAL_TURNS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
@@ -5,7 +6,7 @@ import * as GameTemplates from '@/types/index';
 import { buildRulesSection, DEFAULT_AI_RULEBOOK } from '../constants/systemRulesNormal';
 import { getWorldDateDifferenceString } from '../utils/dateUtils';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
-import { getNsfwGuidance } from './promptUtils';
+import { getNsfwGuidance, getDifficultyGuidance } from './promptUtils';
 
 const STRICT_MODE_GUIDANCE = `
 CHÚ Ý:
@@ -47,11 +48,11 @@ Nguyên tắc an toàn: hành động nhỏ không bao giờ tự ý thay đổi
 
 KHÔNG bắt buộc phải mô tả trong mọi lượt.
 
-ĐƯỢC PHÉP dùng để nhấn mạnh hoặc làm rõ bối cảnh bên trong.
+ĐƯỢỢC PHÉP dùng để nhấn mạnh hoặc làm rõ bối cảnh bên trong.
 
 ƯU TIÊN thay thế bằng hành động nhỏ + phản ứng NPC/môi trường để tạo nhịp tự nhiên.
 
-3. NPC & MÔI TRƯỜNG
+3. NPC & MÔI TRƯỜDNG
 
 NPC và môi trường phản ứng tự nhiên, thoải mái, không hạn chế.
 
@@ -108,7 +109,7 @@ export const generateContinuePrompt = (
 ): string => {
   // STEP 2.2: The "Safety Shield". If aiContextConfig doesn't exist (e.g., from an old save),
   // use the default configuration to prevent the game from crashing.
-  const aiContextConfig = knowledgeBase.aiContextConfig || DEFAULT_AI_CONTEXT_CONFIG;
+  const baseAiContextConfig = knowledgeBase.aiContextConfig || DEFAULT_AI_CONTEXT_CONFIG;
   const rulebook = knowledgeBase.aiRulebook || DEFAULT_AI_RULEBOOK;
   const { worldConfig, worldDate, playerStats, userPrompts, stagedActions } = knowledgeBase;
   const genre = worldConfig?.genre || "Tu Tiên (Mặc định)";
@@ -116,6 +117,11 @@ export const generateContinuePrompt = (
   const effectiveGenre = (genre === CUSTOM_GENRE_VALUE && customGenreName) ? customGenreName : genre;
   
   const currentDifficultyName = worldConfig?.difficulty || 'Thường';
+
+  // --- START: Dynamic Rule Configuration ---
+  const dynamicAiContextConfig = { ...baseAiContextConfig };
+  dynamicAiContextConfig.sendCultivationRules = worldConfig?.isCultivationEnabled || false;
+  // --- END: Dynamic Rule Configuration ---
 
   // --- START: CONSTRUCT CORE CONTEXT ---
   const coreContext = {
@@ -129,8 +135,8 @@ export const generateContinuePrompt = (
           status: playerStats
       },
       playerAssets: {
-          inventory: knowledgeBase.inventory.slice(0, 20).map(i => `${i.name} (x${i.quantity})`), // Truncate for brevity & simplify
-          skills: knowledgeBase.playerSkills.map(s => s.name),
+          inventory: knowledgeBase.inventory.slice(0, 20), // Pass the full item objects
+          skills: knowledgeBase.playerSkills, // Pass the full skill objects
       },
       worldState: {
           theme: worldConfig?.theme,
@@ -144,16 +150,26 @@ export const generateContinuePrompt = (
 
   const mainRealms = (knowledgeBase.realmProgressionList || []);
   
-  // --- START: Build prompt sections conditionally based on aiContextConfig ---
+  // --- START: Build prompt sections conditionally based on dynamicAiContextConfig ---
   
+  const writingStyleGuideSection = (dynamicAiContextConfig.sendWritingStyle && worldConfig?.writingStyleGuide) ? `
+**HƯỚNG DẪN BẮT CHƯỚC VĂN PHONG NGƯỜI DÙNG (CỰC KỲ QUAN TRỌNG):**
+Mục tiêu hàng đầu của bạn là tái hiện một cách trung thực nhất văn phong của người dùng dựa vào đoạn văn mẫu sau. Đừng chỉ sao chép từ ngữ, mà hãy nắm bắt và áp dụng đúng **nhịp điệu**, **cách lựa chọn từ vựng**, và **thái độ/cảm xúc** đặc trưng của họ. Lời kể của bạn phải khiến người đọc tin rằng nó do chính người dùng viết ra. TUYỆT ĐỐI không pha trộn giọng văn AI hoặc làm "mềm hóa" văn phong gốc.
+
+**VĂN BẢN MẪU CỦA NGƯỜI DÙNG ĐỂ BẠN BẮT CHƯỚC:**
+"""
+${worldConfig.writingStyleGuide}
+"""
+` : '';
+
   let finalPrompt = `
 **YÊU CẦU CỐT LÕI:** Tiếp tục câu chuyện game nhập vai thể loại "${effectiveGenre}" bằng tiếng Việt.
-**QUY TẮC QUAN TRỌNG NHẤT:** Bắt đầu phản hồi bằng cách đi thẳng vào lời kể. **TUYỆT ĐỐI KHÔNG** bình luận về lựa chọn của người chơi.
-
+**QUY TẮC QUAN TRỌNG NHẤT:** Bắt đầu phản hồi của bạn bằng cách đi thẳng vào lời kể về những gì xảy ra do hành động của người chơi. **TUYỆT ĐỐI KHÔNG** bình luận về lựa chọn của người chơi. Hãy kể trực tiếp kết quả.
+${writingStyleGuideSection}
 ---
 **PHẦN 1: BỐI CẢNH (CONTEXT)**`;
 
-  if (aiContextConfig.sendRagContext) {
+  if (dynamicAiContextConfig.sendRagContext) {
       finalPrompt += `
 **A. BỐI CẢNH TRUY XUẤT (RAG CONTEXT - LONG-TERM MEMORY):**
 Dưới đây là một số thông tin liên quan từ các sự kiện trong quá khứ có thể hữu ích cho lượt này. Hãy sử dụng nó để đảm bảo tính nhất quán của câu chuyện.
@@ -162,7 +178,7 @@ ${retrievedContext}
 \`\`\`` : "Không có bối cảnh truy xuất nào."}`;
   }
 
-  if (aiContextConfig.sendCoreContext) {
+  if (dynamicAiContextConfig.sendCoreContext) {
       finalPrompt += `
 **B. BỐI CẢNH CỐT LÕI (CORE CONTEXT - PLAYER'S CURRENT STATE):**
 Đây là trạng thái hiện tại của người chơi và những yếu tố trực tiếp liên quan đến họ. Thông tin này LUÔN ĐÚNG và phải được ưu tiên hàng đầu.
@@ -171,7 +187,7 @@ ${JSON.stringify(coreContext, null, 2)}
 \`\`\``;
   }
 
-  if (aiContextConfig.sendConversationalContext) {
+  if (dynamicAiContextConfig.sendConversationalContext) {
       finalPrompt += `
 **C. BỐI CẢNH HỘI THOẠI (CONVERSATIONAL CONTEXT - SHORT-TERM MEMORY):**
 - **Tóm tắt các diễn biến trang trước:**
@@ -206,7 +222,7 @@ ${STRICT_MODE_GUIDANCE}
 `;
   }
 
-  if (aiContextConfig.sendUserPrompts && userPrompts && userPrompts.length > 0) {
+  if (dynamicAiContextConfig.sendUserPrompts && userPrompts && userPrompts.length > 0) {
       finalPrompt += `
 **LỜI NHẮC TỪ NGƯỜI CHƠI (QUY TẮC BẮT BUỘC TUÂN THỦ):**
 ${userPrompts.map(p => `- ${p}`).join('\n')}
@@ -229,13 +245,13 @@ Hãy tiếp tục câu chuyện. Bạn **BẮT BUỘC** phải lồng ghép sự
 - Loại hướng dẫn: ${inputType === 'action' ? 'Hành động trực tiếp' : 'Gợi ý câu chuyện'}
 - Nội dung hướng dẫn: "${playerActionText}"`;
   
-  if (aiContextConfig.sendSpecialEventRules && (playerStats.turn % SPECIAL_EVENT_INTERVAL_TURNS === 0 && playerStats.turn > 0)) {
+  if (dynamicAiContextConfig.sendSpecialEventRules && (playerStats.turn % SPECIAL_EVENT_INTERVAL_TURNS === 0 && playerStats.turn > 0)) {
       finalPrompt += `
 **HƯỚNG DẪN SỰ KIỆN ĐẶC BIỆT (QUAN TRỌNG):**
 Đã đến lúc cho một sự kiện lớn! Hãy tạo ra một diễn biến bất ngờ, có thể thay đổi cục diện hoặc mở ra một nhánh truyện mới. Ví dụ: một cuộc gặp gỡ định mệnh, một tai họa bất ngờ, một cơ duyên hiếm có, hoặc một kẻ thù mạnh xuất hiện. Hãy làm cho nó thật đáng nhớ!`;
   }
   
-  if (aiContextConfig.sendEventGuidance) {
+  if (dynamicAiContextConfig.sendEventGuidance) {
       const currentLocationId = knowledgeBase.currentLocationId;
       const relevantEvents = knowledgeBase.gameEvents.filter(event =>
           event.locationId === currentLocationId && (event.status === 'Sắp diễn ra' || event.status === 'Đang diễn ra' || event.status === 'Đã kết thúc')
@@ -272,30 +288,45 @@ Hãy tiếp tục câu chuyện. Bạn **BẮT BUỘC** phải lồng ghép sự
 
   finalPrompt += `
 **HƯỚNG DẪN XỬ LÝ DÀNH CHO AI:**
-${inputType === 'action'
-    ? `Xử lý nội dung trên như một hành động mà nhân vật chính (${worldConfig?.playerName}) đang thực hiện.`
-    : `Nội dung trên là một gợi ý của người chơi. **NHIỆM VỤ CỦA BẠN LÀ BẮT BUỘC PHẢI LÀM CHO DIỄN BIẾN NÀY XẢY RA.**`
-  }
-*   **VIẾT LỜI KỂ:** Mô tả kết quả của hành động.
+Xử lý nội dung trên như một hành động mà nhân vật chính (${worldConfig?.playerName}) đang thực hiện. Mô tả kết quả của hành động này và các diễn biến tiếp theo một cách chi tiết và hấp dẫn, dựa trên TOÀN BỘ BỐI CẢNH.
+*   **VIẾT LỜI KỂ:** Phản ứng của các NPC và môi trường xung quanh phải logic. Tuân thủ nghiêm ngặt CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH đã chọn.
 *   **SỬ DỤNG TAGS HỆ THỐNG:** Tạo ra các tag để cập nhật trạng thái game.
+`;
 
+  // --- NEW: CREATIVE RULES SECTION ---
+  if (dynamicAiContextConfig.sendDifficultyGuidance) {
+    finalPrompt += `
 ---
-**PHẦN 3: QUY TẮC VÀ HƯỚNG DẪN CHI TIẾT**`;
-
-  // --- NEW: DYNAMIC RULE GENERATION ---
-  finalPrompt += buildRulesSection(aiContextConfig, rulebook, worldConfig, mainRealms, worldDate);
-  // --- END: DYNAMIC RULE GENERATION ---
+${getDifficultyGuidance(worldConfig)}
+`;
+  }
+  
+  if (dynamicAiContextConfig.sendNsfwGuidance) {
+    finalPrompt += `
+---
+**CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH:**
+${getNsfwGuidance(worldConfig)}
+`;
+  }
+  // --- END: CREATIVE RULES SECTION ---
   
   finalPrompt += `
-**C. CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH:**`;
+---
+**PHẦN 3: QUY TẮC VÀ HƯỚNG DẪN CHI TIẾT**
+`;
 
-  if (aiContextConfig.sendNsfwGuidance) {
-      finalPrompt += getNsfwGuidance(worldConfig);
-  }
+  // DYNAMIC TECHNICAL RULE GENERATION
+  finalPrompt += buildRulesSection(dynamicAiContextConfig, rulebook, worldConfig, mainRealms, worldDate);
+  
+  const responseLengthText = responseLength === 'short' ? 'Ngắn (khoảng 2-3 đoạn văn súc tích)' :
+    responseLength === 'medium' ? 'Trung bình (khoảng 3-6 đoạn văn vừa phải)' :
+    responseLength === 'long' ? 'Dài (khoảng 8+ đoạn văn chi tiết)' :
+    'Mặc định (linh hoạt theo diễn biến)';
 
   finalPrompt += `
-**D. ĐỘ DÀI PHẢN HỒI MONG MUỐN:**
-- Độ dài yêu cầu: ${responseLength}
+---
+**ĐỘ DÀI PHẢN HỒI MONG MUỐN:**
+- Người chơi yêu cầu độ dài phản hồi: ${responseLengthText}. Hãy cố gắng điều chỉnh độ dài của lời kể và mô tả cho phù hợp với yêu cầu này của người chơi, nhưng vẫn đảm bảo tính tự nhiên và logic của câu chuyện.
 `;
 
   return finalPrompt;

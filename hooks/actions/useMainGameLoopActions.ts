@@ -1,13 +1,12 @@
+
+
 import { useCallback, useState, useRef } from 'react';
-// FIX: Correct import path for types
 import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, AiChoice, NPC, FindLocationParams } from '../../types/index';
-// FIX: Corrected import path for services
 import { countTokens, generateRefreshedChoices, generateNextTurn, summarizeTurnHistory, findLocationWithAI, getApiSettings } from '../../services';
 import { generateEmbeddings } from '../../services/embeddingService';
 import { performTagProcessing, addTurnHistoryEntryRaw, getMessagesForPage, calculateEffectiveStats, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, handleLocationEntryEvents, searchVectors, extractEntityContextsFromString, worldDateToTotalMinutes } from '../../utils/gameLogicUtils';
 import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS, LIVING_WORLD_TICK_INTERVAL_HOURS } from '../../constants';
 
-// Interface was likely shared, defining it here for clarity.
 export interface UseMainGameLoopActionsProps {
   knowledgeBase: KnowledgeBase;
   setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeBase>>;
@@ -37,8 +36,9 @@ export interface UseMainGameLoopActionsProps {
   executeWorldTick: (kbForTick: KnowledgeBase) => Promise<{ updatedKb: KnowledgeBase; worldEventMessages: GameMessage[] }>;
   handleNonCombatDefeat: (kbStateAtDefeat: KnowledgeBase, fatalNarration?: string) => Promise<void>;
   setSummarizationResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
-  setSentEconomyPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
-  setReceivedEconomyResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
+  isSummarizingNextPageTransition: boolean;
+  setIsSummarizingNextPageTransition: React.Dispatch<React.SetStateAction<boolean>>;
+  // FIX: Added missing properties to the interface to resolve type errors.
   setSentGeneralSubLocationPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
   setReceivedGeneralSubLocationResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
 }
@@ -52,8 +52,6 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
       setRawAiResponsesLog, setApiErrorWithTimeout,
       currentPageDisplay, setCurrentPageDisplay,
       setSummarizationResponsesLog,
-      setSentEconomyPromptsLog, setReceivedEconomyResponsesLog,
-      setSentGeneralSubLocationPromptsLog, setReceivedGeneralSubLocationResponsesLog,
       logNpcAvatarPromptCallback,
       handleNonCombatDefeat,
       setRetrievedRagContextLog,
@@ -64,9 +62,8 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
       isAutoPlaying, setIsAutoPlaying,
       setKnowledgeBase,
       executeSaveGame,
+      isSummarizingNextPageTransition, setIsSummarizingNextPageTransition,
     } = props;
-    
-    const [isSummarizingNextPageTransition, setIsSummarizingNextPageTransition] = useState<boolean>(false);
     
     const logSentPromptCallback = useCallback((prompt: string) => {
       props.setSentPromptsLog(prev => [prompt, ...prev].slice(0, 10));
@@ -82,7 +79,8 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         isChoice: boolean,
         inputType: PlayerActionInputType,
         responseLength: ResponseLength,
-        isStrictMode: boolean
+        isStrictMode: boolean,
+        narrativeDirective?: string // NEW: Added optional directive
     ) => {
         setIsLoadingApi(true);
         resetApiError();
@@ -91,11 +89,7 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         const gameMessagesAtActionStart = [...gameMessages];
         const turnOfPlayerAction = knowledgeBase.playerStats.turn + 1;
 
-        // NEW: Handle Narrative Directive & Rewrite Turn
-        const narrativeDirective = knowledgeBase.narrativeDirectiveForNextTurn;
         if (narrativeDirective) {
-            // Clear the directive from the state snapshot that will be saved to history.
-            // This prevents it from being re-applied on rollback.
             knowledgeBaseAtActionStart.narrativeDirectiveForNextTurn = undefined;
         }
 
@@ -130,25 +124,20 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
                 knowledgeBase, action, inputType, responseLength,
                 currentPageMessagesLog, previousPageSummaries, isStrictMode,
                 lastNarrationFromPreviousPage, retrievedContext, logSentPromptCallback,
-                narrativeDirective // Pass the directive to the service
+                narrativeDirective
             );
             setRawAiResponsesLog(prev => [rawText, ...prev].slice(0, 50));
             
             let currentTurnKb = JSON.parse(JSON.stringify(knowledgeBaseAtActionStart));
 
-            // NEW: Manually clear the directive from the current working state as well,
-            // so it's not present for the next turn.
             if (narrativeDirective) {
                 currentTurnKb.narrativeDirectiveForNextTurn = undefined;
             }
 
-            const { newKb: kbAfterTags, systemMessagesFromTags, turnIncrementedByTag, rewriteTurnDirective } = await performTagProcessing(
+            const { newKb: kbAfterTags, systemMessagesFromTags, turnIncrementedByTag } = await performTagProcessing(
                 currentTurnKb, response.tags, turnOfPlayerAction, setKnowledgeBase, logNpcAvatarPromptCallback
             );
             
-            // Rewrite Turn logic is handled by the calling function in the Copilot Panel now.
-            // This function's responsibility is now only to process the turn normally.
-
             let finalKbForThisTurn = kbAfterTags;
             let combinedSystemMessages = [...systemMessagesFromTags];
             
@@ -281,11 +270,9 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         setApiErrorWithTimeout, logNpcAvatarPromptCallback, handleNonCombatDefeat,
         setRetrievedRagContextLog, currentPageMessagesLog, previousPageSummaries,
         lastNarrationFromPreviousPage, setSummarizationResponsesLog,
-        setSentEconomyPromptsLog, setReceivedEconomyResponsesLog,
-        setSentGeneralSubLocationPromptsLog, setReceivedGeneralSubLocationResponsesLog,
         executeWorldTick, isAutoPlaying, setIsAutoPlaying, setKnowledgeBase, logSummarizationResponseCallback
     ]);
-
+    
     const handleRewriteTurn = useCallback(async (directive: string) => {
         if (isLoadingApi) return;
     
@@ -309,66 +296,26 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         const stateToRestore = history[history.length - 1];
         const newHistory = history.slice(0, -1);
     
-        // Temporarily set the state back to before the turn
         const kbForRewrite = {
             ...stateToRestore.knowledgeBaseSnapshot,
             turnHistory: newHistory,
             narrativeDirectiveForNextTurn: directive
         };
         
-        // Remove the messages from the turn we are rewriting
         const messagesBeforeRewrite = gameMessages.filter(m => m.turnNumber < turnToRewrite);
         setGameMessages(messagesBeforeRewrite);
         setKnowledgeBase(kbForRewrite);
     
-        // Use a timeout to allow React state to update before re-running the action.
-        // This is a common pattern for "state-then-action" sequences without async state setters.
         setTimeout(() => {
-            // Re-execute the player's last action, but now the KB has the new directive.
             handlePlayerAction(
                 lastPlayerActionMessage.content as string,
                 !lastPlayerActionMessage.isPlayerInput,
-                'action', // Assume 'action' type for simplicity in rewrite.
-                'default', // Assume 'default' length.
-                false // Assume not strict mode.
+                'action', 'default', false, directive
             );
         }, 100);
     
     }, [isLoadingApi, knowledgeBase, gameMessages, showNotification, setKnowledgeBase, setGameMessages, handlePlayerAction, resetApiError]);
     
-    
-    const handleFindLocation = useCallback(async (params: FindLocationParams) => {
-        setIsLoadingApi(true);
-        resetApiError();
-        showNotification(VIETNAMESE.findingLocationMessage, 'info');
-        try {
-            const { response: { narration, tags } } = await findLocationWithAI(
-                knowledgeBase, params, currentPageMessagesLog, previousPageSummaries,
-                lastNarrationFromPreviousPage,
-                (prompt) => setSentGeneralSubLocationPromptsLog(prev => [prompt, ...prev].slice(0, 10))
-            );
-            const { newKb: kbAfterTags, systemMessagesFromTags } = await performTagProcessing(
-                knowledgeBase, tags, knowledgeBase.playerStats.turn, setKnowledgeBase, logNpcAvatarPromptCallback
-            );
-            const narrationMessage: GameMessage = {
-                id: 'find-location-narration-' + Date.now(), type: 'system',
-                content: narration, timestamp: Date.now(), turnNumber: knowledgeBase.playerStats.turn
-            };
-            addMessageAndUpdateState([narrationMessage, ...systemMessagesFromTags], kbAfterTags);
-        } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : String(err);
-            setApiErrorWithTimeout(errorMsg);
-            showNotification(VIETNAMESE.errorFindingLocation + `: ${errorMsg}`, 'error');
-        } finally {
-            setIsLoadingApi(false);
-        }
-    }, [
-        knowledgeBase, setIsLoadingApi, resetApiError, showNotification,
-        addMessageAndUpdateState, setKnowledgeBase, logNpcAvatarPromptCallback,
-        setSentGeneralSubLocationPromptsLog, setApiErrorWithTimeout,
-        currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage
-    ]);
-
     const handleCheckTokenCount = useCallback(async () => {
         if (isLoadingApi) return;
         const latestPrompt = props.sentPromptsLog[0];
@@ -441,17 +388,16 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         }
 
         const newHistory = [...knowledgeBase.turnHistory];
-        const stateToRestore = newHistory.pop(); 
+        newHistory.pop(); // Remove the current state
+        const stateToRestore = newHistory[newHistory.length - 1]; // Get the state before that
 
         if (!stateToRestore) {
             showNotification("Lỗi: Không tìm thấy trạng thái để lùi về.", 'error');
             return;
         }
-
-        setKnowledgeBase({
-            ...stateToRestore.knowledgeBaseSnapshot,
-            turnHistory: newHistory
-        });
+        
+        // Directly set the state. The history is already correct.
+        setKnowledgeBase(stateToRestore.knowledgeBaseSnapshot);
         setGameMessages(stateToRestore.gameMessagesSnapshot);
 
         const newTurn = stateToRestore.knowledgeBaseSnapshot.playerStats.turn;
@@ -468,6 +414,41 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         showNotification(VIETNAMESE.rollbackSuccess, 'success');
     }, [knowledgeBase, gameMessages, setKnowledgeBase, setGameMessages, setCurrentPageDisplay, showNotification]);
 
+
+    const handleFindLocation = useCallback(async (params: FindLocationParams) => {
+        setIsLoadingApi(true);
+        resetApiError();
+        showNotification(VIETNAMESE.findingLocationMessage, 'info');
+        try {
+            const { response: { narration, tags } } = await findLocationWithAI(
+                knowledgeBase, params, currentPageMessagesLog, previousPageSummaries,
+                lastNarrationFromPreviousPage,
+                (prompt) => props.setSentGeneralSubLocationPromptsLog(prev => [prompt, ...prev].slice(0, 10))
+            );
+            props.setReceivedGeneralSubLocationResponsesLog(prev => [narration, ...prev].slice(0, 10)); // Assuming narration is the raw text for this service
+            const { newKb: kbAfterTags, systemMessagesFromTags } = await performTagProcessing(
+                knowledgeBase, tags, knowledgeBase.playerStats.turn, setKnowledgeBase, logNpcAvatarPromptCallback
+            );
+            const narrationMessage: GameMessage = {
+                id: 'find-location-narration-' + Date.now(), type: 'system',
+                content: narration, timestamp: Date.now(), turnNumber: knowledgeBase.playerStats.turn
+            };
+            addMessageAndUpdateState([narrationMessage, ...systemMessagesFromTags], kbAfterTags);
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            setApiErrorWithTimeout(errorMsg);
+            showNotification(VIETNAMESE.errorFindingLocation + `: ${errorMsg}`, 'error');
+        } finally {
+            setIsLoadingApi(false);
+        }
+    }, [
+        knowledgeBase, setIsLoadingApi, resetApiError, showNotification,
+        addMessageAndUpdateState, setKnowledgeBase, logNpcAvatarPromptCallback,
+        setApiErrorWithTimeout,
+        currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage,
+        // Dependencies were using props. but should not
+        props.setSentGeneralSubLocationPromptsLog, props.setReceivedGeneralSubLocationResponsesLog
+    ]);
 
     return {
       handlePlayerAction,

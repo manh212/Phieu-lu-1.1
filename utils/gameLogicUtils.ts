@@ -31,6 +31,7 @@ export const DEFAULT_AI_CONTEXT_CONFIG: AIContextConfig = {
     sendCombatStartRules: true,
     sendSpecialEventRules: true,
     sendSimpleCompanionRules: true,
+    sendCultivationRules: false, // NEW: Changed default to false
 };
 // END NEW
 

@@ -3,6 +3,26 @@ import { WorldSettings } from '../types/index';
 import { VIETNAMESE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, DEFAULT_NSFW_DESCRIPTION_STYLE, nsfwGuidanceCustomDefault } from '../constants';
 
 /**
+ * Lấy chuỗi hướng dẫn về độ khó để chèn vào prompt.
+ * @param worldConfig - Cấu hình thế giới hiện tại.
+ * @returns Chuỗi văn bản hướng dẫn về độ khó cho AI.
+ */
+export function getDifficultyGuidance(worldConfig: WorldSettings | null): string {
+  if (!worldConfig) return '';
+  const difficulty = worldConfig.difficulty || 'Thường';
+  
+  // The guidance text is now a single block containing all levels for context,
+  // with the current level highlighted.
+  return `**HƯỚNG DẪN VỀ ĐỘ KHÓ (Rất quan trọng để AI tuân theo):**
+- **Dễ:** ${VIETNAMESE.difficultyGuidanceEasy}
+- **Thường:** ${VIETNAMESE.difficultyGuidanceNormal}
+- **Khó:** ${VIETNAMESE.difficultyGuidanceHard}
+- **Ác Mộng:** ${VIETNAMESE.difficultyGuidanceNightmare}
+Hiện tại người chơi đã chọn độ khó: **${difficulty}**. Hãy điều chỉnh tỉ lệ thành công, lợi ích và rủi ro trong các lựa chọn [CHOICE: "..."] của bạn cho phù hợp với hướng dẫn độ khó này.`;
+}
+
+
+/**
  * Lấy chuỗi hướng dẫn NSFW cuối cùng để chèn vào prompt.
  * Hàm này chứa toàn bộ logic ghi đè của "Phòng Tối AI".
  * @param worldConfig - Cấu hình thế giới hiện tại.

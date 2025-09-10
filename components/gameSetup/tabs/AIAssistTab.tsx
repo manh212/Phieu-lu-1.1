@@ -181,7 +181,59 @@ const AIAssistTab: React.FC<AIAssistTabProps> = ({ setIsArchitectModalOpen }) =>
       {/* Fanfiction Section */}
       <div className="border border-teal-500 p-4 rounded-lg bg-gray-800/30">
           <h3 className="text-xl font-semibold text-teal-400 mb-2">{VIETNAMESE.fanficStoryGeneratorSection}</h3>
-          <InputField label={VIETNAMESE.fanficStoryNameLabel} id="fanficStoryName" value={fanficStoryName} onChange={(e) => setFanficStoryName(e.target.value)} placeholder={VIETNAMESE.fanficStoryNamePlaceholder} />
+          
+          <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">{VIETNAMESE.fanficSourceTypeLabel}</label>
+              <div className="flex gap-x-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                          type="radio" 
+                          name="fanfic-source" 
+                          value="name" 
+                          checked={fanficSourceType === 'name'} 
+                          onChange={() => setFanficSourceType('name')} 
+                          className="h-4 w-4 text-indigo-600 border-gray-500 focus:ring-indigo-500"
+                      />
+                      {VIETNAMESE.fanficSourceTypeName}
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                          type="radio" 
+                          name="fanfic-source" 
+                          value="file" 
+                          checked={fanficSourceType === 'file'} 
+                          onChange={() => setFanficSourceType('file')} 
+                          className="h-4 w-4 text-indigo-600 border-gray-500 focus:ring-indigo-500"
+                      />
+                      {VIETNAMESE.fanficSourceTypeFile}
+                  </label>
+              </div>
+          </div>
+
+          {fanficSourceType === 'name' ? (
+              <InputField label={VIETNAMESE.fanficStoryNameLabel} id="fanficStoryName" value={fanficStoryName} onChange={(e) => setFanficStoryName(e.target.value)} placeholder={VIETNAMESE.fanficStoryNamePlaceholder} />
+          ) : (
+              <div className="mb-4">
+                  <p className="block text-sm font-medium text-gray-300 mb-1">{VIETNAMESE.fanficFileUploadLabel}</p>
+                  <input 
+                      type="file" 
+                      ref={fanficFileInputRef} 
+                      onChange={handleFanficFileChange} 
+                      className="hidden" 
+                      accept=".txt"
+                  />
+                  <Button type="button" onClick={() => fanficFileInputRef.current?.click()} variant='secondary' className='w-full'>
+                      {fanficFile ? `Đã chọn: ${fanficFile.name}` : 'Chọn File (.txt)'}
+                  </Button>
+                  {fanficTokenCount !== null && (
+                      <p className={`text-xs mt-2 ${fanficTokenCount > MAX_TOKENS_FANFIC ? 'text-red-400 font-bold' : 'text-gray-400'}`}>
+                          {VIETNAMESE.tokenCountLabel} {fanficTokenCount.toLocaleString()}
+                          {fanficTokenCount > MAX_TOKENS_FANFIC && ` - ${VIETNAMESE.tokenCountExceededError(MAX_TOKENS_FANFIC)}`}
+                      </p>
+                  )}
+              </div>
+          )}
+
           <InputField label={VIETNAMESE.fanficPlayerDescriptionLabel} id="fanficPlayerDescription" value={fanficPlayerDescription} onChange={(e) => setFanficPlayerDescription(e.target.value)} textarea rows={3} placeholder={VIETNAMESE.fanficPlayerDescriptionPlaceholder} />
           <Button onClick={handleGenFanfic} isLoading={loadingStates.fromFanfic} disabled={Object.values(loadingStates).some(s => s)} variant="primary" className="w-full sm:w-auto mt-3 bg-teal-600 hover:bg-teal-700 focus:ring-teal-500" loadingText={VIETNAMESE.generatingFanficDetails}>
               Phân Tích & Tạo Đồng Nhân

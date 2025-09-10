@@ -24,6 +24,7 @@ export interface AIRulebook {
     simpleCompanionRules: string;
     worldProgressionRules: string;
     specialEventRules: string;
+    cultivationRules: string; // NEW
 }
 
 export interface AIContextConfig {
@@ -59,6 +60,7 @@ export interface AIContextConfig {
     sendCombatStartRules: boolean;
     sendSpecialEventRules: boolean;
     sendSimpleCompanionRules: boolean;
+    sendCultivationRules: boolean; // NEW
 }
 
 export interface AICopilotConfig {
