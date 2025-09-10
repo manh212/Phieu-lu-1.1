@@ -145,7 +145,10 @@ export async function generateContentAndCheck(
     const response = await ai.models.generateContent({ ...params, config: finalConfig });
     
     if (!response.text || response.text.trim() === '') {
-        throw new Error("Phản hồi từ AI trống. Điều này có thể do bộ lọc nội dung. Vui lòng thử một hành động khác hoặc lùi lượt.");
+        // Don't throw error if grounding metadata exists, as search can return an answer without text.
+        if (!response.candidates?.[0]?.groundingMetadata?.groundingChunks) {
+            throw new Error("Phản hồi từ AI trống. Điều này có thể do bộ lọc nội dung. Vui lòng thử một hành động khác hoặc lùi lượt.");
+        }
     }
     
     return response;
@@ -178,5 +181,6 @@ export async function generateContentWithRateLimit(
     });
     const rawText = response.text;
     const parsedResponse = parseAiResponseText(rawText);
+    parsedResponse.groundingMetadata = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     return { response: parsedResponse, rawText, constructedPrompt: prompt };
 }

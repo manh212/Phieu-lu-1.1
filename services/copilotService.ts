@@ -43,19 +43,21 @@ export async function generateArchitectResponse(
     isActionModus: boolean,
     modelOverride?: string,
     useGoogleSearch?: boolean
-): Promise<string> {
+): Promise<{ text: string; groundingMetadata?: any }> {
     const { model } = getApiSettings();
     const modelToUse = modelOverride || model; // Use override if provided
     const prompt = PROMPT_FUNCTIONS.architect(settingsJSON, chatHistory, userRequest, isActionModus);
     
     const config = useGoogleSearch ? { tools: [{googleSearch: {}}] } : {};
     
-    // Using generateContentAndCheck to ensure a valid response is returned
     const response = await generateContentAndCheck({
         model: modelToUse, // Use the selected model
         contents: [{ parts: [{ text: prompt }] }],
         config: config
     });
 
-    return response.text;
+    return {
+        text: response.text,
+        groundingMetadata: response.candidates?.[0]?.groundingMetadata?.groundingChunks,
+    };
 }

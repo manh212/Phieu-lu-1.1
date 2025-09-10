@@ -28,6 +28,7 @@ export interface ParsedAiResponse {
   choices: AiChoice[];
   tags: string[];
   systemMessage?: string;
+  groundingMetadata?: any;
 }
 
 export interface CombatLogContent {
@@ -61,6 +62,7 @@ export interface GameMessage {
   isPlayerInput?: boolean; 
   turnNumber: number; 
   actionTags?: string[];
+  groundingMetadata?: { web?: { uri: string; title: string; } }[];
 }
 
 export interface SaveGameMeta {

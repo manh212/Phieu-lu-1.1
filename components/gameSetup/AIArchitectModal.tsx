@@ -24,6 +24,7 @@ type ArchitectChatMessage = {
     text: string;
     actionTags?: string[];
     applied?: boolean;
+    groundingMetadata?: { web?: { uri: string; title: string; } }[];
 };
 
 export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onClose, currentSettings, onApplyChanges }) => {
@@ -78,7 +79,7 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
                 .map(msg => `${msg.sender === 'user' ? 'User' : 'AI'}: ${msg.text}`)
                 .join('\n');
             
-            const rawResponse = await generateArchitectResponse(
+            const rawResponseObject = await generateArchitectResponse(
                 settingsJSON, 
                 chatHistoryString, 
                 userMessage.text, 
@@ -87,6 +88,7 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
                 useGoogleSearch
             );
             
+            const rawResponse = rawResponseObject.text;
             let aiText = rawResponse;
             let tags: string[] = [];
 
@@ -107,6 +109,7 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
                 text: aiText || "Đây là những thay đổi tôi đã chuẩn bị dựa trên yêu cầu của bạn.",
                 actionTags: tags.length > 0 ? tags : undefined,
                 applied: false,
+                groundingMetadata: rawResponseObject.groundingMetadata,
             };
             setHistory(prev => [...prev, aiMessage]);
 
@@ -148,6 +151,20 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
                         <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-md p-3 rounded-lg shadow-md ${msg.sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200'}`}>
                                 <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                                {msg.groundingMetadata && msg.groundingMetadata.length > 0 && (
+                                    <div className="mt-3 pt-2 border-t border-gray-500/50">
+                                        <h5 className="text-xs font-semibold text-gray-400 mb-1">Nguồn Tham Khảo:</h5>
+                                        <ul className="space-y-1 text-xs">
+                                            {msg.groundingMetadata.map((source, idx) => source.web && (
+                                                <li key={idx} className="truncate">
+                                                    <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline" title={source.web.uri}>
+                                                        {idx + 1}. {source.web.title || source.web.uri}
+                                                    </a>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                                 {msg.actionTags && (
                                     <div className="mt-3 pt-3 border-t border-gray-500/50">
                                         <p className="text-xs text-amber-300 mb-2">AI đề xuất các thay đổi sau:</p>
