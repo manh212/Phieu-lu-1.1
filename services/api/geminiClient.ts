@@ -164,7 +164,8 @@ export async function countTokens(text: string): Promise<number> {
 export async function generateContentWithRateLimit(
     prompt: string, 
     modelId: string, 
-    onPromptConstructed?: (prompt: string) => void
+    onPromptConstructed?: (prompt: string) => void,
+    config?: any
 ): Promise<{response: ParsedAiResponse, rawText: string, constructedPrompt: string}> {
     if (onPromptConstructed) {
         onPromptConstructed(prompt);
@@ -173,6 +174,7 @@ export async function generateContentWithRateLimit(
     const response = await generateContentAndCheck({
         model: modelId,
         contents: [{ parts: [{ text: prompt }] }],
+        config,
     });
     const rawText = response.text;
     const parsedResponse = parseAiResponseText(rawText);

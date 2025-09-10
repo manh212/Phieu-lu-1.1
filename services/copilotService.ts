@@ -13,7 +13,8 @@ export async function generateCopilotResponse(
     userPrompts: string[],
     onPromptConstructed?: (prompt: string) => void,
     copilotModelOverride?: string,
-    isActionModus: boolean = true
+    isActionModus: boolean = true,
+    useGoogleSearch: boolean = false
 ): Promise<{response: ParsedAiResponse, rawText: string, constructedPrompt: string}> {
     const { model } = getApiSettings();
     const modelToUse = copilotModelOverride || model;
@@ -27,7 +28,10 @@ export async function generateCopilotResponse(
         isActionModus
     );
     incrementApiCallCount('AI_COPILOT');
-    return generateContentWithRateLimit(prompt, modelToUse, onPromptConstructed);
+    
+    const config = useGoogleSearch ? { tools: [{googleSearch: {}}] } : {};
+
+    return generateContentWithRateLimit(prompt, modelToUse, onPromptConstructed, config);
 }
 
 
@@ -37,16 +41,20 @@ export async function generateArchitectResponse(
     chatHistory: string,
     userRequest: string,
     isActionModus: boolean,
-    modelOverride?: string, // NEW: Added model override parameter
+    modelOverride?: string,
+    useGoogleSearch?: boolean
 ): Promise<string> {
     const { model } = getApiSettings();
     const modelToUse = modelOverride || model; // Use override if provided
     const prompt = PROMPT_FUNCTIONS.architect(settingsJSON, chatHistory, userRequest, isActionModus);
     
+    const config = useGoogleSearch ? { tools: [{googleSearch: {}}] } : {};
+    
     // Using generateContentAndCheck to ensure a valid response is returned
     const response = await generateContentAndCheck({
         model: modelToUse, // Use the selected model
         contents: [{ parts: [{ text: prompt }] }],
+        config: config
     });
 
     return response.text;

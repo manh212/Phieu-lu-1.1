@@ -31,6 +31,7 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isActionModus, setIsActionModus] = useState(true);
+    const [useGoogleSearch, setUseGoogleSearch] = useState(false);
     const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_ID);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
@@ -77,7 +78,14 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
                 .map(msg => `${msg.sender === 'user' ? 'User' : 'AI'}: ${msg.text}`)
                 .join('\n');
             
-            const rawResponse = await generateArchitectResponse(settingsJSON, chatHistoryString, userMessage.text, isActionModus, selectedModel);
+            const rawResponse = await generateArchitectResponse(
+                settingsJSON, 
+                chatHistoryString, 
+                userMessage.text, 
+                isActionModus, 
+                selectedModel,
+                useGoogleSearch
+            );
             
             let aiText = rawResponse;
             let tags: string[] = [];
@@ -181,16 +189,18 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
                             disabled={isLoading}
                         />
                          <div className="flex gap-2 items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <ToggleSwitch
-                                    id="architect-mode-toggle"
-                                    checked={isActionModus}
-                                    onChange={setIsActionModus}
-                                    disabled={isLoading}
-                                />
-                                <label htmlFor="architect-mode-toggle" className="text-xs text-gray-400 cursor-pointer">
-                                    {isActionModus ? 'Hành Động' : 'Thảo Luận'}
-                                </label>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-1">
+                                    <ToggleSwitch id="architect-search-toggle" checked={useGoogleSearch} onChange={setUseGoogleSearch} disabled={isLoading} />
+                                    <label htmlFor="architect-search-toggle" className="text-xs text-gray-400 cursor-pointer flex items-center gap-1">
+                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>
+                                         Search
+                                    </label>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <ToggleSwitch id="architect-mode-toggle" checked={isActionModus} onChange={setIsActionModus} disabled={isLoading} />
+                                    <label htmlFor="architect-mode-toggle" className="text-xs text-gray-400 cursor-pointer">{isActionModus ? 'Hành Động' : 'Thảo Luận'}</label>
+                                </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="relative" ref={modelSelectorRef}>
@@ -205,9 +215,7 @@ export const AIArchitectModal: React.FC<AIArchitectModalProps> = ({ isOpen, onCl
                                         aria-haspopup="true"
                                         aria-expanded={isModelSelectorOpen}
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg>
                                     </Button>
                                     {isModelSelectorOpen && (
                                         <div className="absolute bottom-full right-0 mb-2 w-56 bg-gray-700 rounded-lg shadow-lg z-[70] border border-gray-600">

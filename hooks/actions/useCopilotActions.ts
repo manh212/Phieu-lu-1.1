@@ -26,7 +26,13 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
         sentPromptsLog, sentCopilotPromptsLog, setSentCopilotPromptsLog,
     } = props;
 
-    const handleCopilotQuery = useCallback(async (userQuestion: string, context?: string, isActionModus: boolean = true, modelOverride?: string) => {
+    const handleCopilotQuery = useCallback(async (
+        userQuestion: string, 
+        context?: string, 
+        isActionModus: boolean = true, 
+        modelOverride?: string,
+        useGoogleSearch: boolean = false
+    ) => {
         setIsLoadingApi(true);
         resetApiError();
         const userMessageContent = context ? `${userQuestion}\n\n**Bối cảnh:**\n${context}` : userQuestion;
@@ -60,7 +66,8 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
                 latestGameplayPrompt, userPrompts || [],
                 (prompt) => setSentCopilotPromptsLog(prev => [prompt, ...prev].slice(0, 10)),
                 modelToUse,
-                isActionModus
+                isActionModus,
+                useGoogleSearch
             );
 
             // The rawText is the full response from AI. We need to parse it here.
