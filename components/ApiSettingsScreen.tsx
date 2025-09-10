@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { GameScreen, ApiConfig, SafetySetting, AvatarGenerationEngine } from '@/types/index'; 
 import Button from './ui/Button';
@@ -28,7 +29,7 @@ const ApiSettingsScreen: React.FC<ApiSettingsScreenProps> = ({ setCurrentScreen,
   const [safetySettings, setSafetySettings] = useState<SafetySetting[]>(DEFAULT_API_CONFIG.safetySettings);
   const [autoGenerateNpcAvatars, setAutoGenerateNpcAvatars] = useState<boolean>(DEFAULT_API_CONFIG.autoGenerateNpcAvatars);
   const [selectedAvatarEngine, setSelectedAvatarEngine] = useState<AvatarGenerationEngine>(DEFAULT_AVATAR_GENERATION_ENGINE);
-  const [ragTopK, setRagTopK] = useState<number>(DEFAULT_API_CONFIG.ragTopK || 10);
+  const [ragTopK, setRagTopK] = useState<number>(DEFAULT_API_CONFIG.ragTopK || 25);
   const [error, setError] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
 
@@ -41,7 +42,7 @@ const ApiSettingsScreen: React.FC<ApiSettingsScreenProps> = ({ setCurrentScreen,
     setSafetySettings(loadedSettings.safetySettings);
     setAutoGenerateNpcAvatars(loadedSettings.autoGenerateNpcAvatars);
     setSelectedAvatarEngine(loadedSettings.avatarGenerationEngine || DEFAULT_AVATAR_GENERATION_ENGINE);
-    setRagTopK(loadedSettings.ragTopK ?? (DEFAULT_API_CONFIG.ragTopK || 10));
+    setRagTopK(loadedSettings.ragTopK ?? (DEFAULT_API_CONFIG.ragTopK || 25));
   }, []);
 
   const handleUserApiKeyChange = (index: number, value: string) => {
@@ -268,7 +269,7 @@ const ApiSettingsScreen: React.FC<ApiSettingsScreenProps> = ({ setCurrentScreen,
               type="range"
               id="ragTopK"
               min="0"
-              max="100"
+              max="500"
               value={ragTopK}
               onChange={(e) => setRagTopK(parseInt(e.target.value, 10))}
               className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
