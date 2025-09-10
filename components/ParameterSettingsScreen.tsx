@@ -4,6 +4,7 @@ import Button from './ui/Button';
 import { VIETNAMESE, STORAGE_SETTINGS_STORAGE_KEY, DEFAULT_API_CONFIG } from '@/constants';
 import { getApiSettings } from '@/services'; 
 import CollapsibleSection from './ui/CollapsibleSection';
+import ToggleSwitch from './ui/ToggleSwitch';
 
 interface ParameterSettingsScreenProps {
   setCurrentScreen: (screen: GameScreen) => void;
@@ -19,8 +20,14 @@ const ParameterSettingsScreen: React.FC<ParameterSettingsScreenProps> = ({ setCu
       performance: true,
   });
 
+  const [isThinkingBudgetAuto, setIsThinkingBudgetAuto] = useState(true);
+  const [isMaxTokensAuto, setIsMaxTokensAuto] = useState(true);
+
   useEffect(() => {
-    setSettings(getApiSettings());
+    const loadedSettings = getApiSettings();
+    setSettings(loadedSettings);
+    setIsThinkingBudgetAuto(loadedSettings.thinkingBudget === undefined);
+    setIsMaxTokensAuto(loadedSettings.maxOutputTokens === undefined);
   }, []);
 
   const handleSettingChange = (field: keyof ApiConfig, value: string | number | boolean | undefined) => {
@@ -41,6 +48,16 @@ const ParameterSettingsScreen: React.FC<ParameterSettingsScreenProps> = ({ setCu
     setSettings(newSettings);
     if (!hasChanges) setHasChanges(true);
     if (successMessage) setSuccessMessage('');
+  };
+  
+  const handleToggleAuto = (field: 'thinkingBudget' | 'maxOutputTokens', isAuto: boolean) => {
+      if (field === 'thinkingBudget') {
+          setIsThinkingBudgetAuto(isAuto);
+          handleSettingChange('thinkingBudget', isAuto ? undefined : (settings.thinkingBudget ?? 10000));
+      } else if (field === 'maxOutputTokens') {
+          setIsMaxTokensAuto(isAuto);
+          handleSettingChange('maxOutputTokens', isAuto ? undefined : (settings.maxOutputTokens ?? 8192));
+      }
   };
 
   const handleRandomizeSeed = () => {
@@ -114,19 +131,45 @@ const ParameterSettingsScreen: React.FC<ParameterSettingsScreenProps> = ({ setCu
           <CollapsibleSection title="Cài đặt Hiệu suất & Nâng cao" isOpen={openSections.performance} onToggle={() => toggleSection('performance')}>
              <div className="space-y-6 p-2">
                 <div>
-                    <label htmlFor="thinkingBudget" className="block text-sm font-medium text-gray-300 mb-1">
-                      Ngân sách Suy nghĩ (Thinking Budget) <span className="text-gray-400 font-normal">({settings.thinkingBudget ?? 'Tự động'})</span>
-                    </label>
-                    <input type="range" id="thinkingBudget" min="0" max="30000" step="100" value={settings.thinkingBudget ?? 0} onChange={(e) => handleSettingChange('thinkingBudget', parseInt(e.target.value, 10))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"/>
-                    <p className="text-xs text-gray-400 mt-1">Chỉ dành cho model Flash. 0 = Tắt. Giá trị cao hơn cho chất lượng tốt hơn nhưng chậm hơn.</p>
+                    <div className="flex justify-between items-center mb-1">
+                        <label className="block text-sm font-medium text-gray-300">
+                          Ngân sách Suy nghĩ (Thinking Budget)
+                          <span className="text-gray-400 font-normal ml-2">({isThinkingBudgetAuto ? 'Tự động' : (settings.thinkingBudget ?? 0)})</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400">{isThinkingBudgetAuto ? 'Tự động' : 'Thủ công'}</span>
+                            <ToggleSwitch
+                                id="thinking-budget-toggle"
+                                checked={!isThinkingBudgetAuto}
+                                onChange={(isChecked) => handleToggleAuto('thinkingBudget', !isChecked)}
+                            />
+                        </div>
+                    </div>
+                    <div className={isThinkingBudgetAuto ? 'opacity-50' : ''}>
+                      <input type="range" id="thinkingBudget" min="0" max="30000" step="100" value={settings.thinkingBudget ?? 0} onChange={(e) => handleSettingChange('thinkingBudget', parseInt(e.target.value, 10))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer" disabled={isThinkingBudgetAuto}/>
+                      <p className="text-xs text-gray-400 mt-1">Chỉ dành cho model Flash. 0 = Tắt. Giá trị cao hơn cho chất lượng tốt hơn nhưng chậm hơn.</p>
+                    </div>
                 </div>
 
                 <div>
-                    <label htmlFor="maxOutputTokens" className="block text-sm font-medium text-gray-300 mb-1">
-                      Số Token Đầu Ra Tối Đa <span className="text-gray-400 font-normal">({settings.maxOutputTokens ?? 'Tự động'})</span>
-                    </label>
-                    <input type="range" id="maxOutputTokens" min="50" max="65000" step="10" value={settings.maxOutputTokens ?? 50} onChange={(e) => handleSettingChange('maxOutputTokens', parseInt(e.target.value, 10))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"/>
-                    <p className="text-xs text-gray-400 mt-1">Giới hạn độ dài tối đa của phản hồi từ AI. Ngân sách suy nghĩ sẽ được tự điều chỉnh nếu cần.</p>
+                    <div className="flex justify-between items-center mb-1">
+                        <label className="block text-sm font-medium text-gray-300">
+                          Số Token Đầu Ra Tối Đa
+                          <span className="text-gray-400 font-normal ml-2">({isMaxTokensAuto ? 'Tự động' : (settings.maxOutputTokens ?? 0)})</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400">{isMaxTokensAuto ? 'Tự động' : 'Thủ công'}</span>
+                            <ToggleSwitch
+                                id="max-tokens-toggle"
+                                checked={!isMaxTokensAuto}
+                                onChange={(isChecked) => handleToggleAuto('maxOutputTokens', !isChecked)}
+                            />
+                        </div>
+                    </div>
+                    <div className={isMaxTokensAuto ? 'opacity-50' : ''}>
+                        <input type="range" id="maxOutputTokens" min="50" max="65000" step="10" value={settings.maxOutputTokens ?? 50} onChange={(e) => handleSettingChange('maxOutputTokens', parseInt(e.target.value, 10))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer" disabled={isMaxTokensAuto}/>
+                        <p className="text-xs text-gray-400 mt-1">Giới hạn độ dài tối đa của phản hồi từ AI. Ngân sách suy nghĩ sẽ được tự điều chỉnh nếu cần.</p>
+                    </div>
                 </div>
                 
                  <div>
