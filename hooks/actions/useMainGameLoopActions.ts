@@ -1,5 +1,3 @@
-
-
 import { useCallback, useState, useRef } from 'react';
 import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, AiChoice, NPC, FindLocationParams } from '../../types/index';
 import { countTokens, generateRefreshedChoices, generateNextTurn, summarizeTurnHistory, findLocationWithAI, getApiSettings } from '../../services';
@@ -387,21 +385,25 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
             return;
         }
 
-        const newHistory = [...knowledgeBase.turnHistory];
-        newHistory.pop(); // Remove the current state
-        const stateToRestore = newHistory[newHistory.length - 1]; // Get the state before that
+        const historyCopy = [...knowledgeBase.turnHistory];
+        // FIX: The bug was here. Previously, it would pop, then take the *new* last element,
+        // effectively rolling back two turns. Now, it uses the element that was just popped.
+        const stateToRestore = historyCopy.pop();
 
         if (!stateToRestore) {
             showNotification("Lỗi: Không tìm thấy trạng thái để lùi về.", 'error');
             return;
         }
         
-        // Directly set the state. The history is already correct.
+        // The KB inside stateToRestore already contains a shorter turn history.
+        // We can just set it directly.
         setKnowledgeBase(stateToRestore.knowledgeBaseSnapshot);
         setGameMessages(stateToRestore.gameMessagesSnapshot);
 
+        // Recalculate the current page display based on the restored turn number
         const newTurn = stateToRestore.knowledgeBaseSnapshot.playerStats.turn;
         const historyForPageCalc = stateToRestore.knowledgeBaseSnapshot.currentPageHistory || [1];
+        
         let newPage = 1;
         for (let i = historyForPageCalc.length - 1; i >= 0; i--) {
             if (newTurn >= historyForPageCalc[i]) {
