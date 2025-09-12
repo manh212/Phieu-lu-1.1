@@ -380,41 +380,57 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
     }, [isLoadingApi, gameMessages, knowledgeBase, showNotification, setIsLoadingApi, resetApiError, logSentPromptCallback, setRawAiResponsesLog, setApiErrorWithTimeout, setGameMessages]);
 
     const onRollbackTurn = useCallback(() => {
+        if (isSummarizingNextPageTransition || isLoadingApi) return;
+
+        // We need at least one state to roll back TO. The initial state (length 1) cannot be rolled back from.
         if (!knowledgeBase.turnHistory || knowledgeBase.turnHistory.length < 2) {
             showNotification(VIETNAMESE.cannotRollbackFurther, 'error');
             return;
         }
-
+        
         const historyCopy = [...knowledgeBase.turnHistory];
-        // FIX: The bug was here. Previously, it would pop, then take the *new* last element,
-        // effectively rolling back two turns. Now, it uses the element that was just popped.
-        const stateToRestore = historyCopy.pop();
-
-        if (!stateToRestore) {
-            showNotification("Lỗi: Không tìm thấy trạng thái để lùi về.", 'error');
-            return;
-        }
         
-        // The KB inside stateToRestore already contains a shorter turn history.
-        // We can just set it directly.
-        setKnowledgeBase(stateToRestore.knowledgeBaseSnapshot);
-        setGameMessages(stateToRestore.gameMessagesSnapshot);
-
-        // Recalculate the current page display based on the restored turn number
-        const newTurn = stateToRestore.knowledgeBaseSnapshot.playerStats.turn;
-        const historyForPageCalc = stateToRestore.knowledgeBaseSnapshot.currentPageHistory || [1];
+        // Pop the state for the beginning of the *current* turn. This IS the state we want to restore.
+        const lastTurnState = historyCopy.pop(); 
         
-        let newPage = 1;
-        for (let i = historyForPageCalc.length - 1; i >= 0; i--) {
-            if (newTurn >= historyForPageCalc[i]) {
-                newPage = i + 1;
-                break;
+        if (lastTurnState) {
+            // The state to restore is the snapshot from the popped entry...
+            const kbToRestore = lastTurnState.knowledgeBaseSnapshot;
+            
+            // ...but we explicitly overwrite its history with the new, shorter history array.
+            // This is the critical fix to allow multiple rollbacks.
+            kbToRestore.turnHistory = historyCopy;
+
+            setKnowledgeBase(kbToRestore);
+            setGameMessages(lastTurnState.gameMessagesSnapshot);
+
+            // Recalculate current page display based on the restored turn number.
+            const newTurn = kbToRestore.playerStats.turn;
+            const historyForPageCalc = kbToRestore.currentPageHistory || [1];
+            
+            let newPage = 1;
+            for (let i = historyForPageCalc.length - 1; i >= 0; i--) {
+                if (newTurn >= historyForPageCalc[i]) {
+                    newPage = i + 1;
+                    break;
+                }
             }
-        }
-        setCurrentPageDisplay(newPage);
+            setCurrentPageDisplay(newPage);
 
-        showNotification(VIETNAMESE.rollbackSuccess, 'success');
-    }, [knowledgeBase, gameMessages, setKnowledgeBase, setGameMessages, setCurrentPageDisplay, showNotification]);
+            showNotification(VIETNAMESE.rollbackSuccess, 'success');
+        } else {
+            // This case should be rare given the length check above.
+            showNotification("Lỗi: Không tìm thấy trạng thái để lùi về.", 'error');
+        }
+    }, [
+        knowledgeBase.turnHistory,
+        setKnowledgeBase,
+        setGameMessages,
+        setCurrentPageDisplay,
+        showNotification,
+        isSummarizingNextPageTransition,
+        isLoadingApi
+    ]);
 
 
     const handleFindLocation = useCallback(async (params: FindLocationParams) => {
