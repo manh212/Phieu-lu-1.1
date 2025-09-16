@@ -2,43 +2,7 @@
 
 import { KnowledgeBase, GameMessage, VectorMetadata, NPC, Wife, Slave, Prisoner, Master, ActivityLogEntry } from '../../types/index';
 import { formatRelationshipMemoryForEmbedding } from '../ragUtils';
-import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
-
-const PERSON_SIMILARITY_THRESHOLD = 0.8;
-
-// Helper to find any person-like entity by ID or Name
-const findPersonByIdOrName = (kb: KnowledgeBase, identifier: string): NPC | Wife | Slave | Prisoner | Master | null => {
-    if (!identifier) return null;
-    
-    const allPeople: (NPC | Wife | Slave | Prisoner | Master)[] = [
-        ...kb.discoveredNPCs, ...kb.wives, ...kb.slaves, ...kb.prisoners,
-    ];
-    if (kb.master && !allPeople.some(p => p.id === kb.master!.id)) {
-        allPeople.push(kb.master);
-    }
-
-    // 1. Direct ID match first
-    const byId = allPeople.find(p => p.id === identifier);
-    if (byId) return byId;
-
-    // 2. Fuzzy name match
-    let bestMatch = { person: null as (NPC | Wife | Slave | Prisoner | Master) | null, score: 0 };
-    const normalizedIdentifier = normalizeStringForComparison(identifier);
-
-    allPeople.forEach(person => {
-        const score = diceCoefficient(normalizedIdentifier, normalizeStringForComparison(person.name));
-        if (score > bestMatch.score) {
-            bestMatch = { person, score };
-        }
-    });
-
-    if (bestMatch.person && bestMatch.score >= PERSON_SIMILARITY_THRESHOLD) {
-        return bestMatch.person;
-    }
-    
-    console.warn(`[findPersonByIdOrName] Could not find a definitive match for identifier: "${identifier}". Best match was "${bestMatch.person?.name}" with score ${bestMatch.score}.`);
-    return null;
-};
+import { findPersonByIdOrName } from '../questUtils';
 
 export const processRelationshipEvent = (
     currentKb: KnowledgeBase,
@@ -132,10 +96,11 @@ export const processRelationshipEvent = (
         targetId: targetEntity?.id || 'player',
     };
     
+    // 4. Create user-facing message
     systemMessages.push({
         id: `relationship-update-${memoryId}`,
         type: 'system',
-        content: `[DEBUG] Mối quan hệ giữa ${sourceName} và ${targetName} đã thay đổi. Lý do: ${reason}`,
+        content: `[Thế giới sống] Dường như đã có chuyện gì đó xảy ra giữa ${sourceName} và ${targetName}...`,
         timestamp: Date.now(),
         turnNumber: turnForSystemMessages
     });

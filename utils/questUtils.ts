@@ -1,4 +1,5 @@
 import { VIETNAMESE } from '../constants'; // VIETNAMESE might be needed for quest related strings in the future
+import { Quest, NPC, Wife, Slave, Prisoner, Master, KnowledgeBase } from '../types/index';
 
 // Helper function to sanitize quest objective text for display
 export const sanitizeQuestObjectiveTextForDisplay = (text: string | undefined): string | undefined => {
@@ -113,4 +114,40 @@ export const normalizeLocationName = (name: string): string => {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/đ/g, "d");
+};
+
+const PERSON_SIMILARITY_THRESHOLD = 0.8;
+
+// Helper to find any person-like entity by ID or Name
+export const findPersonByIdOrName = (kb: KnowledgeBase, identifier: string): NPC | Wife | Slave | Prisoner | Master | null => {
+    if (!identifier) return null;
+    
+    const allPeople: (NPC | Wife | Slave | Prisoner | Master)[] = [
+        ...kb.discoveredNPCs, ...kb.wives, ...kb.slaves, ...kb.prisoners,
+    ];
+    if (kb.master && !allPeople.some(p => p.id === kb.master!.id)) {
+        allPeople.push(kb.master);
+    }
+
+    // 1. Direct ID match first
+    const byId = allPeople.find(p => p.id === identifier);
+    if (byId) return byId;
+
+    // 2. Fuzzy name match
+    let bestMatch = { person: null as (NPC | Wife | Slave | Prisoner | Master) | null, score: 0 };
+    const normalizedIdentifier = normalizeStringForComparison(identifier);
+
+    allPeople.forEach(person => {
+        const score = diceCoefficient(normalizedIdentifier, normalizeStringForComparison(person.name));
+        if (score > bestMatch.score) {
+            bestMatch = { person, score };
+        }
+    });
+
+    if (bestMatch.person && bestMatch.score >= PERSON_SIMILARITY_THRESHOLD) {
+        return bestMatch.person;
+    }
+    
+    console.warn(`[findPersonByIdOrName] Could not find a definitive match for identifier: "${identifier}". Best match was "${bestMatch.person?.name}" with score ${bestMatch.score}.`);
+    return null;
 };
