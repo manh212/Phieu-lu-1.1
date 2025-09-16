@@ -57,13 +57,8 @@ const ManualInputModal: React.FC<ManualInputModalProps> = ({ isOpen, onClose, on
 
 
 // --- START: Manual Tag Parser ---
-const parseManualTags = (responseText: string | undefined): GeneratedWorldElements => {
-    const generated: GeneratedWorldElements = {
-        startingSkills: [], startingItems: [], startingNPCs: [], startingLore: [], startingYeuThu: [],
-        startingLocations: [], startingFactions: [], raceCultivationSystems: [], yeuThuRealmSystem: '',
-        genre: AVAILABLE_GENRES[0], isCultivationEnabled: true, nsfwDescriptionStyle: DEFAULT_NSFW_DESCRIPTION_STYLE,
-        violenceLevel: DEFAULT_VIOLENCE_LEVEL, storyTone: DEFAULT_STORY_TONE,
-    };
+const parseManualTags = (responseText: string | undefined): Partial<GeneratedWorldElements> => {
+    const generated: Partial<GeneratedWorldElements> & { [key: string]: any } = {};
     
     if (!responseText) return generated;
 
@@ -74,6 +69,13 @@ const parseManualTags = (responseText: string | undefined): GeneratedWorldElemen
 
         const tagName = match[1];
         const params = parseTagValue(match[2]);
+        
+        const initArray = (key: keyof GeneratedWorldElements) => {
+            if (!generated[key]) {
+                // FIX: Cast 'generated' to 'any' to allow dynamic assignment of an empty array. This resolves a TypeScript error where the type of '[]' cannot be assigned to the property's complex union type.
+                (generated as any)[key] = [];
+            }
+        };
 
         switch (tagName) {
             case 'GENERATED_PLAYER_NAME': if (params.name) generated.playerName = params.name; break;
@@ -95,7 +97,8 @@ const parseManualTags = (responseText: string | undefined): GeneratedWorldElemen
 
             case 'GENERATED_RACE_SYSTEM':
                 if (params.race && params.system) {
-                    generated.raceCultivationSystems.push({ id: `sys-${params.race}-${Date.now()}`, raceName: params.race, realmSystem: params.system });
+                    initArray('raceCultivationSystems');
+                    generated.raceCultivationSystems!.push({ id: `sys-${params.race}-${Date.now()}`, raceName: params.race, realmSystem: params.system });
                 }
                 break;
             case 'GENERATED_YEUTHU_SYSTEM':
@@ -103,25 +106,46 @@ const parseManualTags = (responseText: string | undefined): GeneratedWorldElemen
                 break;
             
             case 'GENERATED_SKILL':
-                if(params.name) generated.startingSkills.push(params as any);
+                if(params.name) {
+                    initArray('startingSkills');
+                    generated.startingSkills!.push(params as any);
+                }
                 break;
             case 'GENERATED_ITEM':
-                if(params.name) generated.startingItems.push(params as any);
+                if(params.name) {
+                    initArray('startingItems');
+                    generated.startingItems!.push(params as any);
+                }
                 break;
             case 'GENERATED_NPC':
-                if(params.name) generated.startingNPCs.push(params as any);
+                if(params.name) {
+                    initArray('startingNPCs');
+                    generated.startingNPCs!.push(params as any);
+                }
                 break;
             case 'GENERATED_YEUTHU':
-                 if(params.name) generated.startingYeuThu.push(params as any);
+                 if(params.name) {
+                    initArray('startingYeuThu');
+                    generated.startingYeuThu!.push(params as any);
+                 }
                 break;
             case 'GENERATED_LORE':
-                 if(params.title) generated.startingLore.push(params as any);
+                 if(params.title) {
+                    initArray('startingLore');
+                    generated.startingLore!.push(params as any);
+                 }
                 break;
             case 'GENERATED_LOCATION':
-                 if(params.name) generated.startingLocations.push(params as any);
+                 if(params.name) {
+                    initArray('startingLocations');
+                    generated.startingLocations!.push(params as any);
+                 }
                 break;
             case 'GENERATED_FACTION':
-                 if(params.name) generated.startingFactions.push(params as any);
+                 if(params.name) {
+                    initArray('startingFactions');
+                    generated.startingFactions!.push(params as any);
+                 }
                 break;
         }
     });
@@ -228,13 +252,13 @@ const AIAssistTab: React.FC<AIAssistTabProps> = ({ setIsArchitectModalOpen }) =>
     }
   };
   
-  // NEW: Handler for manual input
+  // NEW: Handler for manual input, dispatches new additive action
   const handleApplyManualInput = (text: string) => {
       setIsParsingManual(true);
       try {
           const parsedElements = parseManualTags(text);
-          dispatch({ type: 'APPLY_AI_GENERATION', payload: parsedElements });
-          showNotification('Đã áp dụng thành công các thiết lập từ thẻ thủ công!', 'success');
+          dispatch({ type: 'MANUALLY_ADD_ELEMENTS', payload: parsedElements });
+          showNotification('Đã thêm thành công các thiết lập từ thẻ thủ công!', 'success');
           setIsManualInputModalOpen(false);
       } catch (e) {
           const errorMsg = e instanceof Error ? e.message : 'Lỗi không xác định.';

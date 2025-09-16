@@ -26,6 +26,7 @@ type ActionMap = {
         list: keyof Pick<WorldSettings, 'startingSkills' | 'startingItems' | 'startingNPCs' | 'startingYeuThu' | 'startingLore' | 'startingLocations' | 'startingFactions' | 'raceCultivationSystems'>;
         id: string;
     };
+    MANUALLY_ADD_ELEMENTS: Partial<GeneratedWorldElements>;
 };
 
 export type GameSetupAction = {
@@ -124,6 +125,31 @@ export const gameSetupReducer = (state: GameSetupState, action: GameSetupAction)
                 }
             };
         }
+        
+        case 'MANUALLY_ADD_ELEMENTS': {
+            const newSettings = { ...state.settings };
+            const payload = action.payload;
+
+            for (const key in payload) {
+                const parsedKey = key as keyof GeneratedWorldElements;
+                const existingValue = newSettings[parsedKey];
+                const newValue = payload[parsedKey];
+
+                if (Array.isArray(existingValue) && Array.isArray(newValue)) {
+                    // For arrays, concatenate new elements to the existing list.
+                    (newSettings as any)[parsedKey] = [...existingValue, ...newValue];
+                } else if (newValue !== undefined) {
+                    // For single values, overwrite the existing one.
+                    (newSettings as any)[parsedKey] = newValue;
+                }
+            }
+            return {
+                ...state,
+                settings: newSettings,
+                error: null,
+            };
+        }
+
 
         default:
             return state;
