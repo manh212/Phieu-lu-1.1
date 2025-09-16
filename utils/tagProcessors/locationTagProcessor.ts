@@ -176,12 +176,19 @@ export const processLocationChange = async (
         const npcIndex = newKb.discoveredNPCs.findIndex(n => n.name === characterName);
         if (npcIndex > -1) {
             newKb.discoveredNPCs[npcIndex].locationId = targetLocation.id;
-            // No system message for player, as this is a background world event.
+            // Add system message for NPC movement
+            systemMessages.push({
+                id: 'npc-location-changed-' + Date.now(),
+                type: 'system',
+                content: `[Thế giới sống] ${characterName} đã di chuyển đến: ${targetLocation.name}.`,
+                timestamp: Date.now(),
+                turnNumber: turnForSystemMessages
+            });
         } else {
             console.warn(`LOCATION_CHANGE: NPC "${characterName}" not found.`);
         }
     } else {
-        // --- Handle Player movement (original functionality) ---
+        // --- Handle Player movement ---
         const locationChanged = newKb.currentLocationId !== targetLocation.id;
         
         if (locationChanged) {
