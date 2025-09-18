@@ -1,5 +1,4 @@
-
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { KnowledgeBase, Item, Skill } from '@/types/index'; 
 import { PlayerStatsWithEquipment } from './equipment/PlayerStatsWithEquipment'; 
 import InventoryPanel from './InventoryPanel';
@@ -60,6 +59,7 @@ const SkillList: React.FC<{ title: string; skills: Skill[]; onSkillClick: (skill
     );
 });
 
+type CharacterTab = 'info' | 'inventory' | 'skills';
 
 const CharacterSidePanel: React.FC<CharacterSidePanelProps> = React.memo(({
   knowledgeBase,
@@ -69,6 +69,7 @@ const CharacterSidePanel: React.FC<CharacterSidePanelProps> = React.memo(({
   isUploadingPlayerAvatar,
 }) => {
   const { openEntityModal } = useGame();
+  const [activeTab, setActiveTab] = useState<CharacterTab>('info');
   const currentLocation = knowledgeBase.discoveredLocations.find(l => l.id === knowledgeBase.currentLocationId);
   const isPlayerRestricted = !!knowledgeBase.playerStats.playerSpecialStatus;
   const master = knowledgeBase.master;
@@ -102,38 +103,70 @@ const CharacterSidePanel: React.FC<CharacterSidePanelProps> = React.memo(({
     s.skillType !== GameTemplates.SkillType.CAM_THUAT
   );
 
-  return (
-    <div className="flex flex-col h-full space-y-4"> 
-      {isPlayerRestricted && master && <MasterPanel master={master} />}
-      {knowledgeBase.playerStats && (
-        <PlayerStatsWithEquipment 
-          personId={'player'}
-          playerStats={knowledgeBase.playerStats}
-          equippedItems={knowledgeBase.equippedItems}
-          inventory={knowledgeBase.inventory}
-          currencyName={knowledgeBase.worldConfig?.currencyName}
-          playerName={knowledgeBase.worldConfig?.playerName}
-          playerGender={knowledgeBase.worldConfig?.playerGender}
-          playerRace={knowledgeBase.worldConfig?.playerRace}
-          playerAvatarUrl={knowledgeBase.worldConfig?.playerAvatarUrl} 
-          playerAvatarData={knowledgeBase.playerAvatarData} 
-          worldConfig={knowledgeBase.worldConfig} 
-          worldDate={knowledgeBase.worldDate}
-          isPlayerContext={true}
-          onPlayerAvatarUploadRequest={onPlayerAvatarUploadRequest}
-          isUploadingPlayerAvatar={isUploadingPlayerAvatar}
-          currentLocationName={currentLocation?.name}
-        />
-      )}
-      <InventoryPanel items={displayableInventory} onItemClick={onItemClick} onItemEditClick={(item) => openEntityModal('item', item, true)} />
-      
-      <SkillList title="Công Pháp Tu Luyện" skills={congPhapSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
-      <SkillList title="Linh Kĩ" skills={linhKiSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
-      <SkillList title="Thần Thông" skills={thanThongSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
-      <SkillList title="Cấm Thuật" skills={camThuatSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
-      <SkillList title="Kỹ Năng Nghề Nghiệp" skills={ngheNghiepSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
-      <SkillList title="Kỹ Năng Khác" skills={otherSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+  const activeTabStyle = "whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm border-indigo-500 text-indigo-400";
+  const inactiveTabStyle = "whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500";
 
+  return (
+    <div className="flex flex-col h-full"> 
+      {isPlayerRestricted && master && <MasterPanel master={master} />}
+      
+      <div className="border-b border-gray-700 flex-shrink-0">
+        <nav className="-mb-px flex space-x-4" aria-label="Tabs">
+          <button onClick={() => setActiveTab('info')} className={activeTab === 'info' ? activeTabStyle : inactiveTabStyle}>
+            Thông Tin
+          </button>
+          <button onClick={() => setActiveTab('inventory')} className={activeTab === 'inventory' ? activeTabStyle : inactiveTabStyle}>
+            Túi Đồ
+          </button>
+          <button onClick={() => setActiveTab('skills')} className={activeTab === 'skills' ? activeTabStyle : inactiveTabStyle}>
+            Kỹ Năng
+          </button>
+        </nav>
+      </div>
+      
+      <div className="flex-grow overflow-y-auto custom-scrollbar pt-4 space-y-4">
+        {activeTab === 'info' && (
+          <div>
+            {knowledgeBase.playerStats && (
+              <PlayerStatsWithEquipment 
+                personId={'player'}
+                playerStats={knowledgeBase.playerStats}
+                equippedItems={knowledgeBase.equippedItems}
+                inventory={knowledgeBase.inventory}
+                currencyName={knowledgeBase.worldConfig?.currencyName}
+                playerName={knowledgeBase.worldConfig?.playerName}
+                playerGender={knowledgeBase.worldConfig?.playerGender}
+                playerRace={knowledgeBase.worldConfig?.playerRace}
+                playerAvatarUrl={knowledgeBase.worldConfig?.playerAvatarUrl} 
+                playerAvatarData={knowledgeBase.playerAvatarData} 
+                worldConfig={knowledgeBase.worldConfig} 
+                worldDate={knowledgeBase.worldDate}
+                isPlayerContext={true}
+                onPlayerAvatarUploadRequest={onPlayerAvatarUploadRequest}
+                isUploadingPlayerAvatar={isUploadingPlayerAvatar}
+                currentLocationName={currentLocation?.name}
+              />
+            )}
+          </div>
+        )}
+
+        {activeTab === 'inventory' && (
+          <div>
+            <InventoryPanel items={displayableInventory} onItemClick={onItemClick} onItemEditClick={(item) => openEntityModal('item', item, true)} />
+          </div>
+        )}
+
+        {activeTab === 'skills' && (
+          <div className="space-y-4">
+            <SkillList title="Công Pháp Tu Luyện" skills={congPhapSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+            <SkillList title="Linh Kĩ" skills={linhKiSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+            <SkillList title="Thần Thông" skills={thanThongSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+            <SkillList title="Cấm Thuật" skills={camThuatSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+            <SkillList title="Kỹ Năng Nghề Nghiệp" skills={ngheNghiepSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+            <SkillList title="Kỹ Năng Khác" skills={otherSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+          </div>
+        )}
+      </div>
     </div>
   );
 });

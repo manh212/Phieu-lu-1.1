@@ -83,18 +83,7 @@ const PersonDetails: React.FC<{ person: NPC | Wife | Slave | Prisoner; knowledge
 
     return (
         <>
-            <div className="flex items-start gap-4 mb-4">
-                <img src={getDeterministicAvatarSrc(person)} alt={person.name} className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500"/>
-                <div className="flex-grow space-y-2">
-                    {person.title && <p className="text-lg font-semibold text-gray-300">{person.title}</p>}
-                    <p><strong className="text-gray-400">Giới tính:</strong> {person.gender}</p>
-                    <p><strong className="text-gray-400">Chủng tộc:</strong> {person.race}</p>
-                    <p><strong className="text-gray-400">Phe phái:</strong> {knowledgeBase.discoveredFactions.find(f => f.id === (person as NPC).factionId)?.name || 'Không có'}</p>
-                </div>
-            </div>
-            <p className="text-sm italic text-gray-400">{person.description}</p>
-            
-            <div className="border-b border-gray-700 mt-4">
+            <div className="border-b border-gray-700 mb-4">
                 <nav className="-mb-px flex space-x-6" aria-label="Tabs">
                     <button onClick={() => setActiveTab('info')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'info' ? activeTabStyle : inactiveTabStyle}`}>
                         Thông Tin
@@ -111,6 +100,17 @@ const PersonDetails: React.FC<{ person: NPC | Wife | Slave | Prisoner; knowledge
             <div className="mt-2">
                 {activeTab === 'info' && (
                     <div>
+                        <div className="flex items-start gap-4 mb-4">
+                            <img src={getDeterministicAvatarSrc(person)} alt={person.name} className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500"/>
+                            <div className="flex-grow space-y-2">
+                                {person.title && <p className="text-lg font-semibold text-gray-300">{person.title}</p>}
+                                <p><strong className="text-gray-400">Giới tính:</strong> {person.gender}</p>
+                                <p><strong className="text-gray-400">Chủng tộc:</strong> {person.race}</p>
+                                <p><strong className="text-gray-400">Phe phái:</strong> {knowledgeBase.discoveredFactions.find(f => f.id === (person as NPC).factionId)?.name || 'Không có'}</p>
+                            </div>
+                        </div>
+                        <p className="text-sm italic text-gray-400">{person.description}</p>
+                        
                         <DetailSection title="Thông Tin Tu Luyện & Chỉ Số">
                             <StatGrid>
                                 <InfoPair label="Cảnh giới">{person.realm || 'Không rõ'}</InfoPair>
