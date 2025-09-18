@@ -1,16 +1,14 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { GameEntity, GameEntityType } from '../../../hooks/types';
-// FIX: Import RelationshipEntry from types/index
 import { KnowledgeBase, PlayerStats, Item, Skill, Quest, NPC, GameLocation, WorldLoreEntry, Companion, Faction, YeuThu, Wife, Slave, Prisoner, ActivityLogEntry, QuestObjective, StartingNPC, RelationshipEntry } from '../../../types/index';
 import * as GameTemplates from '../../../types/index';
 import Modal from '../../ui/Modal';
-// FIX: Import PROFICIENCY_TIERS from types/index instead of constants/index
 import { VIETNAMESE, PROFICIENCY_DMG_HEAL_MULTIPLIERS, PROFICIENCY_COST_COOLDOWN_MULTIPLIERS, PROFICIENCY_EXP_THRESHOLDS } from '../../../constants/index';
 import { PROFICIENCY_TIERS } from '../../../types/index';
 import { getDeterministicAvatarSrc } from '../../../utils/avatarUtils';
 import InputField from '../../ui/InputField';
 import Button from '../../ui/Button';
+import { useGame } from '../../../hooks/useGame';
 
 interface EntityDetailModalProps {
     selectedEntity: { type: GameEntityType; entity: GameEntity, isEditing?: boolean } | null;
@@ -57,9 +55,31 @@ const ProgressBar: React.FC<{ value: number; max: number; colorClass?: string; }
     </div>
 );
 
-// --- Reusable Person Details Component ---
-const PersonDetails: React.FC<{ person: NPC | Wife | Slave | Prisoner; knowledgeBase: KnowledgeBase; children?: React.ReactNode }> = ({ person, knowledgeBase, children }) => {
+type PersonDetailTab = 'info' | 'personality' | 'log';
+
+// --- Reusable Person Details Component with Tabs ---
+const PersonDetails: React.FC<{ person: NPC | Wife | Slave | Prisoner; knowledgeBase: KnowledgeBase; children?: React.ReactNode; onClose: () => void; }> = ({ person, knowledgeBase, children, onClose }) => {
+    const { openEntityModal } = useGame();
+    const [activeTab, setActiveTab] = useState<PersonDetailTab>('info');
+    
     const findPersonName = (id: string) => knowledgeBase.discoveredNPCs.find(p => p.id === id)?.name || id;
+
+    const currentLocation = useMemo(() => {
+        if (!person.locationId) return null;
+        return knowledgeBase.discoveredLocations.find(loc => loc.id === person.locationId);
+    }, [person.locationId, knowledgeBase.discoveredLocations]);
+
+    const handleLocationClick = () => {
+        if (currentLocation) {
+            onClose(); 
+            setTimeout(() => {
+                openEntityModal('location', currentLocation);
+            }, 100); 
+        }
+    };
+
+    const activeTabStyle = "border-indigo-400 text-indigo-300";
+    const inactiveTabStyle = "border-transparent text-gray-400 hover:border-gray-500 hover:text-gray-200";
 
     return (
         <>
@@ -74,75 +94,115 @@ const PersonDetails: React.FC<{ person: NPC | Wife | Slave | Prisoner; knowledge
             </div>
             <p className="text-sm italic text-gray-400">{person.description}</p>
             
-            <DetailSection title="Thông Tin Tu Luyện & Chỉ Số" defaultOpen={true}>
-                 <StatGrid>
-                    <InfoPair label="Cảnh giới">{person.realm || 'Không rõ'}</InfoPair>
-                    <InfoPair label="Thiện cảm">{person.affinity}</InfoPair>
-                    <InfoPair label="Tư chất">{person.tuChat || 'Không rõ'}</InfoPair>
-                    <InfoPair label="Linh căn">{person.spiritualRoot || 'Không rõ'}</InfoPair>
-                    <InfoPair label="Thọ nguyên" fullWidth>{Math.floor(person.stats?.thoNguyen || 0)} / {person.stats?.maxThoNguyen || 0} năm</InfoPair>
-                    <InfoPair label="Thể chất đặc biệt" fullWidth>{person.specialPhysique || 'Không rõ'}</InfoPair>
-                 </StatGrid>
-                 <h5 className="font-semibold text-indigo-200 mt-4 mb-2">Chỉ số chiến đấu</h5>
-                 <StatGrid>
-                    <InfoPair label="Sinh lực">{person.stats?.sinhLuc ?? '??'} / {person.stats?.maxSinhLuc ?? '??'}</InfoPair>
-                    <InfoPair label="Linh lực">{person.stats?.linhLuc ?? '??'} / {person.stats?.maxLinhLuc ?? '??'}</InfoPair>
-                    <InfoPair label="Sức tấn công">{person.stats?.sucTanCong ?? '??'}</InfoPair>
-                 </StatGrid>
-            </DetailSection>
+            <div className="border-b border-gray-700 mt-4">
+                <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+                    <button onClick={() => setActiveTab('info')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'info' ? activeTabStyle : inactiveTabStyle}`}>
+                        Thông Tin
+                    </button>
+                    <button onClick={() => setActiveTab('personality')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'personality' ? activeTabStyle : inactiveTabStyle}`}>
+                        Tính Cách & Mục Tiêu
+                    </button>
+                    <button onClick={() => setActiveTab('log')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'log' ? activeTabStyle : inactiveTabStyle}`}>
+                        Nhật Ký
+                    </button>
+                </nav>
+            </div>
 
-            {children} {/* For Prisoner/Wife/Slave specific stats */}
+            <div className="mt-2">
+                {activeTab === 'info' && (
+                    <div>
+                        <DetailSection title="Thông Tin Tu Luyện & Chỉ Số">
+                            <StatGrid>
+                                <InfoPair label="Cảnh giới">{person.realm || 'Không rõ'}</InfoPair>
+                                <InfoPair label="Thiện cảm">{person.affinity}</InfoPair>
+                                <InfoPair label="Tư chất">{person.tuChat || 'Không rõ'}</InfoPair>
+                                <InfoPair label="Linh căn">{person.spiritualRoot || 'Không rõ'}</InfoPair>
+                                <InfoPair label="Thọ nguyên" fullWidth>{Math.floor(person.stats?.thoNguyen || 0)} / {person.stats?.maxThoNguyen || 0} năm</InfoPair>
+                                <InfoPair label="Thể chất đặc biệt" fullWidth>{person.specialPhysique || 'Không rõ'}</InfoPair>
+                            </StatGrid>
+                            <h5 className="font-semibold text-indigo-200 mt-4 mb-2">Chỉ số chiến đấu</h5>
+                            <StatGrid>
+                                <InfoPair label="Sinh lực">{person.stats?.sinhLuc ?? '??'} / {person.stats?.maxSinhLuc ?? '??'}</InfoPair>
+                                <InfoPair label="Linh lực">{person.stats?.linhLuc ?? '??'} / {person.stats?.maxLinhLuc ?? '??'}</InfoPair>
+                                <InfoPair label="Sức tấn công">{person.stats?.sucTanCong ?? '??'}</InfoPair>
+                            </StatGrid>
+                        </DetailSection>
 
-            {(person as NPC).vendorType && (
-                 <DetailSection title="Thông Tin Thương Nhân" defaultOpen={false}>
-                    <p><strong className="text-gray-400">Loại hình:</strong> {(person as NPC).vendorType}</p>
-                    <p><strong className="text-gray-400">Khẩu hiệu:</strong> "{(person as NPC).vendorSlogan}"</p>
-                    <p><strong className="text-gray-400">Chuyên mua:</strong> {(person as NPC).vendorBuysCategories?.join(', ')}</p>
-                </DetailSection>
-            )}
+                        {children}
 
-            <DetailSection title="Tính Cách, Mục Tiêu & Kế Hoạch" defaultOpen={false}>
-                <InfoPair label="Tính cách">
-                    <div className="flex flex-wrap gap-2">
-                        {(person as NPC).personalityTraits?.map(trait => <span key={trait} className="bg-gray-700 text-xs px-2 py-1 rounded-full">{trait}</span>)}
+                        {(person as NPC).vendorType && (
+                            <DetailSection title="Thông Tin Thương Nhân">
+                                <p><strong className="text-gray-400">Loại hình:</strong> {(person as NPC).vendorType}</p>
+                                <p><strong className="text-gray-400">Khẩu hiệu:</strong> "{(person as NPC).vendorSlogan}"</p>
+                                <p><strong className="text-gray-400">Chuyên mua:</strong> {(person as NPC).vendorBuysCategories?.join(', ')}</p>
+                            </DetailSection>
+                        )}
+                        {(person as Wife | Slave).skills?.length > 0 && (
+                            <DetailSection title="Kỹ Năng">
+                                <ul className="list-disc list-inside space-y-1">
+                                    {(person as Wife | Slave).skills.map(skill => <li key={skill.id}>{skill.name}</li>)}
+                                </ul>
+                            </DetailSection>
+                        )}
                     </div>
-                </InfoPair>
-                <div className="mt-3 space-y-2">
-                    <InfoPair label="Mục tiêu dài hạn">{(person as NPC).longTermGoal || 'Chưa có'}</InfoPair>
-                    <InfoPair label="Mục tiêu ngắn hạn">{(person as NPC).shortTermGoal || 'Chưa có'}</InfoPair>
-                </div>
-            </DetailSection>
+                )}
 
-            {(person as Wife | Slave).skills?.length > 0 && (
-                <DetailSection title="Kỹ Năng" defaultOpen={false}>
-                    <ul className="list-disc list-inside space-y-1">
-                        {(person as Wife | Slave).skills.map(skill => <li key={skill.id}>{skill.name}</li>)}
-                    </ul>
-                </DetailSection>
-            )}
+                {activeTab === 'personality' && (
+                     <div>
+                        <DetailSection title="Vị Trí & Kế Hoạch">
+                            <InfoPair label="Vị trí hiện tại">
+                                {currentLocation ? (
+                                    <button onClick={handleLocationClick} className="text-cyan-400 underline hover:text-cyan-300 transition-colors">
+                                        {currentLocation.name}
+                                    </button>
+                                ) : ( 'Không rõ' )}
+                            </InfoPair>
+                            <div className="mt-3 space-y-2">
+                                <InfoPair label="Mục tiêu dài hạn">{(person as NPC).longTermGoal || 'Chưa có'}</InfoPair>
+                                <InfoPair label="Mục tiêu ngắn hạn">{(person as NPC).shortTermGoal || 'Chưa có'}</InfoPair>
+                            </div>
+                        </DetailSection>
 
-            {(person as NPC).relationships && Object.keys((person as NPC).relationships).length > 0 && (
-                <DetailSection title="Mối Quan Hệ" defaultOpen={false}>
-                    <ul className="list-disc list-inside space-y-1">
-                        {Object.entries((person as NPC).relationships as Record<string, RelationshipEntry>).map(([targetId, rel]) => (
-                            <li key={targetId}>{rel.type} với <strong>{findPersonName(targetId)}</strong> (Thiện cảm: {rel.affinity})</li>
-                        ))}
-                    </ul>
-                </DetailSection>
-            )}
+                        <DetailSection title="Tính Cách & Mối Quan Hệ">
+                            <InfoPair label="Tính cách">
+                                <div className="flex flex-wrap gap-2">
+                                    {(person as NPC).personalityTraits?.map(trait => <span key={trait} className="bg-gray-700 text-xs px-2 py-1 rounded-full">{trait}</span>)}
+                                </div>
+                            </InfoPair>
 
-            {(person as NPC).activityLog && (person as NPC).activityLog.length > 0 && (
-                <DetailSection title="Nhật Ký Hoạt Động (5 gần nhất)" defaultOpen={false}>
-                    <ul className="space-y-2 text-xs">
-                        {[...(person as NPC).activityLog].reverse().slice(0, 5).map((log, index) => (
-                            <li key={index} className="border-b border-gray-800 pb-1">
-                                <p className="text-gray-300">{log.description}</p>
-                                <p className="text-gray-500">Lượt {log.turnNumber} tại {knowledgeBase.discoveredLocations.find(l => l.id === log.locationId)?.name || 'Không rõ'}</p>
-                            </li>
-                        ))}
-                    </ul>
-                </DetailSection>
-            )}
+                            {(person as NPC).relationships && Object.keys((person as NPC).relationships).length > 0 && (
+                                <div className="mt-4">
+                                     <h5 className="font-semibold text-indigo-200 mt-4 mb-2">Mối quan hệ</h5>
+                                     <ul className="list-disc list-inside space-y-1">
+                                        {Object.entries((person as NPC).relationships as Record<string, RelationshipEntry>).map(([targetId, rel]) => (
+                                            <li key={targetId}>{rel.type} với <strong>{findPersonName(targetId)}</strong> (Thiện cảm: {rel.affinity})</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                             )}
+                        </DetailSection>
+                     </div>
+                )}
+
+                {activeTab === 'log' && (
+                     <div>
+                        {(person as NPC).activityLog && (person as NPC).activityLog.length > 0 ? (
+                            <DetailSection title="Nhật Ký Hoạt Động (5 gần nhất)">
+                                <ul className="space-y-2 text-xs">
+                                    {[...(person as NPC).activityLog].reverse().slice(0, 5).map((log, index) => (
+                                        <li key={index} className="border-b border-gray-800 pb-1">
+                                            <p className="text-gray-300">{log.description}</p>
+                                            <p className="text-gray-500">Lượt {log.turnNumber} tại {knowledgeBase.discoveredLocations.find(l => l.id === log.locationId)?.name || 'Không rõ'}</p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </DetailSection>
+                         ) : (
+                            <p className="text-gray-500 italic text-center py-4">Không có hoạt động nào được ghi lại.</p>
+                         )}
+                    </div>
+                )}
+            </div>
         </>
     );
 };
@@ -175,7 +235,7 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
         case 'npc': {
             const npc = formData as NPC;
             title = `Chi Tiết NPC: ${npc.name}`;
-            content = <PersonDetails person={npc} knowledgeBase={knowledgeBase} />;
+            content = <PersonDetails person={npc} knowledgeBase={knowledgeBase} onClose={onClose} />;
             break;
         }
         case 'wife':
@@ -186,7 +246,7 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
             const personTypeLabel = personTypeMap[person.entityType];
             title = `Chi Tiết ${personTypeLabel}: ${person.name}`;
             content = (
-                <PersonDetails person={person} knowledgeBase={knowledgeBase}>
+                <PersonDetails person={person} knowledgeBase={knowledgeBase} onClose={onClose}>
                     <DetailSection title="Chỉ Số Thân Phận">
                         <StatGrid>
                             <InfoPair label={VIETNAMESE.statWillpower}>{person.willpower}</InfoPair>
