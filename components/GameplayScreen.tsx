@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect, useState } from 'react';
 import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase, AiChoice, PlayerActionInputType, ResponseLength } from './../types/index';
 import { VIETNAMESE } from './../constants';
@@ -101,18 +102,17 @@ export const GameplayScreen: React.FC = () => {
         const opponentNames = opponentIds.map(id => {
             const opp = allPotentialOpponents.find(o => o.id === id);
             return opp ? opp.name : 'Không rõ';
-        }).join(', ');
-    
-        showNotification(`Bắt đầu chiến đấu thử với: ${opponentNames}`, 'info');
-    
-        // Trigger combat via the knowledgeBase property
+        });
+
+        showNotification(`Bắt đầu chiến đấu thử với: ${opponentNames.join(', ')}`, 'info');
+
         setKnowledgeBase((prev: KnowledgeBase) => ({
             ...prev,
             pendingOpponentIdsForCombat: opponentIds
         }));
         
-        setIsCombatSetupModalOpen(false); // Close modal after starting
-    }, [game]);
+        setIsCombatSetupModalOpen(false);
+    }, [game, combat]);
 
 
     // Scroll management
@@ -145,7 +145,7 @@ export const GameplayScreen: React.FC = () => {
                 game.closeModal();
                 game.closeEconomyModal();
                 game.closeSlaveMarketModal();
-                setIsCopilotOpen(false); // NEW
+                setIsCopilotOpen(false);
                 if (game.messageIdBeingEdited) game.onCancelEditMessage();
             }
         };
@@ -153,7 +153,6 @@ export const GameplayScreen: React.FC = () => {
         return () => document.removeEventListener('keydown', handleEsc);
     }, [closePopover, game, setIsCopilotOpen]);
     
-    // Correctly implemented style function for story messages
     const getDynamicMessageStyles = useCallback((msgType: GameMessage['type']): React.CSSProperties => {
         const styles: React.CSSProperties = {};
         let settingsToApply: StyleSettingProperty | undefined;
@@ -166,52 +165,35 @@ export const GameplayScreen: React.FC = () => {
                 settingsToApply = game.styleSettings.playerAction;
                 break;
             default:
-                return {}; // No custom styles for system, error, etc.
+                return {};
         }
 
         if (settingsToApply) {
-            if (settingsToApply.fontFamily && settingsToApply.fontFamily !== 'inherit') {
-                styles.fontFamily = settingsToApply.fontFamily;
-            }
-            if (settingsToApply.fontSize && settingsToApply.fontSize !== 'inherit') {
-                styles.fontSize = settingsToApply.fontSize;
-            }
-            if (settingsToApply.textColor) {
-                styles.color = settingsToApply.textColor;
-            }
-            if (settingsToApply.backgroundColor) {
-                styles.backgroundColor = settingsToApply.backgroundColor;
-            }
+            if (settingsToApply.fontFamily && settingsToApply.fontFamily !== 'inherit') styles.fontFamily = settingsToApply.fontFamily;
+            if (settingsToApply.fontSize && settingsToApply.fontSize !== 'inherit') styles.fontSize = settingsToApply.fontSize;
+            if (settingsToApply.textColor) styles.color = settingsToApply.textColor;
+            if (settingsToApply.backgroundColor) styles.backgroundColor = settingsToApply.backgroundColor;
         }
 
         return styles;
     }, [game.styleSettings]);
     
-    // Correctly implemented style function for choice buttons
     const getChoiceButtonStyles = useCallback((): React.CSSProperties => {
         const styles: React.CSSProperties = {};
         const settingsToApply = game.styleSettings.choiceButton;
     
         if (settingsToApply) {
-            if (settingsToApply.fontFamily && settingsToApply.fontFamily !== 'inherit') {
-                styles.fontFamily = settingsToApply.fontFamily;
-            }
-            if (settingsToApply.fontSize && settingsToApply.fontSize !== 'inherit') {
-                styles.fontSize = settingsToApply.fontSize;
-            }
-            if (settingsToApply.textColor) {
-                styles.color = settingsToApply.textColor;
-            }
-            if (settingsToApply.backgroundColor && settingsToApply.backgroundColor !== 'transparent') {
-                styles.backgroundColor = settingsToApply.backgroundColor;
-            }
+            if (settingsToApply.fontFamily && settingsToApply.fontFamily !== 'inherit') styles.fontFamily = settingsToApply.fontFamily;
+            if (settingsToApply.fontSize && settingsToApply.fontSize !== 'inherit') styles.fontSize = settingsToApply.fontSize;
+            if (settingsToApply.textColor) styles.color = settingsToApply.textColor;
+            if (settingsToApply.backgroundColor && settingsToApply.backgroundColor !== 'transparent') styles.backgroundColor = settingsToApply.backgroundColor;
         }
         return styles;
     }, [game.styleSettings]);
 
 
     const isSaveDisabled = game.isSavingGame || isLoadingUi || isSummarizingUi;
-    const isStopButtonDisabled = isSummarizingUi || !(game.knowledgeBase.turnHistory && game.knowledgeBase.turnHistory.length > 1);
+    const isStopButtonDisabled = isSummarizingUi || (!isLoadingUi && !(game.knowledgeBase.turnHistory && game.knowledgeBase.turnHistory.length > 1));
 
     const gameTitleDisplay = game.knowledgeBase.manualSaveName || game.knowledgeBase.worldConfig?.saveGameName || game.knowledgeBase.worldConfig?.theme || "Role Play AI";
 
@@ -254,7 +236,7 @@ export const GameplayScreen: React.FC = () => {
 
     return (
         <div className="h-screen flex flex-col bg-gray-900 text-gray-100 p-2 sm:p-4">
-             {!isReaderMode && (
+            {!isReaderMode && (
                 <GameHeader
                     gameTitleDisplay={gameTitleDisplay}
                     knowledgeBase={game.knowledgeBase}
@@ -272,8 +254,8 @@ export const GameplayScreen: React.FC = () => {
             )}
             
             <div className="flex-grow flex flex-col bg-gray-850 shadow-xl rounded-lg overflow-hidden relative min-h-0">
-                <CombatStatusPanel />
-                {game.knowledgeBase.isWorldTicking && (
+                 {combat.combatState.isInCombat && <CombatStatusPanel />}
+                 {game.knowledgeBase.isWorldTicking && (
                     <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20" aria-live="polite" aria-busy="true">
                         <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm shadow-lg border border-sky-500/50">
                             <Spinner size="sm" />
@@ -290,15 +272,15 @@ export const GameplayScreen: React.FC = () => {
                     knowledgeBase={game.knowledgeBase}
                     styleSettings={game.styleSettings}
                     messageIdBeingEdited={game.messageIdBeingEdited}
-                    currentEditText={""} // The parent context will handle the actual edit text state
-                    setCurrentEditText={() => {}} // Parent handles
+                    currentEditText={""}
+                    setCurrentEditText={() => {}}
                     onStartEditMessage={game.onStartEditMessage}
                     onSaveEditedMessage={game.onSaveEditedMessage}
                     onCancelEditMessage={game.onCancelEditMessage}
                     parseAndHighlightText={parseAndHighlightText}
                     getDynamicMessageStyles={getDynamicMessageStyles}
                     onClick={() => setIsReaderMode(prev => !prev)}
-                    onAskCopilotAboutError={(errorMsg) => {
+                     onAskCopilotAboutError={(errorMsg) => {
                         game.handleCopilotQuery("Giải thích lỗi này giúp tôi.", errorMsg);
                         setIsCopilotOpen(true);
                     }}
@@ -335,7 +317,6 @@ export const GameplayScreen: React.FC = () => {
                  )}
             </div>
 
-            {/* Main Menu Panel */}
             <OffCanvasPanel isOpen={isMainMenuOpen} onClose={() => setIsMainMenuOpen(false)} title="Menu Trò Chơi" position="right">
                 <MainMenuPanel
                     onClose={() => setIsMainMenuOpen(false)}
@@ -347,30 +328,22 @@ export const GameplayScreen: React.FC = () => {
                 />
             </OffCanvasPanel>
 
-            {/* Side Panels */}
             <OffCanvasPanel isOpen={isCharPanelOpen} onClose={() => setIsCharPanelOpen(false)} title={VIETNAMESE.characterPanelTitle} position="right">
                 <CharacterSidePanel knowledgeBase={game.knowledgeBase} onItemClick={(item) => game.openEntityModal('item', item)} onSkillClick={(skill) => game.openEntityModal('skill', skill)} onPlayerAvatarUploadRequest={game.onUpdatePlayerAvatar} isUploadingPlayerAvatar={game.isUploadingAvatar} />
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isQuestsPanelOpen} onClose={() => setIsQuestsPanelOpen(false)} title={VIETNAMESE.questsPanelTitle} position="right">
-                <QuestsSidePanel quests={game.knowledgeBase.allQuests} onQuestClick={(quest) => game.openEntityModal('quest', quest)} />
+                {/* FIX: Added missing onQuestEditClick prop */}
+                <QuestsSidePanel quests={game.knowledgeBase.allQuests} onQuestClick={(quest) => game.openEntityModal('quest', quest)} onQuestEditClick={(quest) => game.openEntityModal('quest', quest, true)}/>
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isWorldPanelOpen} onClose={() => setIsWorldPanelOpen(false)} title={VIETNAMESE.worldPanelTitle} position="right">
-                <WorldSidePanel 
-                    knowledgeBase={game.knowledgeBase} 
-                    onNpcClick={(npc) => game.openEntityModal('npc', npc)} 
-                    onYeuThuClick={(yt) => game.openEntityModal('yeuThu', yt)}
-                    onLocationClick={(loc) => game.openEntityModal('location', loc)} 
-                    onLoreClick={(lore) => game.openEntityModal('lore', lore)} 
-                    onFactionClick={(fac) => game.openEntityModal('faction', fac)}
-                    onCompanionClick={(comp) => game.openEntityModal('companion', comp)}
-                />
+                {/* FIX: Removed obsolete on...Click props as the component now uses context */}
+                <WorldSidePanel knowledgeBase={game.knowledgeBase} />
             </OffCanvasPanel>
             
-            {/* AI Copilot Panel - NEW */}
             <AICopilotPanel isOpen={isCopilotOpen} onClose={() => setIsCopilotOpen(false)} />
 
-            {/* Popover & Debug */}
             <MiniInfoPopover isOpen={popover.isOpen} targetRect={popover.targetRect} entity={popover.entity} entityType={popover.entityType} onClose={closePopover} knowledgeBase={game.knowledgeBase} />
+            
             {!isReaderMode && showDebugPanel && <DebugPanelDisplay 
                 kb={game.knowledgeBase} 
                 sentPromptsLog={game.sentPromptsLog} 
@@ -389,7 +362,7 @@ export const GameplayScreen: React.FC = () => {
                 totalPages={game.totalPages} 
                 isAutoPlaying={game.isAutoPlaying} 
                 onToggleAutoPlay={game.onToggleAutoPlay} 
-                onStartDebugCombat={() => setIsCombatSetupModalOpen(true)}
+                onStartDebugCombat={() => setIsCombatSetupModalOpen(true)} 
                 onProcessDebugTags={game.handleProcessDebugTags} 
                 isLoading={isLoadingUi} 
                 onCheckTokenCount={game.handleCheckTokenCount}
@@ -402,14 +375,12 @@ export const GameplayScreen: React.FC = () => {
                 lastScoredNpcsForTick={game.lastScoredNpcsForTick}
                 onManualTick={game.handleManualTick}
             />}
-            {isCombatSetupModalOpen && (
-                <DebugCombatSetupModal
-                    isOpen={isCombatSetupModalOpen}
-                    onClose={() => setIsCombatSetupModalOpen(false)}
-                    knowledgeBase={game.knowledgeBase}
-                    onStartCombat={handleStartDebugCombatWithOpponents}
-                />
-            )}
+            <DebugCombatSetupModal
+                isOpen={isCombatSetupModalOpen}
+                onClose={() => setIsCombatSetupModalOpen(false)}
+                knowledgeBase={game.knowledgeBase}
+                onStartCombat={handleStartDebugCombatWithOpponents}
+            />
         </div>
     );
 };

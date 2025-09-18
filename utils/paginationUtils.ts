@@ -1,3 +1,4 @@
+
 // FIX: Correct import path for types
 import { KnowledgeBase, GameMessage } from '../types/index';
 import { VIETNAMESE } from '../constants';
@@ -20,10 +21,16 @@ export const getMessagesForPage = (
   );
   
   const summaryForThisPage = knowledgeBase.pageSummaries?.[pageNumber];
-  if (summaryForThisPage && turnStartOfPage > 0 && turnEndOfPage >= turnStartOfPage) { 
+
+  // FIX: Added robust type check to ensure summary is a valid non-empty string.
+  // This prevents crashes from corrupted save data where a summary might be null, an object, or an empty string.
+  if (typeof summaryForThisPage === 'string' && summaryForThisPage.trim() && turnStartOfPage > 0 && turnEndOfPage >= turnStartOfPage) { 
      const summaryTurn = turnEndOfPage; 
-     // FIX: Added type guard to ensure content is a string before calling .includes()
-     if (!messages.find(m => m.type === 'page_summary' && m.turnNumber === summaryTurn && typeof m.content === 'string' && m.content.includes(summaryForThisPage))) {
+     
+     // Check if a summary message for this page has already been added to avoid duplicates.
+     const summaryAlreadyExists = messages.some(m => m.type === 'page_summary' && m.turnNumber === summaryTurn);
+
+     if (!summaryAlreadyExists) {
         messages.push({
             id: `page-summary-display-${pageNumber}-${Date.now()}`,
             type: 'page_summary',

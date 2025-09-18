@@ -10,6 +10,12 @@ export interface ActivityLogEntry {
   locationId: string;
 }
 
+// FIX: Define and export RelationshipEntry
+export interface RelationshipEntry {
+    type: string;
+    affinity: number;
+}
+
 export interface Prisoner extends PersonBase {
     entityType: 'prisoner';
     willpower: number;
@@ -33,6 +39,9 @@ export interface Wife extends ComplexCompanionBase {
 export interface Slave extends ComplexCompanionBase {
     entityType: 'slave';
     value?: number;
+    // FIX: Add missing fear and trust properties to match usage in UI
+    fear?: number;
+    trust?: number;
 }
 
 export interface Master extends PersonBase {
@@ -65,7 +74,8 @@ export interface NPC {
     longTermGoal: string;
     shortTermGoal: string;
     currentPlan: string[];
-    relationships: Record<string, { type: string; affinity: number; }>;
+    // FIX: Use the exported RelationshipEntry type
+    relationships: Record<string, RelationshipEntry>;
     lastTickTurn: number;
     tickPriorityScore: number;
     activityLog: ActivityLogEntry[];

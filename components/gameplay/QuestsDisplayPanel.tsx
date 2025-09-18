@@ -2,13 +2,15 @@
 import React, { useState } from 'react';
 import { Quest } from '@/types/index';
 import { VIETNAMESE } from '@/constants';
+import Button from '../ui/Button';
 
 interface QuestsDisplayPanelProps {
   quests: Quest[];
   onQuestClick: (quest: Quest) => void;
+  onQuestEditClick: (quest: Quest) => void;
 }
 
-const QuestsDisplayPanel: React.FC<QuestsDisplayPanelProps> = React.memo(({ quests, onQuestClick }) => {
+const QuestsDisplayPanel: React.FC<QuestsDisplayPanelProps> = React.memo(({ quests, onQuestClick, onQuestEditClick }) => {
   const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'failed'>('active');
   const filteredQuests = quests.filter(q => q.status === activeTab);
 
@@ -24,17 +26,34 @@ const QuestsDisplayPanel: React.FC<QuestsDisplayPanelProps> = React.memo(({ ques
         {questsToRender.map(quest => (
           <li
             key={quest.id}
-            className="text-sm text-gray-300 hover:bg-gray-700 p-2 rounded cursor-pointer transition-colors"
-            onClick={() => onQuestClick(quest)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && onQuestClick(quest)}
-            aria-label={`Details for quest ${quest.title}`}
-            title={quest.title}
+            className="text-sm text-gray-300 hover:bg-gray-700 p-2 rounded transition-colors flex justify-between items-center group"
           >
-            <span className="truncate block">
-                <strong className="text-indigo-300">{quest.title}</strong>
-            </span>
+            <div
+                className="flex-grow cursor-pointer"
+                onClick={() => onQuestClick(quest)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && onQuestClick(quest)}
+                aria-label={`Details for quest ${quest.title}`}
+                title={quest.title}
+            >
+                <span className="truncate block">
+                    <strong className="text-indigo-300">{quest.title}</strong>
+                </span>
+            </div>
+             <Button
+                variant="ghost"
+                size="sm"
+                className="!p-1.5 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onQuestEditClick(quest);
+                }}
+                title={`Chỉnh sửa ${quest.title}`}
+                aria-label={`Chỉnh sửa ${quest.title}`}
+            >
+                ✏️
+            </Button>
           </li>
         ))}
       </ul>

@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
 import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase } from './types/index';
 import { VIETNAMESE } from './constants';
@@ -14,7 +15,7 @@ import CharacterSidePanel from './components/gameplay/CharacterSidePanel';
 import QuestsSidePanel from './components/gameplay/QuestsSidePanel';
 import WorldSidePanel from './components/gameplay/WorldSidePanel';
 import DebugPanelDisplay from './components/gameplay/DebugPanelDisplay';
-import MiniInfoPopover from './components/gameplay/MiniInfoPopover';
+import MiniInfoPopover from './components/ui/MiniInfoPopover';
 import { MainMenuPanel } from './components/gameplay/layout/MainMenuPanel';
 import AICopilotPanel from './components/gameplay/AICopilotPanel';
 
@@ -352,17 +353,13 @@ export const GameplayScreen: React.FC = () => {
                 <CharacterSidePanel knowledgeBase={game.knowledgeBase} onItemClick={(item) => game.openEntityModal('item', item)} onSkillClick={(skill) => game.openEntityModal('skill', skill)} onPlayerAvatarUploadRequest={game.onUpdatePlayerAvatar} isUploadingPlayerAvatar={game.isUploadingAvatar} />
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isQuestsPanelOpen} onClose={() => setIsQuestsPanelOpen(false)} title={VIETNAMESE.questsPanelTitle} position="right">
-                <QuestsSidePanel quests={game.knowledgeBase.allQuests} onQuestClick={(quest) => game.openEntityModal('quest', quest)} />
+                {/* FIX: Added missing onQuestEditClick prop */}
+                <QuestsSidePanel quests={game.knowledgeBase.allQuests} onQuestClick={(quest) => game.openEntityModal('quest', quest)} onQuestEditClick={(quest) => game.openEntityModal('quest', quest, true)}/>
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isWorldPanelOpen} onClose={() => setIsWorldPanelOpen(false)} title={VIETNAMESE.worldPanelTitle} position="right">
+                {/* FIX: Removed obsolete on...Click props as the component now uses context */}
                 <WorldSidePanel 
                     knowledgeBase={game.knowledgeBase} 
-                    onNpcClick={(npc) => game.openEntityModal('npc', npc)} 
-                    onYeuThuClick={(yt) => game.openEntityModal('yeuThu', yt)}
-                    onLocationClick={(loc) => game.openEntityModal('location', loc)} 
-                    onLoreClick={(lore) => game.openEntityModal('lore', lore)} 
-                    onFactionClick={(fac) => game.openEntityModal('faction', fac)}
-                    onCompanionClick={(comp) => game.openEntityModal('companion', comp)}
                 />
             </OffCanvasPanel>
             

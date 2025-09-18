@@ -5,6 +5,8 @@ import { PlayerStatsWithEquipment } from './equipment/PlayerStatsWithEquipment';
 import InventoryPanel from './InventoryPanel';
 import * as GameTemplates from '@/types/index';
 import MasterPanel from './MasterPanel';
+import { useGame } from '@/hooks/useGame';
+import Button from '../ui/Button';
 
 interface CharacterSidePanelProps {
   knowledgeBase: KnowledgeBase;
@@ -14,7 +16,7 @@ interface CharacterSidePanelProps {
   isUploadingPlayerAvatar: boolean;
 }
 
-const SkillList: React.FC<{ title: string; skills: Skill[]; onSkillClick: (skill: Skill) => void }> = React.memo(({ title, skills, onSkillClick }) => {
+const SkillList: React.FC<{ title: string; skills: Skill[]; onSkillClick: (skill: Skill) => void; onSkillEditClick: (skill: Skill) => void; }> = React.memo(({ title, skills, onSkillClick, onSkillEditClick }) => {
     if (skills.length === 0) return null;
     return (
         <div className="bg-gray-800 p-3 sm:p-4 rounded-lg shadow-md">
@@ -23,17 +25,34 @@ const SkillList: React.FC<{ title: string; skills: Skill[]; onSkillClick: (skill
                 {skills.map(skill => (
                     <li
                         key={skill.id}
-                        className="text-sm text-gray-300 hover:bg-gray-700 p-2 rounded-cursor-pointer transition-colors"
-                        onClick={() => onSkillClick(skill)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => e.key === 'Enter' && onSkillClick(skill)}
-                        aria-label={`Details for ${skill.name}`}
-                        title={skill.name}
+                        className="text-sm text-gray-300 hover:bg-gray-700 p-2 rounded transition-colors flex justify-between items-center group"
                     >
-                        <span className="truncate block">
-                            <strong className="text-indigo-300">{skill.name}</strong>
-                        </span>
+                        <div
+                            className="flex-grow cursor-pointer"
+                            onClick={() => onSkillClick(skill)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => e.key === 'Enter' && onSkillClick(skill)}
+                            aria-label={`Details for ${skill.name}`}
+                            title={skill.name}
+                        >
+                            <span className="truncate block">
+                                <strong className="text-indigo-300">{skill.name}</strong>
+                            </span>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="!p-1.5 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSkillEditClick(skill);
+                            }}
+                            title={`Chỉnh sửa ${skill.name}`}
+                            aria-label={`Chỉnh sửa ${skill.name}`}
+                        >
+                            ✏️
+                        </Button>
                     </li>
                 ))}
             </ul>
@@ -49,6 +68,7 @@ const CharacterSidePanel: React.FC<CharacterSidePanelProps> = React.memo(({
   onPlayerAvatarUploadRequest,
   isUploadingPlayerAvatar,
 }) => {
+  const { openEntityModal } = useGame();
   const currentLocation = knowledgeBase.discoveredLocations.find(l => l.id === knowledgeBase.currentLocationId);
   const isPlayerRestricted = !!knowledgeBase.playerStats.playerSpecialStatus;
   const master = knowledgeBase.master;
@@ -105,14 +125,14 @@ const CharacterSidePanel: React.FC<CharacterSidePanelProps> = React.memo(({
           currentLocationName={currentLocation?.name}
         />
       )}
-      <InventoryPanel items={displayableInventory} onItemClick={onItemClick} />
+      <InventoryPanel items={displayableInventory} onItemClick={onItemClick} onItemEditClick={(item) => openEntityModal('item', item, true)} />
       
-      <SkillList title="Công Pháp Tu Luyện" skills={congPhapSkills} onSkillClick={onSkillClick} />
-      <SkillList title="Linh Kĩ" skills={linhKiSkills} onSkillClick={onSkillClick} />
-      <SkillList title="Thần Thông" skills={thanThongSkills} onSkillClick={onSkillClick} />
-      <SkillList title="Cấm Thuật" skills={camThuatSkills} onSkillClick={onSkillClick} />
-      <SkillList title="Kỹ Năng Nghề Nghiệp" skills={ngheNghiepSkills} onSkillClick={onSkillClick} />
-      <SkillList title="Kỹ Năng Khác" skills={otherSkills} onSkillClick={onSkillClick} />
+      <SkillList title="Công Pháp Tu Luyện" skills={congPhapSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+      <SkillList title="Linh Kĩ" skills={linhKiSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+      <SkillList title="Thần Thông" skills={thanThongSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+      <SkillList title="Cấm Thuật" skills={camThuatSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+      <SkillList title="Kỹ Năng Nghề Nghiệp" skills={ngheNghiepSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
+      <SkillList title="Kỹ Năng Khác" skills={otherSkills} onSkillClick={onSkillClick} onSkillEditClick={(skill) => openEntityModal('skill', skill, true)} />
 
     </div>
   );

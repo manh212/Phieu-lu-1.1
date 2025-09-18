@@ -1,3 +1,4 @@
+
 import React, { createContext, ReactNode, useRef, useState, useCallback, useEffect } from 'react';
 import * as jsonpatch from 'fast-json-patch';
 import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction, CombatLogContent } from '@/types/index';
@@ -98,13 +99,14 @@ export interface GameContextType {
     lastNarrationFromPreviousPage?: string;
 
     // Modal State
-    selectedEntity: { type: GameEntityType; entity: GameEntity } | null;
+    selectedEntity: { type: GameEntityType; entity: GameEntity, isEditing?: boolean } | null;
     isStyleSettingsModalOpen: boolean;
     isAiContextModalOpen: boolean;
     activeEconomyModal: {type: 'marketplace' | 'shopping_center', locationId: string} | null;
     activeSlaveMarketModal: {locationId: string} | null;
 
     // Actions (will be populated by allActions)
+    handleUpdateEntity: (entityType: GameEntityType, entityData: GameEntity) => void;
     resetCopilotConversation: () => void;
     [key: string]: any; // Index signature to allow dynamic action properties
 }
@@ -165,6 +167,45 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         gameData.setSentCopilotPromptsLog([]);
         showNotification("Cuộc trò chuyện với Siêu Trợ Lý đã được làm mới.", "info");
     }, [gameData.setAiCopilotMessages, gameData.setSentCopilotPromptsLog, showNotification]);
+
+    const handleUpdateEntity = useCallback((entityType: GameEntityType, entityData: GameEntity) => {
+        gameData.setKnowledgeBase(prevKb => {
+            const newKb = JSON.parse(JSON.stringify(prevKb));
+            let listToUpdate: any[] | undefined;
+            switch(entityType) {
+                case 'npc': listToUpdate = newKb.discoveredNPCs; break;
+                case 'item': listToUpdate = newKb.inventory; break;
+                case 'skill': listToUpdate = newKb.playerSkills; break;
+                case 'quest': listToUpdate = newKb.allQuests; break;
+                case 'location': listToUpdate = newKb.discoveredLocations; break;
+                case 'lore': listToUpdate = newKb.worldLore; break;
+                case 'faction': listToUpdate = newKb.discoveredFactions; break;
+                case 'companion': listToUpdate = newKb.companions; break;
+                case 'yeuThu': listToUpdate = newKb.discoveredYeuThu; break;
+                case 'wife': listToUpdate = newKb.wives; break;
+                case 'slave': listToUpdate = newKb.slaves; break;
+                case 'prisoner': listToUpdate = newKb.prisoners; break;
+            }
+
+            if(listToUpdate) {
+                const index = listToUpdate.findIndex(item => item.id === (entityData as any).id);
+                if (index > -1) {
+                    listToUpdate[index] = entityData;
+                    showNotification(`Đã cập nhật: ${(entityData as any).name || (entityData as any).title}`, 'success');
+
+                    // If an item was updated, player stats might need recalculation
+                    if (entityType === 'item') {
+                        newKb.playerStats = calculateEffectiveStats(newKb.playerStats, newKb.equippedItems, newKb.inventory);
+                    }
+                } else {
+                    showNotification(`Lỗi: Không tìm thấy thực thể để cập nhật.`, 'error');
+                }
+            }
+            return newKb;
+        });
+        closeModal();
+    }, [gameData.setKnowledgeBase, showNotification, closeModal]);
+
 
     const lastPageNumberForPrompt = (gameData.knowledgeBase.currentPageHistory?.length || 1) - 1;
     let lastNarrationFromPreviousPage: string | undefined = undefined;
@@ -394,6 +435,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCurrentScreen, setKnowledgeBase: gameData.setKnowledgeBase, setGameMessages: gameData.setGameMessages,
         setStyleSettings, openEntityModal, closeModal, closeEconomyModal, closeSlaveMarketModal,
         setIsStyleSettingsModalOpen, setIsAiContextModalOpen, setActiveEconomyModal, setActiveSlaveMarketModal,
+        handleUpdateEntity,
         ...allActions, onQuit, resetCopilotConversation, isCurrentlyActivePage, gameplayScrollPosition, justLoadedGame,
         onGoToPrevPage, onGoToNextPage, onJumpToPage,
     };

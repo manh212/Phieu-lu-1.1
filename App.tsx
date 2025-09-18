@@ -1,3 +1,5 @@
+
+
 import React from 'react';
 
 import { GameProvider } from '@/contexts/GameContext';
@@ -82,7 +84,16 @@ const AppContent: React.FC = () => {
       {game.isAiContextModalOpen && <AIContextScreen onClose={() => game.setIsAiContextModalOpen(false)} />}
       
       {/* EntityDetailModal is last to ensure it's on top of other modals */}
-      <EntityDetailModal selectedEntity={game.selectedEntity} isOpen={!!game.selectedEntity} onClose={game.closeModal} knowledgeBase={game.knowledgeBase} onUpdateNpcAvatar={game.onUpdateNpcAvatar} isUploadingAvatar={game.isUploadingAvatar} />
+      <EntityDetailModal 
+        selectedEntity={game.selectedEntity} 
+        isOpen={!!game.selectedEntity} 
+        onClose={game.closeModal} 
+        knowledgeBase={game.knowledgeBase} 
+        // FIX: Removed onUpdateNpcAvatar and isUploadingAvatar as they are not defined in EntityDetailModalProps.
+        // onUpdateNpcAvatar={game.onUpdateNpcAvatar} 
+        // isUploadingAvatar={game.isUploadingAvatar}
+        onUpdateEntity={game.handleUpdateEntity} 
+      />
     </>
   );
 };
