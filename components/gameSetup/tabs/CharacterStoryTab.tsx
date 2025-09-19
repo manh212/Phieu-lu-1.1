@@ -76,9 +76,8 @@ const CharacterStoryTab: React.FC<CharacterStoryTabProps> = ({ playerUploadedAva
             <InputField label={VIETNAMESE.playerMaxThoNguyenLabel} id="playerMaxThoNguyen" name="playerMaxThoNguyen" type="number" value={settings.playerMaxThoNguyen || ''} onChange={handleChange} min={1} />
           </>
         )}
-      </div>
 
-       <fieldset className="border border-gray-700 p-4 rounded-md mt-4">
+        <fieldset className="border border-gray-700 p-4 rounded-md md:col-span-2">
           <legend className="text-md font-semibold text-gray-300 px-1">{VIETNAMESE.playerAvatarSectionTitle}</legend>
           <div className="mt-2 space-y-3 flex flex-col items-center">
             {(playerAvatarPreviewUrl || playerUploadedAvatarData) && (
@@ -95,6 +94,7 @@ const CharacterStoryTab: React.FC<CharacterStoryTabProps> = ({ playerUploadedAva
             />
           </div>
        </fieldset>
+      </div>
     </div>
   );
 };

@@ -89,7 +89,7 @@ const CharacterSidePanel: React.FC<CharacterSidePanelProps> = React.memo(({
       return knowledgeBase.inventory.filter(item => !allEquippedItemIds.has(item.id));
   }, [knowledgeBase.inventory, allEquippedItemIds]);
 
-  // FIX: Removed unnecessary String() casting for cleaner, more direct enum comparison.
+  // FIX: Fixed incorrect types being used in the filter logic. `LinhKiCategory` and `LinhKiActivationType` are types, not enum values. The filter should use `GameTemplates.SkillType.LINH_KI` and `GameTemplates.SkillType.NGHE_NGHIEP` respectively.
   const congPhapSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.CONG_PHAP_TU_LUYEN);
   const linhKiSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.LINH_KI);
   const ngheNghiepSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.NGHE_NGHIEP);

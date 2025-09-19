@@ -1,17 +1,16 @@
 
-
 import React, { useCallback, useRef, useEffect } from 'react';
 import { GameScreen } from '@/types/index'; 
 import Button from './ui/Button';
 import { VIETNAMESE, GAME_TITLE, APP_VERSION } from '@/constants';
+import { useGame } from '@/hooks/useGame';
 
 interface InitialScreenProps {
-  setCurrentScreen: (screen: GameScreen) => void;
-  onSignOut: () => void; 
-  isFirebaseLoading: boolean; 
+  // No props needed as they are now sourced from the useGame hook
 }
 
-const InitialScreen: React.FC<InitialScreenProps> = ({ setCurrentScreen }) => {
+const InitialScreen: React.FC<InitialScreenProps> = () => {
+  const { setCurrentScreen, startQuickPlay } = useGame();
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -54,6 +53,16 @@ const InitialScreen: React.FC<InitialScreenProps> = ({ setCurrentScreen }) => {
               onClick={handleLoadGameClick}
             >
               {VIETNAMESE.loadGame}
+            </Button>
+          </li>
+          <li>
+            <Button 
+                variant="secondary" 
+                size="lg" 
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white focus:ring-teal-500"
+                onClick={startQuickPlay}
+              >
+              Chơi Nhanh
             </Button>
           </li>
           <li>

@@ -1,8 +1,8 @@
 
 import React, { useState, ChangeEvent, useRef } from 'react'; 
-import { PlayerStats, Item, EquipmentSlotId, KnowledgeBase, StatusEffect, WorldDate, TuChatTier } from '@/types/index';
-import { VIETNAMESE, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL } from '@/constants';
-import * as GameTemplates from '@/types/index';
+import { PlayerStats, Item, EquipmentSlotId, KnowledgeBase, StatusEffect, WorldDate, TuChatTier } from '../../../types/index';
+import { VIETNAMESE, FEMALE_AVATAR_BASE_URL, MAX_FEMALE_AVATAR_INDEX, MALE_AVATAR_PLACEHOLDER_URL } from '../../../constants';
+import * as GameTemplates from '../../../types/index';
 import Modal from '@/components/ui/Modal'; 
 import Button from '@/components/ui/Button'; 
 import InputField from '@/components/ui/InputField'; // Added InputField
@@ -28,6 +28,7 @@ interface PlayerStatsWithEquipmentProps {
   currentLocationName?: string;
   tuChat?: TuChatTier;
   personId: string;
+  showFullDetails?: boolean;
 }
 
 export const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> = React.memo(({
@@ -48,6 +49,7 @@ export const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> =
   currentLocationName,
   tuChat,
   personId,
+  showFullDetails = true,
 }) => {
   const [selectedStatusEffect, setSelectedStatusEffect] = useState<StatusEffect | null>(null);
   const isCultivationEnabled = worldConfig?.isCultivationEnabled !== undefined ? worldConfig.isCultivationEnabled : true;
@@ -206,136 +208,58 @@ export const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> =
   return (
     <>
     <div className="bg-gray-800 p-3 sm:p-4 rounded-lg shadow-md border border-gray-700">
-      <div className="flex items-start mb-3 border-b border-gray-700 pb-2">
-        <img 
-            src={getDeterministicAvatarSrc({ id: personId, avatarUrl: playerAvatarData || playerAvatarUrl, gender: playerGender })}
-            alt={VIETNAMESE.playerAvatarLabel} 
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-indigo-500 shadow-md mr-3 sm:mr-4"
-        />
-        <div className="flex-grow">
-            <h3 className="text-lg font-semibold text-indigo-400">
-            <span>{isPlayerContext ? VIETNAMESE.playerStatsSection : playerName}</span>
-            {isCultivationEnabled && playerStats.hieuUngBinhCanh && (
-                <span className="block text-xs font-bold text-red-400 bg-red-900/50 px-2 py-0.5 rounded-full border border-red-600 animate-pulse mt-1">
-                {VIETNAMESE.bottleneckEffectLabel}
-                </span>
-            )}
-            </h3>
-            {isPlayerContext && (
-              <div className="mt-1 space-y-1">
-                <div className="flex flex-wrap gap-1">
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => playerAvatarFileInputRef.current?.click()}
-                        className="text-xs !py-1 !px-2 border-indigo-500 hover:bg-indigo-700/50 flex-grow sm:flex-grow-0"
-                        isLoading={isUploadingPlayerAvatar && !showPlayerAvatarUrlInput}
-                        loadingText={VIETNAMESE.uploadingAvatarMessage}
-                        disabled={isUploadingPlayerAvatar}
-                        title={VIETNAMESE.uploadAvatarButtonLabel}
-                    >
-                     {VIETNAMESE.uploadAvatarButtonLabel}
-                    </Button>
-                    <input
-                        type="file"
-                        ref={playerAvatarFileInputRef}
-                        onChange={handlePlayerAvatarFileChange}
-                        accept="image/png, image/jpeg, image/webp, image/gif"
-                        className="hidden"
-                        id="player-avatar-upload-input"
-                        disabled={isUploadingPlayerAvatar}
-                    />
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                            setShowPlayerAvatarUrlInput(!showPlayerAvatarUrlInput);
-                            if (!showPlayerAvatarUrlInput) {
-                                if (playerAvatarData && playerAvatarData.startsWith('http')) {
-                                    setPlayerAvatarUrlInputValue(playerAvatarData);
-                                } else if (playerAvatarUrl && playerAvatarUrl.startsWith('http')) {
-                                     setPlayerAvatarUrlInputValue(playerAvatarUrl);
-                                } else {
-                                    setPlayerAvatarUrlInputValue('');
-                                }
-                            }
-                            setPlayerAvatarUrlError(null);
-                        }}
-                        className="text-xs !py-1 !px-2 border-cyan-500 hover:bg-cyan-700/50 flex-grow sm:flex-grow-0"
-                        disabled={isUploadingPlayerAvatar}
-                        aria-expanded={showPlayerAvatarUrlInput}
-                        title={VIETNAMESE.avatarUrlInputLabel}
-                    >
-                        {showPlayerAvatarUrlInput ? "Đóng URL" : VIETNAMESE.avatarUrlInputLabel.replace(":", "")}
-                    </Button>
-                </div>
-                 {showPlayerAvatarUrlInput && (
-                    <div className="mt-1.5 p-2 border border-gray-600 rounded-md bg-gray-800/30">
-                        <InputField
-                            label="" 
-                            id="playerGameplayAvatarUrlInput"
-                            value={playerAvatarUrlInputValue}
-                            onChange={(e) => setPlayerAvatarUrlInputValue(e.target.value)}
-                            placeholder={VIETNAMESE.avatarUrlInputPlaceholder}
-                            disabled={isPlayerAvatarUrlValidating || isUploadingPlayerAvatar}
-                            className="!mb-1.5"
-                        />
-                        <Button
-                            type="button"
-                            variant="primary"
-                            onClick={handlePlayerAvatarUrlSubmit}
-                            className="w-full text-xs !py-1"
-                            isLoading={isPlayerAvatarUrlValidating}
-                            disabled={isPlayerAvatarUrlValidating || isUploadingPlayerAvatar || !playerAvatarUrlInputValue.trim()}
-                            loadingText={VIETNAMESE.avatarUrlValidating}
-                        >
-                            {VIETNAMESE.confirmUrlButton}
-                        </Button>
-                        {playerAvatarUrlError && <p className="text-xs text-red-400 mt-1">{playerAvatarUrlError}</p>}
-                    </div>
-                )}
-              </div>
-            )}
-        </div>
+      <div className="mb-3 border-b border-gray-700 pb-2">
+        <h3 className="text-lg font-semibold text-indigo-400">
+        <span>{isPlayerContext ? VIETNAMESE.playerStatsSection : playerName}</span>
+        {isCultivationEnabled && playerStats.hieuUngBinhCanh && (
+            <span className="block text-xs font-bold text-red-400 bg-red-900/50 px-2 py-0.5 rounded-full border border-red-600 animate-pulse mt-1">
+            {VIETNAMESE.bottleneckEffectLabel}
+            </span>
+        )}
+        </h3>
       </div>
       
-      <section aria-labelledby="thong-tin-co-ban">
-        <h4 id="thong-tin-co-ban" className="text-md font-semibold text-indigo-200 mt-3 mb-2 border-b border-gray-700 pb-1">Thông Tin Cơ Bản</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0.5">
-            {playerName && !isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.characterName}: </span>{playerName}</div>}
-            {isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.characterName}: </span>{playerName}</div>}
-            {playerGender && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.gender}: </span>{playerGender}</div>}
-            {playerRace && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.playerRaceLabel || "Chủng Tộc"}: </span>{playerRace}</div>}
-            {isPlayerContext && currentLocationName && <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.legendCurrentLocation}: </span>{currentLocationName}</div>}
-            {isPlayerContext && worldDate && (
+      {showFullDetails && (
+        <>
+          <section aria-labelledby="thong-tin-co-ban">
+            <h4 id="thong-tin-co-ban" className="text-md font-semibold text-indigo-200 mt-3 mb-2 border-b border-gray-700 pb-1">Thông Tin Cơ Bản</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0.5">
+                {playerName && !isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.characterName}: </span>{playerName}</div>}
+                {isPlayerContext && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.characterName}: </span>{playerName}</div>}
+                {playerGender && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.gender}: </span>{playerGender}</div>}
+                {playerRace && <div className="text-sm py-0.5"><span className="font-semibold text-indigo-300">{VIETNAMESE.playerRaceLabel || "Chủng Tộc"}: </span>{playerRace}</div>}
+                {isPlayerContext && currentLocationName && <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.legendCurrentLocation}: </span>{currentLocationName}</div>}
+                {isPlayerContext && worldDate && (
+                    <div className="text-sm py-0.5 col-span-1 md:col-span-2">
+                        <span className="font-semibold text-indigo-300">Thời Gian: </span>
+                        <span className="text-gray-300">
+                            {`Ngày ${worldDate.day}, Tháng ${worldDate.month}, Năm ${worldDate.year} - ${String(worldDate.hour).padStart(2, '0')}:${String(worldDate.minute).padStart(2, '0')}`}
+                        </span>
+                    </div>
+                )}
+            </div>
+          </section>
+          
+          <section aria-labelledby="thong-tin-tu-luyen">
+            <h4 id="thong-tin-tu-luyen" className="text-md font-semibold text-indigo-200 mt-3 mb-2 border-b border-gray-700 pb-1">Thông Tin Tu Luyện</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0.5">
+                <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.spiritualRootLabel || 'Linh Căn'}: </span>{playerStats.spiritualRoot ?? 'Không rõ'}</div>
+                <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.specialPhysiqueLabel || 'Thể Chất'}: </span>{playerStats.specialPhysique ?? 'Không rõ'}</div>
+                {tuChatToDisplay && <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">Tư Chất: </span>{tuChatToDisplay}</div>}
+                {isCultivationEnabled && 
                 <div className="text-sm py-0.5 col-span-1 md:col-span-2">
-                    <span className="font-semibold text-indigo-300">Thời Gian: </span>
-                    <span className="text-gray-300">
-                        {`Ngày ${worldDate.day}, Tháng ${worldDate.month}, Năm ${worldDate.year} - ${String(worldDate.hour).padStart(2, '0')}:${String(worldDate.minute).padStart(2, '0')}`}
-                    </span>
+                    <span className="font-semibold text-indigo-300">Thọ Nguyên: </span>
+                    <span className="text-lime-300 font-semibold">{Math.floor(playerStats.thoNguyen ?? 0)} / {playerStats.maxThoNguyen ?? 0} (năm)</span>
                 </div>
-            )}
-        </div>
-      </section>
-      
-      <section aria-labelledby="thong-tin-tu-luyen">
-        <h4 id="thong-tin-tu-luyen" className="text-md font-semibold text-indigo-200 mt-3 mb-2 border-b border-gray-700 pb-1">Thông Tin Tu Luyện</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0.5">
-            <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.spiritualRootLabel || 'Linh Căn'}: </span>{playerStats.spiritualRoot ?? 'Không rõ'}</div>
-            <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">{VIETNAMESE.specialPhysiqueLabel || 'Thể Chất'}: </span>{playerStats.specialPhysique ?? 'Không rõ'}</div>
-            {tuChatToDisplay && <div className="text-sm py-0.5 col-span-1 md:col-span-2"><span className="font-semibold text-indigo-300">Tư Chất: </span>{tuChatToDisplay}</div>}
-            {isCultivationEnabled && 
-            <div className="text-sm py-0.5 col-span-1 md:col-span-2">
-                <span className="font-semibold text-indigo-300">Thọ Nguyên: </span>
-                <span className="text-lime-300 font-semibold">{Math.floor(playerStats.thoNguyen ?? 0)} / {playerStats.maxThoNguyen ?? 0} (năm)</span>
+                }
+                <div className="text-sm py-0.5 col-span-1 md:col-span-2">
+                    <span className="font-semibold text-indigo-300">{realmLabel}: </span>
+                    <span className="text-amber-400 font-semibold">{playerStats.realm ?? 'Không rõ'}</span>
+                </div>
             </div>
-            }
-            <div className="text-sm py-0.5 col-span-1 md:col-span-2">
-                <span className="font-semibold text-indigo-300">{realmLabel}: </span>
-                <span className="text-amber-400 font-semibold">{playerStats.realm ?? 'Không rõ'}</span>
-            </div>
-        </div>
-      </section>
+          </section>
+        </>
+      )}
 
       <section aria-labelledby="chi-so-chien-dau">
         <h4 id="chi-so-chien-dau" className="text-md font-semibold text-indigo-200 mt-3 mb-2 border-b border-gray-700 pb-1">Chỉ Số Chiến Đấu</h4>
@@ -405,6 +329,94 @@ export const PlayerStatsWithEquipment: React.FC<PlayerStatsWithEquipmentProps> =
                 ))}
             </ul>
         </section>
+      )}
+
+      {showFullDetails && (
+          <section aria-labelledby="anh-dai-dien" className="mt-3 pt-3 border-t border-gray-700">
+            <h4 id="anh-dai-dien" className="text-md font-semibold text-indigo-200 mb-2">Ảnh Đại Diện</h4>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+                <img 
+                    src={getDeterministicAvatarSrc({ id: personId, avatarUrl: playerAvatarData || playerAvatarUrl, gender: playerGender })}
+                    alt={VIETNAMESE.playerAvatarLabel} 
+                    className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500 shadow-md flex-shrink-0"
+                />
+                {isPlayerContext && (
+                    <div className="space-y-1 w-full max-w-xs">
+                        <div className="flex flex-wrap gap-1">
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => playerAvatarFileInputRef.current?.click()}
+                                className="text-xs !py-1 !px-2 border-indigo-500 hover:bg-indigo-700/50 flex-grow"
+                                isLoading={isUploadingPlayerAvatar && !showPlayerAvatarUrlInput}
+                                loadingText={VIETNAMESE.uploadingAvatarMessage}
+                                disabled={isUploadingPlayerAvatar}
+                                title={VIETNAMESE.uploadAvatarButtonLabel}
+                            >
+                            {VIETNAMESE.uploadAvatarButtonLabel}
+                            </Button>
+                            <input
+                                type="file"
+                                ref={playerAvatarFileInputRef}
+                                onChange={handlePlayerAvatarFileChange}
+                                accept="image/png, image/jpeg, image/webp, image/gif"
+                                className="hidden"
+                                id="player-avatar-upload-input"
+                                disabled={isUploadingPlayerAvatar}
+                            />
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                    setShowPlayerAvatarUrlInput(!showPlayerAvatarUrlInput);
+                                    if (!showPlayerAvatarUrlInput) {
+                                        if (playerAvatarData && playerAvatarData.startsWith('http')) {
+                                            setPlayerAvatarUrlInputValue(playerAvatarData);
+                                        } else if (playerAvatarUrl && playerAvatarUrl.startsWith('http')) {
+                                            setPlayerAvatarUrlInputValue(playerAvatarUrl);
+                                        } else {
+                                            setPlayerAvatarUrlInputValue('');
+                                        }
+                                    }
+                                    setPlayerAvatarUrlError(null);
+                                }}
+                                className="text-xs !py-1 !px-2 border-cyan-500 hover:bg-cyan-700/50 flex-grow"
+                                disabled={isUploadingPlayerAvatar}
+                                aria-expanded={showPlayerAvatarUrlInput}
+                                title={VIETNAMESE.avatarUrlInputLabel}
+                            >
+                                {showPlayerAvatarUrlInput ? "Đóng URL" : VIETNAMESE.avatarUrlInputLabel.replace(":", "")}
+                            </Button>
+                        </div>
+                        {showPlayerAvatarUrlInput && (
+                            <div className="mt-1.5 p-2 border border-gray-600 rounded-md bg-gray-800/30">
+                                <InputField
+                                    label="" 
+                                    id="playerGameplayAvatarUrlInput"
+                                    value={playerAvatarUrlInputValue}
+                                    onChange={(e) => setPlayerAvatarUrlInputValue(e.target.value)}
+                                    placeholder={VIETNAMESE.avatarUrlInputPlaceholder}
+                                    disabled={isPlayerAvatarUrlValidating || isUploadingPlayerAvatar}
+                                    className="!mb-1.5"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="primary"
+                                    onClick={handlePlayerAvatarUrlSubmit}
+                                    className="w-full text-xs !py-1"
+                                    isLoading={isPlayerAvatarUrlValidating}
+                                    disabled={isPlayerAvatarUrlValidating || isUploadingPlayerAvatar || !playerAvatarUrlInputValue.trim()}
+                                    loadingText={VIETNAMESE.avatarUrlValidating}
+                                >
+                                    {VIETNAMESE.confirmUrlButton}
+                                </Button>
+                                {playerAvatarUrlError && <p className="text-xs text-red-400 mt-1">{playerAvatarUrlError}</p>}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+          </section>
       )}
     </div>
 

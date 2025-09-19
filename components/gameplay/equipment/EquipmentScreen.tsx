@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 // FIX: Corrected import paths to point to the new centralized type export.
 import { GameScreen, KnowledgeBase, Item, EquipmentSlotId, EquipmentSlotConfig, EquipmentTypeValues as EquipmentTypeValue } from '../../../types/index';
@@ -6,7 +5,7 @@ import Button from '../../ui/Button';
 import { VIETNAMESE, EQUIPMENT_SLOTS_CONFIG } from '../../../constants';
 // FIX: Corrected import to use the new centralized type export instead of the empty types file.
 import * as GameTemplates from '../../../types/index';
-import EquipmentSlotUI from '@/components/gameplay/equipment/EquipmentSlotUI';
+import EquipmentSlotUI from './EquipmentSlotUI';
 import EquipmentInventoryList from './EquipmentInventoryList';
 // FIX: Changed to named import for PlayerStatsWithEquipment
 import { PlayerStatsWithEquipment } from './PlayerStatsWithEquipment';
@@ -20,7 +19,8 @@ interface EquipmentScreenProps {
   isUploadingAvatar: boolean;
 }
 
-const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
+// FIX: Added named export to resolve module import error.
+export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
   knowledgeBase,
   setCurrentScreen,
   onUpdateEquipment,
@@ -233,6 +233,7 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
             onPlayerAvatarUploadRequest={onUpdatePlayerAvatar}
             isUploadingPlayerAvatar={isUploadingAvatar}
             currentLocationName={currentLocation?.name}
+            showFullDetails={true}
           />
         </div>
 
@@ -265,5 +266,3 @@ const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
     </div>
   );
 };
-
-export default EquipmentScreen;

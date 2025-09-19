@@ -211,10 +211,81 @@ const PersonDetails: React.FC<{ person: NPC | Wife | Slave | Prisoner; knowledge
 const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, isOpen, onClose, knowledgeBase, onUpdateEntity }) => {
     const [formData, setFormData] = useState<GameEntity | null>(null);
     const isEditing = selectedEntity?.isEditing || false;
+    const { openEntityModal } = useGame();
 
     useEffect(() => {
         setFormData(selectedEntity?.entity ? JSON.parse(JSON.stringify(selectedEntity.entity)) : null);
     }, [selectedEntity]);
+
+    const FactionDetails: React.FC<{ faction: Faction; knowledgeBase: KnowledgeBase; }> = ({ faction, knowledgeBase }) => {
+        const [activeTab, setActiveTab] = useState<'info' | 'relations'>('info');
+        
+        const findNpcName = (id: string) => knowledgeBase.discoveredNPCs.find(npc => npc.id === id)?.name || id;
+        const findLocationName = (id: string) => knowledgeBase.discoveredLocations.find(loc => loc.id === id)?.name || id;
+        const findFactionName = (id: string) => knowledgeBase.discoveredFactions.find(f => f.id === id)?.name || id;
+
+        const activeTabStyle = "border-indigo-400 text-indigo-300";
+        const inactiveTabStyle = "border-transparent text-gray-400 hover:border-gray-500 hover:text-gray-200";
+
+        return (
+            <div className="space-y-4">
+                <p className="italic text-gray-400">{faction.description}</p>
+    
+                <div className="border-b border-gray-700">
+                    <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+                        <button onClick={() => setActiveTab('info')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'info' ? activeTabStyle : inactiveTabStyle}`}>
+                            Thông Tin Phe Phái
+                        </button>
+                        <button onClick={() => setActiveTab('relations')} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'relations' ? activeTabStyle : inactiveTabStyle}`}>
+                            Thành Viên & Quan Hệ
+                        </button>
+                    </nav>
+                </div>
+                
+                <div className="mt-4">
+                    {activeTab === 'info' && (
+                        <div className="space-y-2">
+                            <h4 className="font-semibold text-lg text-indigo-300 mb-2">Thông Tin Cơ Bản</h4>
+                            <StatGrid>
+                                <InfoPair label="Chính/Tà">{faction.alignment}</InfoPair>
+                                <InfoPair label="Uy tín của bạn">{faction.playerReputation}</InfoPair>
+                                <InfoPair label="Trụ sở" fullWidth>{findLocationName(faction.baseLocationId || '')}</InfoPair>
+                            </StatGrid>
+                        </div>
+                    )}
+                    {activeTab === 'relations' && (
+                        <div className="space-y-4">
+                             <h4 className="font-semibold text-lg text-indigo-300 mb-2">Thành Viên & Quan Hệ</h4>
+                             <StatGrid>
+                                <InfoPair label="Lãnh đạo">{findNpcName(faction.leaderNPCId || 'Chưa rõ')}</InfoPair>
+                             </StatGrid>
+                             {(faction.keyNPCIds && faction.keyNPCIds.length > 0) && (
+                                <InfoPair label="Thành viên chủ chốt" fullWidth>
+                                    <ul className="list-disc list-inside space-y-1">
+                                        {faction.keyNPCIds.map(id => <li key={id}>{findNpcName(id)}</li>)}
+                                    </ul>
+                                </InfoPair>
+                             )}
+                             {(faction.alliedFactionIds && faction.alliedFactionIds.length > 0) && (
+                                <InfoPair label="Đồng minh" fullWidth>
+                                    <ul className="list-disc list-inside space-y-1">
+                                        {faction.alliedFactionIds.map(id => <li key={id}>{findFactionName(id)}</li>)}
+                                    </ul>
+                                </InfoPair>
+                             )}
+                             {(faction.enemyFactionIds && faction.enemyFactionIds.length > 0) && (
+                                <InfoPair label="Kẻ địch" fullWidth>
+                                    <ul className="list-disc list-inside space-y-1">
+                                        {faction.enemyFactionIds.map(id => <li key={id}>{findFactionName(id)}</li>)}
+                                    </ul>
+                                </InfoPair>
+                             )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     const handleSaveChanges = () => {
         if (formData && selectedEntity) {
@@ -486,42 +557,7 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
         case 'faction': {
             const faction = formData as Faction;
             title = `Chi Tiết Phe Phái: ${faction.name}`;
-            content = (
-                <div className="space-y-4">
-                    <p className="italic text-gray-400">{faction.description}</p>
-                    <DetailSection title="Thông Tin Cơ Bản">
-                        <StatGrid>
-                            <InfoPair label="Chính/Tà">{faction.alignment}</InfoPair>
-                            <InfoPair label="Uy tín của bạn">{faction.playerReputation}</InfoPair>
-                            <InfoPair label="Trụ sở" fullWidth>{findLocationName(faction.baseLocationId || '')}</InfoPair>
-                        </StatGrid>
-                    </DetailSection>
-                    <DetailSection title="Thành Viên & Quan Hệ" defaultOpen={false}>
-                        <InfoPair label="Lãnh đạo">{findNpcName(faction.leaderNPCId || '')}</InfoPair>
-                         {faction.keyNPCIds && faction.keyNPCIds.length > 0 && (
-                            <InfoPair label="Thành viên chủ chốt">
-                                <ul className="list-disc list-inside">
-                                    {faction.keyNPCIds.map(id => <li key={id}>{findNpcName(id)}</li>)}
-                                </ul>
-                            </InfoPair>
-                         )}
-                         {faction.alliedFactionIds && faction.alliedFactionIds.length > 0 && (
-                            <InfoPair label="Đồng minh">
-                                <ul className="list-disc list-inside">
-                                    {faction.alliedFactionIds.map(id => <li key={id}>{knowledgeBase.discoveredFactions.find(f=>f.id === id)?.name || id}</li>)}
-                                </ul>
-                            </InfoPair>
-                         )}
-                         {faction.enemyFactionIds && faction.enemyFactionIds.length > 0 && (
-                            <InfoPair label="Kẻ địch">
-                                <ul className="list-disc list-inside">
-                                    {faction.enemyFactionIds.map(id => <li key={id}>{knowledgeBase.discoveredFactions.find(f=>f.id === id)?.name || id}</li>)}
-                                </ul>
-                            </InfoPair>
-                         )}
-                    </DetailSection>
-                </div>
-            );
+            content = <FactionDetails faction={faction} knowledgeBase={knowledgeBase} />;
             break;
         }
         case 'companion': {

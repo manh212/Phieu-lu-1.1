@@ -1,4 +1,9 @@
 
+
+
+
+
+
 import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect, useState } from 'react';
 import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase, AiChoice, PlayerActionInputType, ResponseLength } from './../types/index';
 import { VIETNAMESE } from './../constants';
@@ -336,8 +341,22 @@ export const GameplayScreen: React.FC = () => {
                 <QuestsSidePanel quests={game.knowledgeBase.allQuests} onQuestClick={(quest) => game.openEntityModal('quest', quest)} onQuestEditClick={(quest) => game.openEntityModal('quest', quest, true)}/>
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isWorldPanelOpen} onClose={() => setIsWorldPanelOpen(false)} title={VIETNAMESE.worldPanelTitle} position="right">
-                {/* FIX: Removed obsolete on...Click props as the component now uses context */}
-                <WorldSidePanel knowledgeBase={game.knowledgeBase} />
+                {/* FIX: Pass all required props to WorldSidePanel to handle entity clicks. */}
+                <WorldSidePanel 
+                    knowledgeBase={game.knowledgeBase}
+                    onNpcClick={(npc) => game.openEntityModal('npc', npc)}
+                    onNpcEditClick={(npc) => game.openEntityModal('npc', npc, true)}
+                    onYeuThuClick={(yeuThu) => game.openEntityModal('yeuThu', yeuThu)}
+                    onYeuThuEditClick={(yeuThu) => game.openEntityModal('yeuThu', yeuThu, true)}
+                    onLocationClick={(location) => game.openEntityModal('location', location)}
+                    onLocationEditClick={(location) => game.openEntityModal('location', location, true)}
+                    onLoreClick={(lore) => game.openEntityModal('lore', lore)}
+                    onLoreEditClick={(lore) => game.openEntityModal('lore', lore, true)}
+                    onFactionClick={(faction) => game.openEntityModal('faction', faction)}
+                    onFactionEditClick={(faction) => game.openEntityModal('faction', faction, true)}
+                    onCompanionClick={(companion) => game.openEntityModal('companion', companion)}
+                    onCompanionEditClick={(companion) => game.openEntityModal('companion', companion, true)}
+                />
             </OffCanvasPanel>
             
             <AICopilotPanel isOpen={isCopilotOpen} onClose={() => setIsCopilotOpen(false)} />

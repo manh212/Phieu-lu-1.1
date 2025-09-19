@@ -7,7 +7,8 @@ import { useGame } from '../hooks/useGame';
 import InitialScreen from './InitialScreen';
 import GameSetupScreen from './GameSetupScreen';
 import { GameplayScreen } from './GameplayScreen';
-import EquipmentScreen from './gameplay/equipment/EquipmentScreen';
+// FIX: Changed to a named import as EquipmentScreen does not have a default export.
+import { EquipmentScreen } from './gameplay/equipment/EquipmentScreen';
 import { CraftingScreen } from './gameplay/crafting/CraftingScreen';
 import ApiSettingsScreen from './ApiSettingsScreen';
 import LoadGameScreen from './LoadGameScreen';
@@ -33,11 +34,8 @@ const AppRouter: React.FC = () => {
 
     switch (game.currentScreen) {
         case GameScreen.Initial:
-            return <InitialScreen 
-                setCurrentScreen={game.setCurrentScreen} 
-                onSignOut={() => {}} // Firebase removed
-                isFirebaseLoading={false} // Firebase removed
-            />;
+// FIX: The InitialScreen component no longer accepts props as it sources them from the useGame hook. The unnecessary props have been removed.
+            return <InitialScreen />;
         case GameScreen.GameSetup:
             return <GameSetupScreen 
                 setCurrentScreen={game.setCurrentScreen} 
@@ -148,11 +146,8 @@ const AppRouter: React.FC = () => {
         case GameScreen.ApiUsage:
             return <ApiUsageScreen />;
         default:
-            return <InitialScreen 
-                setCurrentScreen={game.setCurrentScreen}
-                onSignOut={() => {}}
-                isFirebaseLoading={false}
-            />;
+// FIX: The InitialScreen component no longer accepts props as it sources them from the useGame hook. The unnecessary props have been removed.
+            return <InitialScreen />;
     }
 };
 

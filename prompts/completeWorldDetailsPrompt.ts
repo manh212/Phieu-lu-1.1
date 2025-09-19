@@ -110,21 +110,19 @@ Tuổi thọ tối đa (\`maxThoNguyen\`) tăng mạnh theo từng đại cảnh
         - **HƯỚN DẪN CHI TIẾT CHO TAG \`[GENERATED_SKILL: ...]\`:**
         - **Thuộc tính chung (BẮT BUỘC cho mọi loại):** \`name\`, \`description\`, \`skillType="CHỌN MỘT TRONG: ${Object.values(GameTemplates.SkillType).join(' | ')}"\`, \`otherEffects="Hiệu ứng đặc biệt của kĩ năng, bắt buộc phải có"\`.
         - **Thuộc tính cho Công Pháp Tu Luyện (\`skillType="${GameTemplates.SkillType.CONG_PHAP_TU_LUYEN}"\`):**
-            - \`congPhapType="CHỌN MỘT TRONG: ${Object.values(GameTemplates.CongPhapType).join(' | ')}"\`
-            - \`congPhapGrade="CHỌN MỘT TRONG: ${[...CONG_PHAP_GRADES].join(' | ')}"\`
-            - Nếu \`congPhapType="${GameTemplates.CongPhapType.VO_Y}"\`, thêm \`weaponFocus="CHỌN MỘT TRONG: ${[...WEAPON_TYPES_FOR_VO_Y].join(' | ')}"\`.
+            - \`congPhapType="(${Object.values(GameTemplates.CongPhapType).join('|')})"\`
+            - \`congPhapGrade="(${[...GameTemplates.CONG_PHAP_GRADES].join('|')})"\`
+            - Nếu \`congPhapType="${GameTemplates.CongPhapType.VO_Y}"\`, thêm \`weaponFocus="(${[...WEAPON_TYPES_FOR_VO_Y].join('|')})"\`.
         - **Thuộc tính cho Linh Kĩ (\`skillType="${GameTemplates.SkillType.LINH_KI}"\`):**
-            - \`linhKiCategory="CHỌN MỘT TRONG: ${[...LINH_KI_CATEGORIES].join(' | ')}"\`
-            - \`linhKiActivation="CHỌN MỘT TRONG: ${[...LINH_KI_ACTIVATION_TYPES].join(' | ')}"\`
+            - \`linhKiCategory="(${[...GameTemplates.LINH_KI_CATEGORIES].join('|')})"\`, \`linhKiActivation="(${[...GameTemplates.LINH_KI_ACTIVATION_TYPES].join('|')})"\`.
             - Nếu \`linhKiActivation="Chủ động"\`, thêm các thuộc tính chiến đấu chung. Nếu \`linhKiCategory="Tấn công"\`, thêm \`baseDamage\`, \`damageMultiplier\`. Nếu \`linhKiCategory="Hồi phục"\`, thêm \`baseHealing\`, \`healingMultiplier\`.
-            - Nếu \`linhKiActivation="Bị động"\`, chỉ cần có \`otherEffects\`.
         - **Thuộc tính cho Thần Thông (\`skillType="${GameTemplates.SkillType.THAN_THONG}"\`):** (Chỉ dùng thuộc tính chiến đấu chung).
         - **Thuộc tính cho Cấm Thuật (\`skillType="${GameTemplates.SkillType.CAM_THUAT}"\`):**
             - \`sideEffects="Mô tả tác dụng phụ, ví dụ: giảm tuổi thọ, mất tu vi..."\`
         - **Thuộc tính cho Nghề Nghiệp (\`skillType="${GameTemplates.SkillType.NGHE_NGHIEP}"\`):** (Bắt buộc phải chọn 1 trong những nghề nghiệp vừa dược đề ra, phải dựa vào tính chất nghề nghiệp để đưa ra các kĩ năng phù hợp)
-            - \`professionType="CHỌN MỘT TRONG: ${Object.values(GameTemplates.ProfessionType).join(' | ')}"\`
+            - \`professionType="(${Object.values(GameTemplates.ProfessionType).join('|')})"\`
             - \`skillDescription="Mô tả kỹ năng nghề đó làm được gì cụ thể."\`
-            - \`professionGrade="CHỌN MỘT TRONG: ${[...PROFESSION_GRADES].join(' | ')}"\`
+            - \`professionGrade="(${[...PROFESSION_GRADES].join('|')})"\`
         - **THUỘC TÍNH CHIẾN ĐẤU CHUNG (Dùng cho Linh Kĩ (Chủ động), Thần Thông, Cấm Thuật):**
             - \`manaCost=SỐ\`, \`cooldown=SỐ LƯỢT\`, \`otherEffects="Hiệu ứng 1;Hiệu ứng 2"\`.
             - **CHỈ DÙNG CHO CÁC KỸ NĂNG GÂY SÁT THƯƠNG/HỒI PHỤC (ví dụ Linh Kĩ Tấn Công/Hồi Phục):**
@@ -168,7 +166,7 @@ Người dùng đã điền một vài thông tin cho thế giới của họ v�
 **NHIỆM VỤ:**
 1.  **Đọc kỹ** các thông tin đã có trong phần "THÔNG TIN HIỆN TẠI". Các thông tin này là bối cảnh chính và **KHÔNG THỂ THAY ĐỔI**.
 2.  Dựa vào các thông tin đó, hãy **sáng tạo** và điền vào các mục được đánh dấu là "**CẦN TẠO**".
-3.  **QUY TẮC TỐI THƯỢỢNG:** Chỉ trả về các tag [GENERATED_...] cho những mục được đánh dấu là '**CẦN TẠO**'. **TUYỆT ĐỐI KHÔNG** tạo lại tag cho những mục đã được đánh dấu là "ĐÃ CÓ".
+3.  **QUY TẮC TỐI THƯỢNG:** Chỉ trả về các tag [GENERATED_...] cho những mục được đánh dấu là '**CẦN TẠO**'. **TUYỆT ĐỐI KHÔNG** tạo lại tag cho những mục đã được đánh dấu là "ĐÃ CÓ".
 4.  **QUY TẮC ĐẶC BIỆT VỀ NPC (CỰC KỲ QUAN TRỌNG):**
     *   Nếu mục "NPC Khởi Đầu" được đánh dấu là "ĐÃ CÓ", bạn phải kiểm tra danh sách NPC mà người dùng cung cấp.
     *   Với **MỖI NPC** trong danh sách đó mà **thiếu** \`longTermGoal\`, \`shortTermGoal\`, hoặc \`locationName\`, bạn **BẮT BUỘC** phải tạo một tag \`[GENERATED_NPC: ...]\` hoàn chỉnh cho NPC đó.

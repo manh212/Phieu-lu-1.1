@@ -1,8 +1,7 @@
-
 import React, { createContext, ReactNode, useRef, useState, useCallback, useEffect } from 'react';
 import * as jsonpatch from 'fast-json-patch';
-import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction, CombatLogContent } from '@/types/index';
-import { INITIAL_KNOWLEDGE_BASE, VIETNAMESE, APP_VERSION, MAX_AUTO_SAVE_SLOTS, TURNS_PER_PAGE, DEFAULT_TIERED_STATS, KEYFRAME_INTERVAL, EQUIPMENT_SLOTS_CONFIG } from '@/constants/index';
+import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction, CombatLogContent, YeuThu, Companion, Faction, WorldLoreEntry } from '@/types/index';
+import { INITIAL_KNOWLEDGE_BASE, VIETNAMESE, APP_VERSION, MAX_AUTO_SAVE_SLOTS, TURNS_PER_PAGE, DEFAULT_TIERED_STATS, KEYFRAME_INTERVAL, EQUIPMENT_SLOTS_CONFIG, DEFAULT_WORLD_SETTINGS, DEFAULT_PLAYER_STATS } from '@/constants/index';
 import { saveGameToIndexedDB, loadGamesFromIndexedDB, loadSpecificGameFromIndexedDB, deleteGameFromIndexedDB, importGameToIndexedDB, resetDBConnection as resetIndexedDBConnection } from '../services/indexedDBService';
 import * as GameTemplates from '@/types/index';
 import { useAppInitialization } from '../hooks/useAppInitialization';
@@ -106,6 +105,7 @@ export interface GameContextType {
     activeSlaveMarketModal: {locationId: string} | null;
 
     // Actions (will be populated by allActions)
+    startQuickPlay: () => void;
     handleUpdateEntity: (entityType: GameEntityType, entityData: GameEntity) => void;
     resetCopilotConversation: () => void;
     [key: string]: any; // Index signature to allow dynamic action properties
@@ -205,6 +205,155 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
         closeModal();
     }, [gameData.setKnowledgeBase, showNotification, closeModal]);
+
+    const startQuickPlay = useCallback(() => {
+        gameData.resetGameData(); 
+    
+        // Define the quick play entities
+        const quickPlaySkill: Skill = {
+            id: 'qp-skill-fireball',
+            name: 'Hỏa Cầu Thuật',
+            description: 'Tạo ra một quả cầu lửa nhỏ tấn công kẻ địch.',
+            skillType: GameTemplates.SkillType.LINH_KI,
+            detailedEffect: 'Gây 20 sát thương Hỏa.',
+            manaCost: 10,
+            cooldown: 1,
+            currentCooldown: 0,
+            baseDamage: 20,
+            damageMultiplier: 0,
+            healingAmount: 0,
+            healingMultiplier: 0,
+            linhKiDetails: {
+                category: 'Tấn công',
+                activation: 'Chủ động',
+            }
+        };
+
+        const quickPlayItem: ItemType = {
+            id: 'qp-item-potion',
+            name: 'Hồi Phục Tán',
+            description: 'Một loại thuốc bột giúp hồi phục một lượng nhỏ sinh lực.',
+            quantity: 5,
+            category: GameTemplates.ItemCategory.POTION,
+            rarity: GameTemplates.ItemRarity.PHO_THONG,
+            value: 10,
+            itemRealm: 'Phàm Nhân',
+            potionType: GameTemplates.PotionType.HOI_PHUC,
+            effects: ['Hồi 50 HP'],
+            isConsumedOnUse: true,
+            usable: true,
+            consumable: true,
+        };
+
+        const quickPlayNpc: NPC = {
+            id: 'qp-npc-tester',
+            name: 'NPC Thử Nghiệm',
+            title: 'Người Hướng Dẫn',
+            gender: 'Nam',
+            race: 'Nhân Tộc',
+            description: 'Một người đàn ông thân thiện ở đây để giúp bạn kiểm tra các tính năng.',
+            personalityTraits: ['Thân thiện', 'Hay giúp đỡ'],
+            affinity: 50,
+            realm: 'Phàm Nhân',
+            locationId: 'start-loc', // Match the location ID below
+            stats: {
+                sinhLuc: 100,
+                maxSinhLuc: 100,
+                sucTanCong: 10,
+            },
+            mood: 'Bình Thường',
+            needs: {},
+            longTermGoal: 'Giúp đỡ người mới.',
+            shortTermGoal: 'Chào hỏi người chơi.',
+            currentPlan: [],
+            relationships: {},
+            lastTickTurn: 0,
+            tickPriorityScore: 0,
+            activityLog: [],
+        };
+        
+        // NEW ENTITIES FOR QUICK PLAY
+        const quickPlayYeuThu: YeuThu = {
+            id: 'qp-yeuthu-wolf',
+            name: 'Sói Hoang',
+            species: 'Lang Tộc',
+            description: 'Một con sói hoang với bộ lông xám tro, ánh mắt đầy cảnh giác.',
+            isHostile: true,
+            realm: 'Phàm Nhân',
+            stats: {
+                sinhLuc: 50,
+                maxSinhLuc: 50,
+                sucTanCong: 15,
+            },
+            locationId: 'start-loc',
+        };
+
+        const quickPlayCompanion: Companion = {
+            id: 'qp-comp-dog',
+            name: 'Tiểu Hắc',
+            description: 'Một chú chó mực trung thành, luôn quấn quýt bên chân bạn.',
+            hp: 100,
+            maxHp: 100,
+            mana: 0,
+            maxMana: 0,
+            atk: 10,
+        };
+
+        const quickPlayFaction: Faction = {
+            id: 'qp-faction-village',
+            name: 'Làng Tân Thủ',
+            description: 'Một ngôi làng nhỏ yên bình, là nơi những người mới bắt đầu cuộc hành trình của mình.',
+            alignment: GameTemplates.FactionAlignment.TRUNG_LAP,
+            playerReputation: 10,
+        };
+
+        const quickPlayLore: WorldLoreEntry = {
+            id: 'qp-lore-welcome',
+            title: 'Chào Mừng Đến Thế Giới Mẫu',
+            content: 'Đây là một thế giới được tạo ra để thử nghiệm các tính năng của game. Mọi thứ ở đây đều có thể thay đổi. Chúc bạn có một trải nghiệm vui vẻ!'
+        };
+
+        const quickPlayKb: KnowledgeBase = {
+            ...INITIAL_KNOWLEDGE_BASE,
+            worldConfig: {
+                ...DEFAULT_WORLD_SETTINGS,
+                saveGameName: "Chơi Nhanh (Xem Trước)",
+                playerName: "Lữ Khách Vô Danh",
+                theme: "Thế Giới Mẫu",
+            },
+            playerStats: {
+                ...DEFAULT_PLAYER_STATS,
+                turn: 1,
+            },
+            playerSkills: [quickPlaySkill],
+            inventory: [quickPlayItem],
+            discoveredNPCs: [quickPlayNpc],
+            discoveredYeuThu: [quickPlayYeuThu],
+            companions: [quickPlayCompanion],
+            discoveredFactions: [quickPlayFaction],
+            worldLore: [quickPlayLore],
+            discoveredLocations: [{
+                id: 'start-loc',
+                name: 'Khu Vực Mẫu',
+                description: 'Một nơi để bắt đầu.',
+                isSafeZone: true,
+                visited: true,
+            }],
+            currentLocationId: 'start-loc',
+        };
+    
+        const startingMessage: GameMessage = {
+            id: 'quick-play-start',
+            type: 'system',
+            content: 'Chào mừng đến với chế độ Chơi Nhanh! Đây là giao diện xem trước. Không có cốt truyện nào được tạo. Hãy thoải mái khám phá các tính năng!',
+            timestamp: Date.now(),
+            turnNumber: 1,
+        };
+    
+        gameData.setKnowledgeBase(quickPlayKb);
+        gameData.setGameMessages([startingMessage]);
+        setCurrentScreen(GameScreen.Gameplay);
+    }, [gameData, setCurrentScreen]);
 
 
     const lastPageNumberForPrompt = (gameData.knowledgeBase.currentPageHistory?.length || 1) - 1;
@@ -436,7 +585,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setStyleSettings, openEntityModal, closeModal, closeEconomyModal, closeSlaveMarketModal,
         setIsStyleSettingsModalOpen, setIsAiContextModalOpen, setActiveEconomyModal, setActiveSlaveMarketModal,
         handleUpdateEntity,
-        ...allActions, onQuit, resetCopilotConversation, isCurrentlyActivePage, gameplayScrollPosition, justLoadedGame,
+        ...allActions, onQuit, startQuickPlay, resetCopilotConversation, isCurrentlyActivePage, gameplayScrollPosition, justLoadedGame,
         onGoToPrevPage, onGoToNextPage, onJumpToPage,
     };
 

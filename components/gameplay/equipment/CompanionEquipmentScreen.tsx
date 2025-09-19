@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { GameScreen, KnowledgeBase, Item, EquipmentSlotId, EquipmentSlotConfig, Wife, Slave, ComplexCompanionBase, PlayerStats } from '@/types/index';
 import Button from '@/components/ui/Button';
@@ -257,6 +258,7 @@ export const CompanionEquipmentScreen: React.FC = () => {
                                 playerAvatarUrl={selectedCompanion.avatarUrl}
                                 isPlayerContext={false}
                                 worldDate={knowledgeBase.worldDate}
+                                showFullDetails={false}
                             />
                         )}
                     </div>
