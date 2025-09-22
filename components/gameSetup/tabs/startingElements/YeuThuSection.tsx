@@ -12,9 +12,10 @@ interface YeuThuSectionProps {
   handleStartingYeuThuChange: (index: number, field: keyof StartingYeuThu, value: string | boolean) => void;
   addStartingYeuThu: () => void;
   removeStartingYeuThu: (index: number) => void;
+  handlePinToggle: (index: number) => void;
 }
 
-const YeuThuSection: React.FC<YeuThuSectionProps> = ({ settings, handleStartingYeuThuChange, addStartingYeuThu, removeStartingYeuThu }) => {
+const YeuThuSection: React.FC<YeuThuSectionProps> = ({ settings, handleStartingYeuThuChange, addStartingYeuThu, removeStartingYeuThu, handlePinToggle }) => {
   return (
     <>
       {(settings.startingYeuThu || []).map((yeuThu, index) => (
@@ -33,7 +34,20 @@ const YeuThuSection: React.FC<YeuThuSectionProps> = ({ settings, handleStartingY
           )}
           <InputField label="Thù Địch?" id={`yeuthuHostile-${index}`} type="checkbox" checked={yeuThu.isHostile} onChange={(e) => handleStartingYeuThuChange(index, 'isHostile', (e.target as HTMLInputElement).checked)} />
 
-          <div className="text-right mt-2">
+          <div className="flex justify-between items-center mt-2">
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handlePinToggle(index)}
+                className={`!py-1 !px-2 text-xs w-24 justify-center transition-colors ${
+                    yeuThu.isPinned
+                    ? 'text-yellow-300 border-yellow-500 bg-yellow-900/40 hover:bg-yellow-800/60'
+                    : 'text-gray-400 border-gray-600 hover:border-yellow-500 hover:text-yellow-300'
+                }`}
+                title={yeuThu.isPinned ? 'Bỏ ghim khỏi bối cảnh cốt lõi' : 'Ghim yếu tố này vào bối cảnh cốt lõi'}
+            >
+                {yeuThu.isPinned ? 'Đã ghim' : 'Chưa ghim'}
+            </Button>
             <Button variant="danger" size="sm" onClick={() => removeStartingYeuThu(index)}>Xóa Yêu Thú</Button>
           </div>
         </div>

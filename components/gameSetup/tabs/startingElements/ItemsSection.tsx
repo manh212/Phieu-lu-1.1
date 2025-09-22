@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { WorldSettings, StartingItem, Item } from '../../../../types/index';
 import * as GameTemplates from '../../../../types/index';
@@ -11,6 +12,7 @@ interface ItemsSectionProps {
     handleStartingItemChange: (index: number, field: any, value: any) => void;
     addStartingItem: () => void;
     removeStartingItem: (index: number) => void;
+    handlePinToggle: (index: number) => void;
 }
 
 const EquipmentEffectEditor: React.FC<{
@@ -113,7 +115,7 @@ const EquipmentEffectEditor: React.FC<{
     );
 };
 
-const ItemsSection: React.FC<ItemsSectionProps> = ({ settings, handleStartingItemChange, addStartingItem, removeStartingItem }) => {
+const ItemsSection: React.FC<ItemsSectionProps> = ({ settings, handleStartingItemChange, addStartingItem, removeStartingItem, handlePinToggle }) => {
     const realmProgressionList = (settings.raceCultivationSystems[0]?.realmSystem || '').split(' - ').map(s => s.trim()).filter(Boolean);
 
     const constructItemForCalc = (startingItem: StartingItem): Item => {
@@ -244,8 +246,21 @@ const ItemsSection: React.FC<ItemsSectionProps> = ({ settings, handleStartingIte
                             </p>
                         </div>
 
-                        <div className="text-right mt-2">
-                        <Button variant="danger" size="sm" onClick={() => removeStartingItem(index)}>{VIETNAMESE.removeItem}</Button>
+                        <div className="flex justify-between items-center mt-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handlePinToggle(index)}
+                                className={`!py-1 !px-2 text-xs w-24 justify-center transition-colors ${
+                                    item.isPinned
+                                    ? 'text-yellow-300 border-yellow-500 bg-yellow-900/40 hover:bg-yellow-800/60'
+                                    : 'text-gray-400 border-gray-600 hover:border-yellow-500 hover:text-yellow-300'
+                                }`}
+                                title={item.isPinned ? 'Bỏ ghim khỏi bối cảnh cốt lõi' : 'Ghim yếu tố này vào bối cảnh cốt lõi'}
+                            >
+                                {item.isPinned ? 'Đã ghim' : 'Chưa ghim'}
+                            </Button>
+                            <Button variant="danger" size="sm" onClick={() => removeStartingItem(index)}>{VIETNAMESE.removeItem}</Button>
                         </div>
                     </div>
                 );

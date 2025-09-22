@@ -22,6 +22,7 @@ export interface StartingSkill {
   professionDetails?: { type?: ProfessionType; grade?: ProfessionGrade; skillDescription?: string; };
   camThuatDetails?: { sideEffects?: string; };
   thanThongDetails?: {};
+  isPinned?: boolean;
 }
 
 export interface StartingItem {
@@ -38,6 +39,7 @@ export interface StartingItem {
   professionSkillBookDetails?: { professionToLearn?: ProfessionType; };
   professionToolDetails?: { professionRequired?: ProfessionType; };
   aiPreliminaryType?: string;
+  isPinned?: boolean;
 }
 
 export interface StartingNPC {
@@ -52,6 +54,7 @@ export interface StartingNPC {
   longTermGoal?: string;
   shortTermGoal?: string;
   locationName?: string;
+  isPinned?: boolean;
 }
 
 export interface StartingYeuThu {
@@ -61,11 +64,12 @@ export interface StartingYeuThu {
     description: string;
     realm?: string;
     isHostile: boolean;
+    isPinned?: boolean;
 }
 
-export interface StartingLore { id?: string; title: string; content: string; }
-export interface StartingLocation { id?: string; name: string; description: string; isSafeZone?: boolean; regionId?: string; mapX?: number; mapY?: number; locationType?: LocationTypeValues; }
-export interface StartingFaction { id?: string; name: string; description: string; alignment: FactionAlignmentValues; initialPlayerReputation: number; }
+export interface StartingLore { id?: string; title: string; content: string; isPinned?: boolean; }
+export interface StartingLocation { id?: string; name: string; description: string; isSafeZone?: boolean; regionId?: string; mapX?: number; mapY?: number; locationType?: LocationTypeValues; isPinned?: boolean; }
+export interface StartingFaction { id?: string; name: string; description: string; alignment: FactionAlignmentValues; initialPlayerReputation: number; isPinned?: boolean; }
 
 export interface RaceCultivationSystem {
   id: string;

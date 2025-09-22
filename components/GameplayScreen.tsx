@@ -4,6 +4,14 @@
 
 
 
+
+
+
+
+
+
+
+
 import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect, useState } from 'react';
 import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase, AiChoice, PlayerActionInputType, ResponseLength } from './../types/index';
 import { VIETNAMESE } from './../constants';
@@ -337,11 +345,10 @@ export const GameplayScreen: React.FC = () => {
                 <CharacterSidePanel knowledgeBase={game.knowledgeBase} onItemClick={(item) => game.openEntityModal('item', item)} onSkillClick={(skill) => game.openEntityModal('skill', skill)} onPlayerAvatarUploadRequest={game.onUpdatePlayerAvatar} isUploadingPlayerAvatar={game.isUploadingAvatar} />
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isQuestsPanelOpen} onClose={() => setIsQuestsPanelOpen(false)} title={VIETNAMESE.questsPanelTitle} position="right">
-                {/* FIX: Added missing onQuestEditClick prop */}
                 <QuestsSidePanel quests={game.knowledgeBase.allQuests} onQuestClick={(quest) => game.openEntityModal('quest', quest)} onQuestEditClick={(quest) => game.openEntityModal('quest', quest, true)}/>
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isWorldPanelOpen} onClose={() => setIsWorldPanelOpen(false)} title={VIETNAMESE.worldPanelTitle} position="right">
-                {/* FIX: Pass all required props to WorldSidePanel to handle entity clicks. */}
+                {/* FIX: Pass all required on...Click and on...EditClick props to WorldSidePanel. */}
                 <WorldSidePanel 
                     knowledgeBase={game.knowledgeBase}
                     onNpcClick={(npc) => game.openEntityModal('npc', npc)}

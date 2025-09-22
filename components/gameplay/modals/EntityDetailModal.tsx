@@ -3,8 +3,8 @@ import { GameEntity, GameEntityType } from '../../../hooks/types';
 import { KnowledgeBase, PlayerStats, Item, Skill, Quest, NPC, GameLocation, WorldLoreEntry, Companion, Faction, YeuThu, Wife, Slave, Prisoner, ActivityLogEntry, QuestObjective, StartingNPC, RelationshipEntry } from '../../../types/index';
 import * as GameTemplates from '../../../types/index';
 import Modal from '../../ui/Modal';
-import { VIETNAMESE, PROFICIENCY_DMG_HEAL_MULTIPLIERS, PROFICIENCY_COST_COOLDOWN_MULTIPLIERS, PROFICIENCY_EXP_THRESHOLDS } from '../../../constants/index';
-import { PROFICIENCY_TIERS } from '../../../types/index';
+import { VIETNAMESE, PROFICIENCY_DMG_HEAL_MULTIPLIERS, PROFICIENCY_COST_COOLDOWN_MULTIPLIERS, PROFICIENCY_EXP_THRESHOLDS, ALL_FACTION_ALIGNMENTS } from '../../../constants/index';
+import { PROFICIENCY_TIERS, TU_CHAT_TIERS } from '../../../types/index';
 import { getDeterministicAvatarSrc } from '../../../utils/avatarUtils';
 import InputField from '../../ui/InputField';
 import Button from '../../ui/Button';
@@ -216,8 +216,45 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
     useEffect(() => {
         setFormData(selectedEntity?.entity ? JSON.parse(JSON.stringify(selectedEntity.entity)) : null);
     }, [selectedEntity]);
+    
+    const handleFormChange = (field: string, value: any, type: string = 'string') => {
+        setFormData(prev => {
+            if (!prev) return null;
+            let finalValue = value;
+            if (type === 'number') {
+                finalValue = parseInt(value, 10);
+                if (isNaN(finalValue)) finalValue = 0;
+            } else if (type === 'checkbox') {
+                finalValue = value; // Already boolean
+            }
+            
+            const newFormData = JSON.parse(JSON.stringify(prev));
+            const fieldParts = field.split('.');
+            let currentLevel: any = newFormData;
+            for (let i = 0; i < fieldParts.length - 1; i++) {
+                const part = fieldParts[i];
+                if (currentLevel[part] === undefined || currentLevel[part] === null) {
+                    currentLevel[part] = {};
+                }
+                currentLevel = currentLevel[part];
+            }
+            currentLevel[fieldParts[fieldParts.length - 1]] = finalValue;
+            return newFormData;
+        });
+    };
 
-    const FactionDetails: React.FC<{ faction: Faction; knowledgeBase: KnowledgeBase; }> = ({ faction, knowledgeBase }) => {
+    const handleObjectiveChange = (index: number, field: keyof QuestObjective, value: string | boolean) => {
+        setFormData(prev => {
+            if (!prev || !('objectives' in prev)) return prev;
+            const newFormData = JSON.parse(JSON.stringify(prev)) as Quest;
+            const newObjectives = [...newFormData.objectives];
+            (newObjectives[index] as any)[field] = value;
+            newFormData.objectives = newObjectives;
+            return newFormData;
+        });
+    };
+
+    const FactionDetails: React.FC<{ faction: Faction; knowledgeBase: KnowledgeBase; }> = ({ faction, knowledgeBase, }) => {
         const [activeTab, setActiveTab] = useState<'info' | 'relations'>('info');
         
         const findNpcName = (id: string) => knowledgeBase.discoveredNPCs.find(npc => npc.id === id)?.name || id;
@@ -305,8 +342,23 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
     switch (type) {
         case 'npc': {
             const npc = formData as NPC;
-            title = `Chi Tiết NPC: ${npc.name}`;
-            content = <PersonDetails person={npc} knowledgeBase={knowledgeBase} onClose={onClose} />;
+            title = `Chi Tiết NPC: ${isEditing ? '' : npc.name}`;
+            content = isEditing ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                    <InputField label="Tên" id="npc-name" value={npc.name} onChange={e => handleFormChange('name', e.target.value)} />
+                    <InputField label="Chức danh" id="npc-title" value={npc.title} onChange={e => handleFormChange('title', e.target.value)} />
+                    <InputField label="Giới tính" id="npc-gender" type="select" options={['Nam', 'Nữ', 'Khác', 'Không rõ']} value={npc.gender} onChange={e => handleFormChange('gender', e.target.value)} />
+                    <InputField label="Chủng tộc" id="npc-race" value={npc.race} onChange={e => handleFormChange('race', e.target.value)} />
+                    <InputField label="Cảnh giới" id="npc-realm" value={npc.realm} onChange={e => handleFormChange('realm', e.target.value)} />
+                    <InputField label="Thiện cảm" id="npc-affinity" type="number" value={npc.affinity} onChange={e => handleFormChange('affinity', e.target.value, 'number')} />
+                    <InputField label="Tư chất" id="npc-tuChat" type="select" options={[...TU_CHAT_TIERS]} value={npc.tuChat} onChange={e => handleFormChange('tuChat', e.target.value)} />
+                    <InputField label="Linh căn" id="npc-spiritualRoot" value={npc.spiritualRoot} onChange={e => handleFormChange('spiritualRoot', e.target.value)} />
+                    <InputField label="Thể chất" id="npc-specialPhysique" value={npc.specialPhysique} onChange={e => handleFormChange('specialPhysique', e.target.value)} />
+                    <InputField label="Mô tả" id="npc-description" value={npc.description} onChange={e => handleFormChange('description', e.target.value)} textarea rows={3} className="md:col-span-2"/>
+                    <InputField label="Mục tiêu dài hạn" id="npc-longTermGoal" value={npc.longTermGoal} onChange={e => handleFormChange('longTermGoal', e.target.value)} textarea rows={2} className="md:col-span-2"/>
+                    <InputField label="Mục tiêu ngắn hạn" id="npc-shortTermGoal" value={npc.shortTermGoal} onChange={e => handleFormChange('shortTermGoal', e.target.value)} textarea rows={2} className="md:col-span-2"/>
+                </div>
+            ) : <PersonDetails person={npc} knowledgeBase={knowledgeBase} onClose={onClose} />;
             break;
         }
         case 'wife':
@@ -315,8 +367,18 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
             const person = formData as Wife | Slave | Prisoner;
             const personTypeMap = { wife: 'Đạo Lữ', slave: 'Nô Lệ', prisoner: 'Tù Nhân' };
             const personTypeLabel = personTypeMap[person.entityType];
-            title = `Chi Tiết ${personTypeLabel}: ${person.name}`;
-            content = (
+            title = `Chi Tiết ${personTypeLabel}: ${isEditing ? '' : person.name}`;
+            content = isEditing ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                    <InputField label="Tên" id="person-name" value={person.name} onChange={e => handleFormChange('name', e.target.value)} />
+                    <InputField label="Thiện cảm" id="person-affinity" type="number" value={person.affinity} onChange={e => handleFormChange('affinity', e.target.value, 'number')} />
+                    <InputField label="Ý chí" id="person-willpower" type="number" value={person.willpower} onChange={e => handleFormChange('willpower', e.target.value, 'number')} />
+                    <InputField label="Phục tùng" id="person-obedience" type="number" value={person.obedience} onChange={e => handleFormChange('obedience', e.target.value, 'number')} />
+                    {'resistance' in person && <InputField label="Phản kháng" id="person-resistance" type="number" value={(person as Prisoner).resistance} onChange={e => handleFormChange('resistance', e.target.value, 'number')} />}
+                    {'fear' in person && <InputField label="Sợ hãi" id="person-fear" type="number" value={(person as Slave).fear} onChange={e => handleFormChange('fear', e.target.value, 'number')} />}
+                    {'trust' in person && <InputField label="Tin tưởng" id="person-trust" type="number" value={(person as Slave).trust} onChange={e => handleFormChange('trust', e.target.value, 'number')} />}
+                 </div>
+            ) : (
                 <PersonDetails person={person} knowledgeBase={knowledgeBase} onClose={onClose}>
                     <DetailSection title="Chỉ Số Thân Phận">
                         <StatGrid>
@@ -331,75 +393,27 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
             );
             break;
         }
-        case 'lore': {
-            const lore = formData as WorldLoreEntry;
-            title = `Chi Tiết Tri Thức: ${lore.title}`;
-            content = (
-                <div className="space-y-4">
-                    <p className="whitespace-pre-wrap">{lore.content}</p>
-                </div>
-            );
-            break;
-        }
-        case 'skill': {
-            const skill = formData as Skill;
-            const proficiencyTierIndex = PROFICIENCY_TIERS.indexOf(skill.proficiencyTier || "Sơ Nhập");
-            title = `Chi Tiết Kỹ Năng: ${skill.name}`;
-            content = (
-                <div className="space-y-4">
-                    <p className="italic text-gray-400">{skill.description}</p>
-                    <DetailSection title="Thông Tin Cơ Bản">
-                        <StatGrid>
-                            <InfoPair label="Loại kỹ năng">{skill.skillType}</InfoPair>
-                            <InfoPair label="Mục tiêu">{skill.targetType || 'Không rõ'}</InfoPair>
-                            <InfoPair label="Linh lực tiêu hao">{skill.manaCost}</InfoPair>
-                            <InfoPair label="Thời gian hồi">{skill.cooldown} lượt</InfoPair>
-                        </StatGrid>
-                    </DetailSection>
-                    <DetailSection title="Hiệu Quả & Độ Thuần Thục">
-                        <InfoPair label="Độ thuần thục">
-                            <div className="space-y-1">
-                                <p>{skill.proficiencyTier} ({skill.proficiency} / {skill.maxProficiency || 'MAX'})</p>
-                                <ProgressBar value={skill.proficiency || 0} max={skill.maxProficiency || 100} />
-                            </div>
-                        </InfoPair>
-                        <div className="mt-4">
-                            <p className="font-semibold text-indigo-200 mb-2">Hiệu quả chi tiết</p>
-                            <p className="text-sm whitespace-pre-wrap">{skill.detailedEffect}</p>
-                             <StatGrid>
-                                <InfoPair label="Sát thương cơ bản">{Math.round(skill.baseDamage * PROFICIENCY_DMG_HEAL_MULTIPLIERS[skill.proficiencyTier || "Sơ Nhập"])}</InfoPair>
-                                <InfoPair label="Hồi phục cơ bản">{Math.round(skill.healingAmount * PROFICIENCY_DMG_HEAL_MULTIPLIERS[skill.proficiencyTier || "Sơ Nhập"])}</InfoPair>
-                                <InfoPair label="Sát thương theo % ATK">{(skill.damageMultiplier * 100).toFixed(0)}%</InfoPair>
-                                <InfoPair label="Hồi phục theo % ATK">{(skill.healingMultiplier * 100).toFixed(0)}%</InfoPair>
-                             </StatGrid>
-                        </div>
-                    </DetailSection>
-
-                    {skill.skillType === GameTemplates.SkillType.CONG_PHAP_TU_LUYEN && skill.congPhapDetails && (
-                        <DetailSection title="Chi Tiết Công Pháp">
-                            <StatGrid>
-                                <InfoPair label="Loại công pháp">{skill.congPhapDetails.type}</InfoPair>
-                                <InfoPair label="Phẩm chất">{skill.congPhapDetails.grade}</InfoPair>
-                                {skill.congPhapDetails.weaponFocus && <InfoPair label="Chuyên tu vũ khí">{skill.congPhapDetails.weaponFocus}</InfoPair>}
-                            </StatGrid>
-                        </DetailSection>
-                    )}
-                     {skill.skillType === GameTemplates.SkillType.LINH_KI && skill.linhKiDetails && (
-                        <DetailSection title="Chi Tiết Linh Kĩ">
-                            <StatGrid>
-                                <InfoPair label="Phân loại">{skill.linhKiDetails.category}</InfoPair>
-                                <InfoPair label="Loại kích hoạt">{skill.linhKiDetails.activation}</InfoPair>
-                            </StatGrid>
-                        </DetailSection>
-                    )}
-                </div>
-            );
-            break;
-        }
-        case 'quest': {
+         case 'quest': {
             const quest = formData as Quest;
-            title = `Chi Tiết Nhiệm Vụ: ${quest.title}`;
-            content = (
+            title = `Chi Tiết Nhiệm Vụ: ${isEditing ? '' : quest.title}`;
+            content = isEditing ? (
+                <div className="space-y-4">
+                    <InputField label="Tiêu đề" id="quest-title" value={quest.title} onChange={e => handleFormChange('title', e.target.value)} />
+                    <InputField label="Mô tả" id="quest-description" value={quest.description} onChange={e => handleFormChange('description', e.target.value)} textarea />
+                    <InputField label="Trạng thái" id="quest-status" type="select" options={['active', 'completed', 'failed']} value={quest.status} onChange={e => handleFormChange('status', e.target.value)} />
+                    <fieldset className="border border-gray-700 p-3 rounded-md">
+                        <legend className="text-md font-semibold text-gray-300 px-1">Mục tiêu</legend>
+                        <div className="space-y-2 mt-2">
+                        {quest.objectives.map((obj, index) => (
+                            <div key={obj.id} className="flex items-center gap-2">
+                                <input type="checkbox" checked={obj.completed} onChange={e => handleObjectiveChange(index, 'completed', e.target.checked)} className="h-5 w-5 rounded text-indigo-500 bg-gray-600 border-gray-500 focus:ring-indigo-400 mt-5" />
+                                <InputField label="" id={`obj-text-${index}`} value={obj.text} onChange={e => handleObjectiveChange(index, 'text', e.target.value)} className="flex-grow !mb-0" />
+                            </div>
+                        ))}
+                        </div>
+                    </fieldset>
+                </div>
+            ) : (
                 <div className="space-y-4">
                     <p className="italic text-gray-400">{quest.description}</p>
                     <DetailSection title="Mục tiêu">
@@ -416,170 +430,23 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
             );
             break;
         }
-        case 'item': {
-            const item = formData as Item;
-            title = `Chi Tiết Vật Phẩm: ${item.name}`;
-            content = (
-                <div className="space-y-4">
-                    <p className="italic text-gray-400">{item.description}</p>
-                    <DetailSection title="Thông Tin Cơ Bản">
-                        <StatGrid>
-                            <InfoPair label="Số lượng">{item.quantity}</InfoPair>
-                            <InfoPair label="Loại">{item.category}</InfoPair>
-                            <InfoPair label="Độ hiếm">{item.rarity}</InfoPair>
-                            <InfoPair label="Giá trị">{item.value?.toLocaleString()} {knowledgeBase.worldConfig?.currencyName}</InfoPair>
-                            <InfoPair label="Cảnh giới vật phẩm" fullWidth>{item.itemRealm}</InfoPair>
-                        </StatGrid>
-                    </DetailSection>
-
-                    {item.category === GameTemplates.ItemCategory.EQUIPMENT && (
-                        <DetailSection title="Thuộc tính Trang bị">
-                            <StatGrid>
-                                <InfoPair label="Loại trang bị">{(item as GameTemplates.EquipmentTemplate).equipmentType}</InfoPair>
-                                <InfoPair label="Vị trí">{(item as GameTemplates.EquipmentTemplate).slot || 'N/A'}</InfoPair>
-                                <InfoPair label="Chỉ số cộng thêm" fullWidth>
-                                    <pre className="text-xs bg-gray-900 p-2 rounded"><code>{JSON.stringify((item as GameTemplates.EquipmentTemplate).statBonuses, null, 2)}</code></pre>
-                                </InfoPair>
-                                <InfoPair label="Hiệu ứng đặc biệt" fullWidth>
-                                    <ul className="list-disc list-inside">
-                                        {(item as GameTemplates.EquipmentTemplate).uniqueEffects.map((effect, i) => <li key={i}>{effect}</li>)}
-                                    </ul>
-                                </InfoPair>
-                            </StatGrid>
-                        </DetailSection>
-                    )}
-                    {item.category === GameTemplates.ItemCategory.POTION && (
-                         <DetailSection title="Thuộc tính Đan Dược">
-                            <StatGrid>
-                                <InfoPair label="Loại đan dược">{(item as GameTemplates.PotionTemplate).potionType}</InfoPair>
-                            </StatGrid>
-                            <InfoPair label="Công dụng">
-                                <ul className="list-disc list-inside">
-                                    {(item as GameTemplates.PotionTemplate).effects.map((effect, i) => <li key={i}>{effect}</li>)}
-                                </ul>
-                            </InfoPair>
-                         </DetailSection>
-                    )}
-                     {item.category === GameTemplates.ItemCategory.CONG_PHAP && (
-                        <DetailSection title="Chi Tiết Công Pháp">
-                            <StatGrid>
-                                <InfoPair label="Loại công pháp">{(item as GameTemplates.CongPhapTemplate).congPhapType}</InfoPair>
-                                <InfoPair label="% Kinh nghiệm thưởng">{ (item as GameTemplates.CongPhapTemplate).expBonusPercentage}%</InfoPair>
-                            </StatGrid>
-                        </DetailSection>
-                    )}
-                     {item.category === GameTemplates.ItemCategory.LINH_KI && (
-                        <DetailSection title="Chi Tiết Linh Kĩ">
-                           <InfoPair label="Học được kỹ năng">
-                                <pre className="text-xs bg-gray-900 p-2 rounded"><code>{(item as GameTemplates.LinhKiTemplate).skillToLearnJSON}</code></pre>
-                            </InfoPair>
-                        </DetailSection>
-                    )}
-                     {item.category === GameTemplates.ItemCategory.PROFESSION_SKILL_BOOK && (
-                        <DetailSection title="Chi Tiết Sách Nghề">
-                            <InfoPair label="Học được nghề">{(item as GameTemplates.ProfessionSkillBookTemplate).professionToLearn}</InfoPair>
-                        </DetailSection>
-                    )}
-                     {item.category === GameTemplates.ItemCategory.PROFESSION_TOOL && (
-                        <DetailSection title="Chi Tiết Dụng Cụ Nghề">
-                            <InfoPair label="Yêu cầu nghề">{(item as GameTemplates.ProfessionToolTemplate).professionRequired}</InfoPair>
-                        </DetailSection>
-                    )}
-                </div>
-            );
-            break;
-        }
-        case 'yeuThu': {
-            const yeuThu = formData as YeuThu;
-            title = `Chi Tiết Yêu Thú: ${yeuThu.name}`;
-            content = (
-                <div className="space-y-4">
-                    <p className="italic text-gray-400">{yeuThu.description}</p>
-                    <DetailSection title="Thông Tin Cơ Bản">
-                         <StatGrid>
-                            <InfoPair label="Loài">{yeuThu.species}</InfoPair>
-                            <InfoPair label="Cảnh giới">{yeuThu.realm}</InfoPair>
-                            <InfoPair label="Thái độ">{yeuThu.isHostile ? 'Thù địch' : 'Trung lập / Thân thiện'}</InfoPair>
-                         </StatGrid>
-                    </DetailSection>
-                     <DetailSection title="Chỉ số chiến đấu">
-                        <StatGrid>
-                            <InfoPair label="Sinh lực">{yeuThu.stats?.sinhLuc ?? '??'} / {yeuThu.stats?.maxSinhLuc ?? '??'}</InfoPair>
-                            <InfoPair label="Linh lực">{yeuThu.stats?.linhLuc ?? '??'} / {yeuThu.stats?.maxLinhLuc ?? '??'}</InfoPair>
-                            <InfoPair label="Sức tấn công">{yeuThu.stats?.sucTanCong ?? '??'}</InfoPair>
-                        </StatGrid>
-                     </DetailSection>
-                     {(yeuThu.skills && yeuThu.skills.length > 0) && (
-                        <DetailSection title="Kỹ năng" defaultOpen={false}>
-                            <ul className="list-disc list-inside">
-                                {yeuThu.skills.map(skill => <li key={skill}>{skill}</li>)}
-                            </ul>
-                        </DetailSection>
-                     )}
-                </div>
-            );
-            break;
-        }
-        case 'location': {
-            const location = formData as GameLocation;
-            title = `Chi Tiết Địa Điểm: ${location.name}`;
-            content = (
-                 <div className="space-y-4">
-                    <p className="italic text-gray-400">{location.description}</p>
-                    <DetailSection title="Thông Tin Cơ Bản">
-                        <StatGrid>
-                            <InfoPair label="Loại">{location.locationType}</InfoPair>
-                            <InfoPair label="Vùng">{knowledgeBase.discoveredRegions.find(r => r.id === location.regionId)?.name || 'Chưa rõ'}</InfoPair>
-                            <InfoPair label="An toàn">{location.isSafeZone ? 'Có' : 'Không'}</InfoPair>
-                            <InfoPair label="Trạng thái">{location.visited ? 'Đã đến' : 'Chưa đến'}</InfoPair>
-                            <InfoPair label="Tọa độ">({location.mapX ?? '?'}, {location.mapY ?? '?'})</InfoPair>
-                            {location.parentLocationId && <InfoPair label="Thuộc khu vực">{findLocationName(location.parentLocationId)}</InfoPair>}
-                        </StatGrid>
-                    </DetailSection>
-                    {location.connections && location.connections.filter(c => c.isDiscovered).length > 0 && (
-                        <DetailSection title="Kết nối đã biết" defaultOpen={false}>
-                            <ul className="list-disc list-inside">
-                                {location.connections.filter(c=>c.isDiscovered).map(conn => <li key={conn.targetLocationId}>{findLocationName(conn.targetLocationId)}</li>)}
-                            </ul>
-                        </DetailSection>
-                    )}
-                     {location.environmentalEffects && location.environmentalEffects.length > 0 && (
-                        <DetailSection title="Hiệu ứng Môi trường" defaultOpen={false}>
-                            <ul className="list-disc list-inside">
-                                {location.environmentalEffects.map(eff => <li key={eff}>{eff}</li>)}
-                            </ul>
-                        </DetailSection>
-                    )}
-                </div>
-            );
-            break;
-        }
-        case 'faction': {
+         case 'faction': {
             const faction = formData as Faction;
-            title = `Chi Tiết Phe Phái: ${faction.name}`;
-            content = <FactionDetails faction={faction} knowledgeBase={knowledgeBase} />;
-            break;
-        }
-        case 'companion': {
-            const companion = formData as Companion;
-            title = `Chi Tiết Đồng Hành: ${companion.name}`;
-            content = (
+            title = `Chi Tiết Phe Phái: ${isEditing ? '' : faction.name}`;
+            content = isEditing ? (
                 <div className="space-y-4">
-                    <p className="italic text-gray-400">{companion.description}</p>
-                    <DetailSection title="Chỉ số">
-                        <StatGrid>
-                            <InfoPair label="HP">{companion.hp} / {companion.maxHp}</InfoPair>
-                            <InfoPair label="Mana">{companion.mana} / {companion.maxMana}</InfoPair>
-                            <InfoPair label="Sức tấn công">{companion.atk}</InfoPair>
-                        </StatGrid>
-                    </DetailSection>
+                    <InputField label="Tên" id="faction-name" value={faction.name} onChange={e => handleFormChange('name', e.target.value)} />
+                    <InputField label="Mô tả" id="faction-desc" value={faction.description} onChange={e => handleFormChange('description', e.target.value)} textarea />
+                    <InputField label="Chính/Tà" id="faction-align" type="select" options={[...ALL_FACTION_ALIGNMENTS]} value={faction.alignment} onChange={e => handleFormChange('alignment', e.target.value)} />
+                    <InputField label="Uy tín người chơi" id="faction-rep" type="number" value={faction.playerReputation} onChange={e => handleFormChange('playerReputation', e.target.value, 'number')} />
                 </div>
-            );
+            ) : <FactionDetails faction={faction} knowledgeBase={knowledgeBase} />;
             break;
         }
+        // Fallback for other types
         default: {
             title = `Chi Tiết: ${(entity as any).name || (entity as any).title}`;
-            content = <p className="italic text-gray-400">Chức năng xem chi tiết cho loại thực thể này chưa được hỗ trợ.</p>;
+            content = <p className="italic text-gray-400">Chức năng xem/sửa chi tiết cho loại thực thể này chưa được hỗ trợ đầy đủ.</p>;
         }
     }
 

@@ -57,6 +57,16 @@ const StartingElementsTab: React.FC<StartingElementsTabProps> = ({ openSections,
       dispatch({ type: 'UPDATE_FIELD', payload: { field: listKey, value: updatedList } });
   };
 
+  // FIX: Add handlePinToggle function to manage pinning state
+  const handlePinToggle = (listKey: keyof WorldSettings, index: number) => {
+      const list = (state.settings as any)[listKey] as any[];
+      const updatedList = [...list];
+      const itemToUpdate = { ...updatedList[index] };
+      itemToUpdate.isPinned = !itemToUpdate.isPinned;
+      updatedList[index] = itemToUpdate;
+      dispatch({ type: 'UPDATE_FIELD', payload: { field: listKey, value: updatedList } });
+  };
+
   return (
     <div className="space-y-2">
       <CollapsibleSection title={VIETNAMESE.startingSkillsSection} isOpen={openSections.skills} onToggle={() => toggleSection('skills')} itemCount={(settings.startingSkills || []).length}>
@@ -66,6 +76,7 @@ const StartingElementsTab: React.FC<StartingElementsTabProps> = ({ openSections,
           handleStartingSkillChange={createChangeHandler('startingSkills')}
           addStartingSkill={(type) => dispatch({ type: 'ADD_ELEMENT', payload: { list: 'startingSkills', element: { name: '', description: '', skillType: type } } })}
           removeStartingSkill={createRemoveHandler('startingSkills')}
+          handlePinToggle={(index) => handlePinToggle('startingSkills', index)}
         />
       </CollapsibleSection>
 
@@ -76,6 +87,7 @@ const StartingElementsTab: React.FC<StartingElementsTabProps> = ({ openSections,
           handleStartingItemChange={createChangeHandler('startingItems')}
           addStartingItem={createAddHandler('startingItems', { name: '', description: '', quantity: 1, category: GameTemplates.ItemCategory.MISCELLANEOUS })}
           removeStartingItem={createRemoveHandler('startingItems')}
+          handlePinToggle={(index) => handlePinToggle('startingItems', index)}
         />
       </CollapsibleSection>
       
@@ -86,6 +98,7 @@ const StartingElementsTab: React.FC<StartingElementsTabProps> = ({ openSections,
           handleStartingNPCChange={createChangeHandler('startingNPCs')}
           addStartingNPC={createAddHandler('startingNPCs', { name: '', personality: '', initialAffinity: 0, details: '' })}
           removeStartingNPC={createRemoveHandler('startingNPCs')}
+          handlePinToggle={(index) => handlePinToggle('startingNPCs', index)}
         />
       </CollapsibleSection>
 
@@ -96,6 +109,7 @@ const StartingElementsTab: React.FC<StartingElementsTabProps> = ({ openSections,
           handleStartingYeuThuChange={createChangeHandler('startingYeuThu')}
           addStartingYeuThu={createAddHandler('startingYeuThu', { name: '', species: '', description: '', isHostile: true })}
           removeStartingYeuThu={createRemoveHandler('startingYeuThu')}
+          handlePinToggle={(index) => handlePinToggle('startingYeuThu', index)}
         />
       </CollapsibleSection>
 
@@ -106,6 +120,7 @@ const StartingElementsTab: React.FC<StartingElementsTabProps> = ({ openSections,
           handleStartingLoreChange={createChangeHandler('startingLore')}
           addStartingLore={createAddHandler('startingLore', { title: '', content: '' })}
           removeStartingLore={createRemoveHandler('startingLore')}
+          handlePinToggle={(index) => handlePinToggle('startingLore', index)}
         />
       </CollapsibleSection>
 
@@ -116,6 +131,7 @@ const StartingElementsTab: React.FC<StartingElementsTabProps> = ({ openSections,
           handleStartingLocationChange={createChangeHandler('startingLocations')}
           addStartingLocation={createAddHandler('startingLocations', { name: '', description: '' })}
           removeStartingLocation={createRemoveHandler('startingLocations')}
+          handlePinToggle={(index) => handlePinToggle('startingLocations', index)}
         />
       </CollapsibleSection>
       
@@ -126,6 +142,7 @@ const StartingElementsTab: React.FC<StartingElementsTabProps> = ({ openSections,
           handleStartingFactionChange={createChangeHandler('startingFactions')}
           addStartingFaction={createAddHandler('startingFactions', { name: '', description: '', alignment: GameTemplates.FactionAlignment.TRUNG_LAP, initialPlayerReputation: 0 })}
           removeStartingFaction={createRemoveHandler('startingFactions')}
+          handlePinToggle={(index) => handlePinToggle('startingFactions', index)}
         />
       </CollapsibleSection>
     </div>

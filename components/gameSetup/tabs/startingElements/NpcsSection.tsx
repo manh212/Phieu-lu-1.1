@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 // FIX: Corrected import path for types.
 import { WorldSettings, StartingNPC, TuChatTier, TU_CHAT_TIERS, StartingLocation } from '@/types/index';
@@ -11,6 +12,7 @@ interface NpcsSectionProps {
   handleStartingNPCChange: (index: number, field: keyof StartingNPC, value: string | number | undefined) => void;
   addStartingNPC: () => void;
   removeStartingNPC: (index: number) => void;
+  handlePinToggle: (index: number) => void;
 }
 
 // LocationStatus sub-component for memoized check
@@ -41,7 +43,7 @@ const LocationStatus: React.FC<LocationStatusProps> = React.memo(({ locationName
 });
 
 
-const NpcsSection: React.FC<NpcsSectionProps> = ({ settings, handleStartingNPCChange, addStartingNPC, removeStartingNPC }) => {
+const NpcsSection: React.FC<NpcsSectionProps> = ({ settings, handleStartingNPCChange, addStartingNPC, removeStartingNPC, handlePinToggle }) => {
   return (
     <>
       {(settings.startingNPCs || []).map((npc, index) => (
@@ -153,7 +155,20 @@ const NpcsSection: React.FC<NpcsSectionProps> = ({ settings, handleStartingNPCCh
           <LocationStatus locationName={npc.locationName} startingLocations={settings.startingLocations} />
           {/* --- END OF NEWLY ADDED FIELDS --- */}
 
-          <div className="text-right mt-2">
+          <div className="flex justify-between items-center mt-2">
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handlePinToggle(index)}
+                className={`!py-1 !px-2 text-xs w-24 justify-center transition-colors ${
+                    npc.isPinned
+                    ? 'text-yellow-300 border-yellow-500 bg-yellow-900/40 hover:bg-yellow-800/60'
+                    : 'text-gray-400 border-gray-600 hover:border-yellow-500 hover:text-yellow-300'
+                }`}
+                title={npc.isPinned ? 'Bỏ ghim khỏi bối cảnh cốt lõi' : 'Ghim yếu tố này vào bối cảnh cốt lõi'}
+            >
+                {npc.isPinned ? 'Đã ghim' : 'Chưa ghim'}
+            </Button>
             <Button variant="danger" size="sm" onClick={() => removeStartingNPC(index)}>{VIETNAMESE.removeNPC}</Button>
           </div>
         </div>

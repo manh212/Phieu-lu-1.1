@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { WorldSettings, StartingSkill, SkillTypeValues } from '../../../../types/index';
 import * as GameTemplates from '../../../../types/index';
@@ -10,6 +11,7 @@ interface SkillsSectionProps {
   handleStartingSkillChange: (index: number, field: string, value: any) => void;
   addStartingSkill: (type: SkillTypeValues) => void;
   removeStartingSkill: (index: number) => void;
+  handlePinToggle: (index: number) => void;
 }
 
 const renderCombatSkillFields = (
@@ -44,7 +46,8 @@ const renderSkillSubSection = (
     renderDetails: (skill: StartingSkill, index: number) => React.ReactNode | null,
     handleStartingSkillChange: (index: number, field: string, value: any) => void,
     addStartingSkill: (type: GameTemplates.SkillTypeValues) => void,
-    removeStartingSkill: (index: number) => void
+    removeStartingSkill: (index: number) => void,
+    handlePinToggle: (index: number) => void
   ) => {
     const filteredSkills = (settings.startingSkills || [])
         .map((skill, index) => ({ ...skill, originalIndex: index }))
@@ -83,7 +86,20 @@ const renderSkillSubSection = (
                                 rows={2} 
                             />
                             {renderDetails(skill, skill.originalIndex)}
-                            <div className="text-right">
+                            <div className="flex justify-between items-center mt-2">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handlePinToggle(skill.originalIndex)}
+                                    className={`!py-1 !px-2 text-xs w-24 justify-center transition-colors ${
+                                        skill.isPinned
+                                        ? 'text-yellow-300 border-yellow-500 bg-yellow-900/40 hover:bg-yellow-800/60'
+                                        : 'text-gray-400 border-gray-600 hover:border-yellow-500 hover:text-yellow-300'
+                                    }`}
+                                    title={skill.isPinned ? 'Bỏ ghim khỏi bối cảnh cốt lõi' : 'Ghim yếu tố này vào bối cảnh cốt lõi'}
+                                >
+                                    {skill.isPinned ? 'Đã ghim' : 'Chưa ghim'}
+                                </Button>
                                 <Button variant="danger" size="sm" onClick={() => removeStartingSkill(skill.originalIndex)}>
                                     {VIETNAMESE.removeSkill}
                                 </Button>
@@ -96,7 +112,7 @@ const renderSkillSubSection = (
     );
   };
 
-const SkillsSection: React.FC<SkillsSectionProps> = ({ settings, handleStartingSkillChange, addStartingSkill, removeStartingSkill }) => {
+const SkillsSection: React.FC<SkillsSectionProps> = ({ settings, handleStartingSkillChange, addStartingSkill, removeStartingSkill, handlePinToggle }) => {
     return (
         <div className="space-y-2 divide-y divide-gray-700">
             {renderSkillSubSection(
@@ -128,7 +144,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ settings, handleStartingS
                         />
                     </div>
                 ),
-                handleStartingSkillChange, addStartingSkill, removeStartingSkill
+                handleStartingSkillChange, addStartingSkill, removeStartingSkill, handlePinToggle
             )}
             {renderSkillSubSection(
                 settings,
@@ -154,7 +170,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ settings, handleStartingS
                         )}
                     </div>
                 ),
-                handleStartingSkillChange, addStartingSkill, removeStartingSkill
+                handleStartingSkillChange, addStartingSkill, removeStartingSkill, handlePinToggle
             )}
             {renderSkillSubSection(
                 settings,
@@ -165,7 +181,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ settings, handleStartingS
                         {renderCombatSkillFields(skill, index, handleStartingSkillChange)}
                     </div>
                 ),
-                handleStartingSkillChange, addStartingSkill, removeStartingSkill
+                handleStartingSkillChange, addStartingSkill, removeStartingSkill, handlePinToggle
             )}
             {renderSkillSubSection(
                 settings,
@@ -185,7 +201,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ settings, handleStartingS
                          {renderCombatSkillFields(skill, index, handleStartingSkillChange)}
                     </div>
                 ),
-                handleStartingSkillChange, addStartingSkill, removeStartingSkill
+                handleStartingSkillChange, addStartingSkill, removeStartingSkill, handlePinToggle
             )}
             {renderSkillSubSection(
                 settings,
@@ -209,7 +225,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ settings, handleStartingS
                         />
                     </div>
                 ),
-                handleStartingSkillChange, addStartingSkill, removeStartingSkill
+                handleStartingSkillChange, addStartingSkill, removeStartingSkill, handlePinToggle
             )}
              {renderSkillSubSection(
                 settings,
@@ -228,7 +244,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ settings, handleStartingS
                         />
                     </div>
                 ),
-                handleStartingSkillChange, addStartingSkill, removeStartingSkill
+                handleStartingSkillChange, addStartingSkill, removeStartingSkill, handlePinToggle
             )}
         </div>
     );

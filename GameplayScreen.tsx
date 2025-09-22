@@ -1,8 +1,23 @@
 
-import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
-import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase } from './types/index';
-import { VIETNAMESE } from './constants';
-import * as GameTemplates from './types/index'; // Import GameTemplates
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect, useState } from 'react';
+import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase, AiChoice, PlayerActionInputType, ResponseLength } from './../types/index';
+import { VIETNAMESE } from './../constants';
+import * as GameTemplates from './../types/index'; // Import GameTemplates
 
 // Import Layout Components
 import GameHeader from './components/gameplay/layout/GameHeader';
@@ -18,6 +33,8 @@ import DebugPanelDisplay from './components/gameplay/DebugPanelDisplay';
 import MiniInfoPopover from './components/ui/MiniInfoPopover';
 import { MainMenuPanel } from './components/gameplay/layout/MainMenuPanel';
 import AICopilotPanel from './components/gameplay/AICopilotPanel';
+import CombatStatusPanel from './components/gameplay/CombatStatusPanel'; // NEW: Import combat panel
+import DebugCombatSetupModal from './components/combat/DebugCombatSetupModal'; // NEW: Import modal
 
 // Import Custom Hooks
 import { useGameplayPanels } from './hooks/useGameplayPanels';
@@ -38,7 +55,25 @@ export const GameplayScreen: React.FC = () => {
     // Use custom hooks for UI state not needed globally
     const { isReaderMode, setIsReaderMode, isCharPanelOpen, setIsCharPanelOpen, isQuestsPanelOpen, setIsQuestsPanelOpen, isWorldPanelOpen, setIsWorldPanelOpen, showDebugPanel, setShowDebugPanel, isMainMenuOpen, setIsMainMenuOpen, isCopilotOpen, setIsCopilotOpen } = useGameplayPanels();
     const { popover, handleKeywordClick, closePopover } = usePopover();
+    const [isCombatSetupModalOpen, setIsCombatSetupModalOpen] = useState(false); // NEW: State for debug combat modal
     
+    // NEW: Action Router to fix circular dependency
+    const handleActionRouter = useCallback((
+        action: AiChoice | string, 
+        isChoice: boolean, 
+        inputType: PlayerActionInputType, 
+        responseLength: ResponseLength,
+        isStrictMode: boolean
+    ) => {
+        if (combat.combatState.isInCombat) {
+            const actionTag = typeof action === 'object' ? action.actionTag : undefined;
+            combat.processPlayerAction(actionTag);
+        } else {
+            const actionText = typeof action === 'string' ? action : action.text;
+            game.handlePlayerAction(actionText, isChoice, inputType, responseLength, isStrictMode);
+        }
+    }, [combat, game.handlePlayerAction]);
+
     const {
         playerInput, setPlayerInput, currentActionType, setCurrentActionType,
         selectedResponseLength, setSelectedResponseLength,
@@ -46,7 +81,7 @@ export const GameplayScreen: React.FC = () => {
         responseLengthDropdownRef, handleChoiceClick, handleSubmit, handleRefresh,
         isStrictMode, setIsStrictMode
     } = usePlayerInput({
-        onPlayerAction: game.handlePlayerAction,
+        onPlayerAction: handleActionRouter, // Use the new router function
         onRefreshChoices: game.handleRefreshChoices,
         isLoading: game.isLoadingApi || game.isSummarizingNextPageTransition || game.knowledgeBase.isWorldTicking,
         isSummarizing: game.isSummarizingOnLoad || game.isSummarizingNextPageTransition,
@@ -59,65 +94,39 @@ export const GameplayScreen: React.FC = () => {
 
     // --- NEW: Effect to start combat ---
     useEffect(() => {
-        if (game.knowledgeBase.pendingOpponentIdsForCombat && game.knowledgeBase.pendingOpponentIdsForCombat.length > 0) {
+        if (game.knowledgeBase.pendingOpponentIdsForCombat) {
             combat.startCombat(game.knowledgeBase.pendingOpponentIdsForCombat);
             // Clear the pending state after starting combat to prevent re-triggering
             game.setKnowledgeBase((prev: KnowledgeBase) => ({
                 ...prev,
                 pendingOpponentIdsForCombat: null
             }));
-            // Switch to combat screen
-            game.setCurrentScreen(GameScreen.Combat);
         }
-    }, [game.knowledgeBase.pendingOpponentIdsForCombat, combat.startCombat, game.setKnowledgeBase, game.setCurrentScreen]);
+    }, [game.knowledgeBase.pendingOpponentIdsForCombat, combat.startCombat, game.setKnowledgeBase]);
 
-    // --- NEW: Effect to handle post-combat results ---
-    useEffect(() => {
-        if (game.knowledgeBase.postCombatState) {
-            game.handleCombatEnd(game.knowledgeBase.postCombatState);
-        }
-    }, [game.knowledgeBase.postCombatState, game.handleCombatEnd]);
-
-
-    const handleStartDebugCombat = useCallback(() => {
-        const { knowledgeBase, setKnowledgeBase, showNotification } = game;
-        const { combatState } = combat;
-    
-        if (combatState.isInCombat) {
-            showNotification("Đã ở trong trận chiến!", 'warning');
+    // NEW: Handler for starting debug combat with selected opponents
+    const handleStartDebugCombatWithOpponents = useCallback((opponentIds: string[]) => {
+        const { showNotification, setKnowledgeBase, knowledgeBase } = game;
+        
+        if (opponentIds.length === 0) {
+            showNotification("Vui lòng chọn ít nhất một đối thủ.", 'warning');
             return;
         }
-    
-        const opponentsInLocation = [
-            ...knowledgeBase.discoveredNPCs.filter((npc: any) => npc.locationId === knowledgeBase.currentLocationId && !npc.isEssential),
-            ...knowledgeBase.discoveredYeuThu.filter((yt: any) => yt.locationId === knowledgeBase.currentLocationId)
-        ];
 
-        let potentialOpponents = opponentsInLocation;
+        const allPotentialOpponents = [...knowledgeBase.discoveredNPCs, ...knowledgeBase.discoveredYeuThu];
+        const opponentNames = opponentIds.map(id => {
+            const opp = allPotentialOpponents.find(o => o.id === id);
+            return opp ? opp.name : 'Không rõ';
+        });
 
-        if(potentialOpponents.length === 0) {
-             potentialOpponents = [
-                ...knowledgeBase.discoveredNPCs.filter((npc: any) => !npc.isEssential),
-                ...knowledgeBase.discoveredYeuThu
-            ];
-        }
-    
-        if (potentialOpponents.length === 0) {
-            showNotification("Không tìm thấy đối thủ nào để bắt đầu chiến đấu thử.", 'error');
-            return;
-        }
-    
-        const shuffled = potentialOpponents.sort(() => 0.5 - Math.random());
-        const selectedOpponents = shuffled.slice(0, Math.min(2, shuffled.length));
-        const opponentIds = selectedOpponents.map((opp: any) => opp.id);
-    
-        showNotification(`Bắt đầu chiến đấu thử với: ${selectedOpponents.map((o: any) => o.name).join(', ')}`, 'info');
-    
+        showNotification(`Bắt đầu chiến đấu thử với: ${opponentNames.join(', ')}`, 'info');
+
         setKnowledgeBase((prev: KnowledgeBase) => ({
             ...prev,
             pendingOpponentIdsForCombat: opponentIds
         }));
-    
+        
+        setIsCombatSetupModalOpen(false);
     }, [game, combat]);
 
 
@@ -151,7 +160,7 @@ export const GameplayScreen: React.FC = () => {
                 game.closeModal();
                 game.closeEconomyModal();
                 game.closeSlaveMarketModal();
-                setIsCopilotOpen(false); // NEW
+                setIsCopilotOpen(false);
                 if (game.messageIdBeingEdited) game.onCancelEditMessage();
             }
         };
@@ -175,18 +184,10 @@ export const GameplayScreen: React.FC = () => {
         }
 
         if (settingsToApply) {
-            if (settingsToApply.fontFamily && settingsToApply.fontFamily !== 'inherit') {
-                styles.fontFamily = settingsToApply.fontFamily;
-            }
-            if (settingsToApply.fontSize && settingsToApply.fontSize !== 'inherit') {
-                styles.fontSize = settingsToApply.fontSize;
-            }
-            if (settingsToApply.textColor) {
-                styles.color = settingsToApply.textColor;
-            }
-            if (settingsToApply.backgroundColor) {
-                styles.backgroundColor = settingsToApply.backgroundColor;
-            }
+            if (settingsToApply.fontFamily && settingsToApply.fontFamily !== 'inherit') styles.fontFamily = settingsToApply.fontFamily;
+            if (settingsToApply.fontSize && settingsToApply.fontSize !== 'inherit') styles.fontSize = settingsToApply.fontSize;
+            if (settingsToApply.textColor) styles.color = settingsToApply.textColor;
+            if (settingsToApply.backgroundColor) styles.backgroundColor = settingsToApply.backgroundColor;
         }
 
         return styles;
@@ -197,18 +198,10 @@ export const GameplayScreen: React.FC = () => {
         const settingsToApply = game.styleSettings.choiceButton;
     
         if (settingsToApply) {
-            if (settingsToApply.fontFamily && settingsToApply.fontFamily !== 'inherit') {
-                styles.fontFamily = settingsToApply.fontFamily;
-            }
-            if (settingsToApply.fontSize && settingsToApply.fontSize !== 'inherit') {
-                styles.fontSize = settingsToApply.fontSize;
-            }
-            if (settingsToApply.textColor) {
-                styles.color = settingsToApply.textColor;
-            }
-            if (settingsToApply.backgroundColor && settingsToApply.backgroundColor !== 'transparent') {
-                styles.backgroundColor = settingsToApply.backgroundColor;
-            }
+            if (settingsToApply.fontFamily && settingsToApply.fontFamily !== 'inherit') styles.fontFamily = settingsToApply.fontFamily;
+            if (settingsToApply.fontSize && settingsToApply.fontSize !== 'inherit') styles.fontSize = settingsToApply.fontSize;
+            if (settingsToApply.textColor) styles.color = settingsToApply.textColor;
+            if (settingsToApply.backgroundColor && settingsToApply.backgroundColor !== 'transparent') styles.backgroundColor = settingsToApply.backgroundColor;
         }
         return styles;
     }, [game.styleSettings]);
@@ -258,7 +251,7 @@ export const GameplayScreen: React.FC = () => {
 
     return (
         <div className="h-screen flex flex-col bg-gray-900 text-gray-100 p-2 sm:p-4">
-             {!isReaderMode && (
+            {!isReaderMode && (
                 <GameHeader
                     gameTitleDisplay={gameTitleDisplay}
                     knowledgeBase={game.knowledgeBase}
@@ -276,7 +269,8 @@ export const GameplayScreen: React.FC = () => {
             )}
             
             <div className="flex-grow flex flex-col bg-gray-850 shadow-xl rounded-lg overflow-hidden relative min-h-0">
-                {game.knowledgeBase.isWorldTicking && (
+                 {combat.combatState.isInCombat && <CombatStatusPanel />}
+                 {game.knowledgeBase.isWorldTicking && (
                     <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20" aria-live="polite" aria-busy="true">
                         <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm shadow-lg border border-sky-500/50">
                             <Spinner size="sm" />
@@ -301,7 +295,7 @@ export const GameplayScreen: React.FC = () => {
                     parseAndHighlightText={parseAndHighlightText}
                     getDynamicMessageStyles={getDynamicMessageStyles}
                     onClick={() => setIsReaderMode(prev => !prev)}
-                    onAskCopilotAboutError={(errorMsg) => {
+                     onAskCopilotAboutError={(errorMsg) => {
                         game.handleCopilotQuery("Giải thích lỗi này giúp tôi.", errorMsg);
                         setIsCopilotOpen(true);
                     }}
@@ -353,19 +347,31 @@ export const GameplayScreen: React.FC = () => {
                 <CharacterSidePanel knowledgeBase={game.knowledgeBase} onItemClick={(item) => game.openEntityModal('item', item)} onSkillClick={(skill) => game.openEntityModal('skill', skill)} onPlayerAvatarUploadRequest={game.onUpdatePlayerAvatar} isUploadingPlayerAvatar={game.isUploadingAvatar} />
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isQuestsPanelOpen} onClose={() => setIsQuestsPanelOpen(false)} title={VIETNAMESE.questsPanelTitle} position="right">
-                {/* FIX: Added missing onQuestEditClick prop */}
                 <QuestsSidePanel quests={game.knowledgeBase.allQuests} onQuestClick={(quest) => game.openEntityModal('quest', quest)} onQuestEditClick={(quest) => game.openEntityModal('quest', quest, true)}/>
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isWorldPanelOpen} onClose={() => setIsWorldPanelOpen(false)} title={VIETNAMESE.worldPanelTitle} position="right">
-                {/* FIX: Removed obsolete on...Click props as the component now uses context */}
+                {/* FIX: Pass all required on...Click and on...EditClick props to WorldSidePanel. */}
                 <WorldSidePanel 
-                    knowledgeBase={game.knowledgeBase} 
+                    knowledgeBase={game.knowledgeBase}
+                    onNpcClick={(npc) => game.openEntityModal('npc', npc)}
+                    onNpcEditClick={(npc) => game.openEntityModal('npc', npc, true)}
+                    onYeuThuClick={(yeuThu) => game.openEntityModal('yeuThu', yeuThu)}
+                    onYeuThuEditClick={(yeuThu) => game.openEntityModal('yeuThu', yeuThu, true)}
+                    onLocationClick={(location) => game.openEntityModal('location', location)}
+                    onLocationEditClick={(location) => game.openEntityModal('location', location, true)}
+                    onLoreClick={(lore) => game.openEntityModal('lore', lore)}
+                    onLoreEditClick={(lore) => game.openEntityModal('lore', lore, true)}
+                    onFactionClick={(faction) => game.openEntityModal('faction', faction)}
+                    onFactionEditClick={(faction) => game.openEntityModal('faction', faction, true)}
+                    onCompanionClick={(companion) => game.openEntityModal('companion', companion)}
+                    onCompanionEditClick={(companion) => game.openEntityModal('companion', companion, true)}
                 />
             </OffCanvasPanel>
             
             <AICopilotPanel isOpen={isCopilotOpen} onClose={() => setIsCopilotOpen(false)} />
 
             <MiniInfoPopover isOpen={popover.isOpen} targetRect={popover.targetRect} entity={popover.entity} entityType={popover.entityType} onClose={closePopover} knowledgeBase={game.knowledgeBase} />
+            
             {!isReaderMode && showDebugPanel && <DebugPanelDisplay 
                 kb={game.knowledgeBase} 
                 sentPromptsLog={game.sentPromptsLog} 
@@ -384,7 +390,7 @@ export const GameplayScreen: React.FC = () => {
                 totalPages={game.totalPages} 
                 isAutoPlaying={game.isAutoPlaying} 
                 onToggleAutoPlay={game.onToggleAutoPlay} 
-                onStartDebugCombat={handleStartDebugCombat} 
+                onStartDebugCombat={() => setIsCombatSetupModalOpen(true)} 
                 onProcessDebugTags={game.handleProcessDebugTags} 
                 isLoading={isLoadingUi} 
                 onCheckTokenCount={game.handleCheckTokenCount}
@@ -397,6 +403,12 @@ export const GameplayScreen: React.FC = () => {
                 lastScoredNpcsForTick={game.lastScoredNpcsForTick}
                 onManualTick={game.handleManualTick}
             />}
+            <DebugCombatSetupModal
+                isOpen={isCombatSetupModalOpen}
+                onClose={() => setIsCombatSetupModalOpen(false)}
+                knowledgeBase={game.knowledgeBase}
+                onStartCombat={handleStartDebugCombatWithOpponents}
+            />
         </div>
     );
 };
