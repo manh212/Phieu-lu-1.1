@@ -443,7 +443,188 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
             ) : <FactionDetails faction={faction} knowledgeBase={knowledgeBase} />;
             break;
         }
-        // Fallback for other types
+        case 'item': {
+            const item = formData as Item;
+            title = `Chi Tiết Vật Phẩm: ${isEditing ? '' : item.name}`;
+            content = isEditing ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                    <InputField label="Tên" id="item-name" value={item.name} onChange={e => handleFormChange('name', e.target.value)} />
+                    <InputField label="Số lượng" id="item-quantity" type="number" value={item.quantity} onChange={e => handleFormChange('quantity', e.target.value, 'number')} />
+                    <InputField label="Độ hiếm" id="item-rarity" type="select" options={Object.values(GameTemplates.ItemRarity)} value={item.rarity} onChange={e => handleFormChange('rarity', e.target.value)} />
+                    <InputField label="Cảnh giới vật phẩm" id="item-itemRealm" value={item.itemRealm} onChange={e => handleFormChange('itemRealm', e.target.value)} />
+                    <InputField label="Mô tả" id="item-description" value={item.description} onChange={e => handleFormChange('description', e.target.value)} textarea rows={3} className="md:col-span-2"/>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    <p className="italic text-gray-400">{item.description}</p>
+                    <StatGrid>
+                        <InfoPair label="Số lượng">{item.quantity}</InfoPair>
+                        <InfoPair label="Loại">{item.category}</InfoPair>
+                        <InfoPair label="Độ hiếm">{item.rarity}</InfoPair>
+                        <InfoPair label="Cảnh giới">{item.itemRealm || 'Không rõ'}</InfoPair>
+                        <InfoPair label="Giá trị">{item.value?.toLocaleString() || 'Không rõ'}</InfoPair>
+                    </StatGrid>
+                    {item.category === GameTemplates.ItemCategory.EQUIPMENT && (
+                        <DetailSection title="Thuộc tính trang bị">
+                            <StatGrid>
+                                <InfoPair label="Loại trang bị">{(item as GameTemplates.EquipmentTemplate).equipmentType}</InfoPair>
+                                <InfoPair label="Vị trí">{(item as GameTemplates.EquipmentTemplate).slot || 'Không rõ'}</InfoPair>
+                            </StatGrid>
+                            {(item as GameTemplates.EquipmentTemplate).statBonuses && Object.keys((item as GameTemplates.EquipmentTemplate).statBonuses).length > 0 && (
+                                <InfoPair label="Chỉ số cộng thêm" fullWidth>
+                                    <ul className="list-disc list-inside">
+                                        {Object.entries((item as GameTemplates.EquipmentTemplate).statBonuses).map(([key, value]) => value !== 0 && <li key={key}>{key}: +{value}</li>)}
+                                    </ul>
+                                </InfoPair>
+                            )}
+                            {(item as GameTemplates.EquipmentTemplate).uniqueEffects && (item as GameTemplates.EquipmentTemplate).uniqueEffects.length > 0 && (
+                                <InfoPair label="Hiệu ứng đặc biệt" fullWidth>
+                                    <ul className="list-disc list-inside">
+                                        {(item as GameTemplates.EquipmentTemplate).uniqueEffects.map((effect, i) => <li key={i}>{effect}</li>)}
+                                    </ul>
+                                </InfoPair>
+                            )}
+                        </DetailSection>
+                    )}
+                </div>
+            );
+            break;
+        }
+        case 'skill': {
+            const skill = formData as Skill;
+            title = `Chi Tiết Kỹ Năng: ${isEditing ? '' : skill.name}`;
+            content = isEditing ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                    <InputField label="Tên" id="skill-name" value={skill.name} onChange={e => handleFormChange('name', e.target.value)} />
+                    <InputField label="Linh lực tiêu hao" id="skill-manaCost" type="number" value={skill.manaCost} onChange={e => handleFormChange('manaCost', e.target.value, 'number')} />
+                    <InputField label="Hồi chiêu (lượt)" id="skill-cooldown" type="number" value={skill.cooldown} onChange={e => handleFormChange('cooldown', e.target.value, 'number')} />
+                    <InputField label="Sát thương cơ bản" id="skill-baseDamage" type="number" value={skill.baseDamage} onChange={e => handleFormChange('baseDamage', e.target.value, 'number')} />
+                    <InputField label="Hồi phục cơ bản" id="skill-healingAmount" type="number" value={skill.healingAmount} onChange={e => handleFormChange('healingAmount', e.target.value, 'number')} />
+                     <InputField label="Mô tả" id="skill-description" value={skill.description} onChange={e => handleFormChange('description', e.target.value)} textarea className="md:col-span-2" />
+                    <InputField label="Hiệu ứng chi tiết" id="skill-detailedEffect" value={skill.detailedEffect} onChange={e => handleFormChange('detailedEffect', e.target.value)} textarea className="md:col-span-2" />
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    <p className="italic text-gray-400">{skill.description}</p>
+                    <DetailSection title="Thông số">
+                        <StatGrid>
+                            <InfoPair label="Loại">{skill.skillType}</InfoPair>
+                            <InfoPair label="Hồi chiêu">{skill.cooldown || 0} lượt</InfoPair>
+                            <InfoPair label="Linh lực">{skill.manaCost || 0}</InfoPair>
+                            <InfoPair label="Sát thương">{skill.baseDamage || 0} (+{((skill.damageMultiplier || 0) * 100).toFixed(0)}% ATK)</InfoPair>
+                            <InfoPair label="Hồi phục">{skill.healingAmount || 0} (+{((skill.healingMultiplier || 0) * 100).toFixed(0)}% ATK)</InfoPair>
+                        </StatGrid>
+                    </DetailSection>
+                    <DetailSection title="Hiệu ứng chi tiết">
+                        <p>{skill.detailedEffect}</p>
+                    </DetailSection>
+                    <DetailSection title="Độ thuần thục">
+                        <InfoPair label={`${skill.proficiencyTier || 'Sơ Nhập'} (${skill.proficiency || 0} / ${skill.maxProficiency || 100})`}>
+                            <ProgressBar value={skill.proficiency || 0} max={skill.maxProficiency || 100} />
+                        </InfoPair>
+                    </DetailSection>
+                </div>
+            );
+            break;
+        }
+        case 'yeuThu': {
+            const yt = formData as YeuThu;
+            title = `Chi Tiết Yêu Thú: ${isEditing ? '' : yt.name}`;
+            content = isEditing ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                    <InputField label="Tên" id="yt-name" value={yt.name} onChange={e => handleFormChange('name', e.target.value)} />
+                    <InputField label="Loài" id="yt-species" value={yt.species} onChange={e => handleFormChange('species', e.target.value)} />
+                    <InputField label="Cảnh giới" id="yt-realm" value={yt.realm} onChange={e => handleFormChange('realm', e.target.value)} />
+                    <InputField label="Sinh lực" id="yt-hp" type="number" value={yt.stats?.sinhLuc} onChange={e => handleFormChange('stats.sinhLuc', e.target.value, 'number')} />
+                    <InputField label="Sinh lực tối đa" id="yt-maxHp" type="number" value={yt.stats?.maxSinhLuc} onChange={e => handleFormChange('stats.maxSinhLuc', e.target.value, 'number')} />
+                    <InputField label="Sức tấn công" id="yt-atk" type="number" value={yt.stats?.sucTanCong} onChange={e => handleFormChange('stats.sucTanCong', e.target.value, 'number')} />
+                    <InputField label="Mô tả" id="yt-desc" value={yt.description} onChange={e => handleFormChange('description', e.target.value)} textarea rows={3} className="md:col-span-2"/>
+                    <InputField label="Thù địch?" id="yt-hostile" type="checkbox" checked={yt.isHostile} onChange={e => handleFormChange('isHostile', (e.target as HTMLInputElement).checked, 'checkbox')} />
+                 </div>
+            ) : (
+                <div className="space-y-4">
+                    <div className="flex items-start gap-4">
+                        <img src={getDeterministicAvatarSrc(yt)} alt={yt.name} className="w-24 h-24 rounded-full object-cover border-2 border-red-500"/>
+                        <div className="flex-grow space-y-2">
+                             <p><strong className="text-gray-400">Loài:</strong> {yt.species}</p>
+                             <p><strong className="text-gray-400">Cảnh giới:</strong> {yt.realm}</p>
+                             <p><strong className="text-gray-400">Thái độ:</strong> <span className={yt.isHostile ? 'text-red-400' : 'text-green-400'}>{yt.isHostile ? 'Thù địch' : 'Trung lập'}</span></p>
+                        </div>
+                    </div>
+                    <p className="italic text-gray-400">{yt.description}</p>
+                    <DetailSection title="Chỉ số">
+                        <StatGrid>
+                            <InfoPair label="Sinh lực">{yt.stats?.sinhLuc ?? '??'} / {yt.stats?.maxSinhLuc ?? '??'}</InfoPair>
+                            <InfoPair label="Sức tấn công">{yt.stats?.sucTanCong ?? '??'}</InfoPair>
+                        </StatGrid>
+                    </DetailSection>
+                </div>
+            );
+            break;
+        }
+        case 'companion': {
+            const comp = formData as Companion;
+            title = `Chi Tiết Đồng Hành: ${isEditing ? '' : comp.name}`;
+            content = isEditing ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                    <InputField label="Tên" id="comp-name" value={comp.name} onChange={e => handleFormChange('name', e.target.value)} />
+                    <InputField label="HP" id="comp-hp" type="number" value={comp.hp} onChange={e => handleFormChange('hp', e.target.value, 'number')} />
+                    <InputField label="HP Tối đa" id="comp-maxHp" type="number" value={comp.maxHp} onChange={e => handleFormChange('maxHp', e.target.value, 'number')} />
+                    <InputField label="Mana" id="comp-mana" type="number" value={comp.mana} onChange={e => handleFormChange('mana', e.target.value, 'number')} />
+                    <InputField label="Mana Tối đa" id="comp-maxMana" type="number" value={comp.maxMana} onChange={e => handleFormChange('maxMana', e.target.value, 'number')} />
+                    <InputField label="ATK" id="comp-atk" type="number" value={comp.atk} onChange={e => handleFormChange('atk', e.target.value, 'number')} />
+                    <InputField label="Mô tả" id="comp-desc" value={comp.description} onChange={e => handleFormChange('description', e.target.value)} textarea rows={3} className="md:col-span-2"/>
+                 </div>
+            ) : (
+                <div className="space-y-2">
+                    <p className="italic text-gray-400">{comp.description}</p>
+                    <DetailSection title="Chỉ số">
+                        <StatGrid>
+                            <InfoPair label="HP">{comp.hp} / {comp.maxHp}</InfoPair>
+                            <InfoPair label="Mana">{comp.mana} / {comp.maxMana}</InfoPair>
+                            <InfoPair label="ATK">{comp.atk}</InfoPair>
+                        </StatGrid>
+                    </DetailSection>
+                </div>
+            );
+            break;
+        }
+        case 'location': {
+            const loc = formData as GameLocation;
+            title = `Chi Tiết Địa Điểm: ${isEditing ? '' : loc.name}`;
+            content = isEditing ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                    <InputField label="Tên" id="loc-name" value={loc.name} onChange={e => handleFormChange('name', e.target.value)} />
+                    <InputField label="Loại" id="loc-type" type="select" options={Object.values(GameTemplates.LocationType)} value={loc.locationType} onChange={e => handleFormChange('locationType', e.target.value)} />
+                    <InputField label="Tọa độ X" id="loc-mapX" type="number" value={loc.mapX} onChange={e => handleFormChange('mapX', e.target.value, 'number')} />
+                    <InputField label="Tọa độ Y" id="loc-mapY" type="number" value={loc.mapY} onChange={e => handleFormChange('mapY', e.target.value, 'number')} />
+                    <InputField label="Mô tả" id="loc-desc" value={loc.description} onChange={e => handleFormChange('description', e.target.value)} textarea rows={4} className="md:col-span-2"/>
+                    <InputField label="An toàn?" id="loc-safe" type="checkbox" checked={loc.isSafeZone} onChange={e => handleFormChange('isSafeZone', (e.target as HTMLInputElement).checked, 'checkbox')} />
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    <p className="italic text-gray-400">{loc.description}</p>
+                    <StatGrid>
+                        <InfoPair label="Loại">{loc.locationType}</InfoPair>
+                        <InfoPair label="An toàn">{loc.isSafeZone ? 'Có' : 'Không'}</InfoPair>
+                        <InfoPair label="Tọa độ">{loc.mapX !== undefined ? `(${loc.mapX}, ${loc.mapY})` : 'Không rõ'}</InfoPair>
+                        <InfoPair label="Vùng">{findLocationName(loc.regionId || '') || 'Không rõ'}</InfoPair>
+                    </StatGrid>
+                </div>
+            );
+            break;
+        }
+        case 'lore': {
+            const lore = formData as WorldLoreEntry;
+            title = `Chi Tiết Tri Thức: ${isEditing ? '' : lore.title}`;
+            content = isEditing ? (
+                 <div className="space-y-4">
+                    <InputField label="Tiêu đề" id="lore-title" value={lore.title} onChange={e => handleFormChange('title', e.target.value)} />
+                    <InputField label="Nội dung" id="lore-content" value={lore.content} onChange={e => handleFormChange('content', e.target.value)} textarea rows={8} />
+                 </div>
+            ) : <p className="whitespace-pre-wrap leading-relaxed">{lore.content}</p>;
+            break;
+        }
         default: {
             title = `Chi Tiết: ${(entity as any).name || (entity as any).title}`;
             content = <p className="italic text-gray-400">Chức năng xem/sửa chi tiết cho loại thực thể này chưa được hỗ trợ đầy đủ.</p>;
