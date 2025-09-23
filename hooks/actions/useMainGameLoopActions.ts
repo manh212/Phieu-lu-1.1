@@ -1,3 +1,5 @@
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
 import { useCallback, useState, useRef } from 'react';
 import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, AiChoice, NPC, FindLocationParams } from '../../types/index';
 import { countTokens, generateRefreshedChoices, generateNextTurn, summarizeTurnHistory, findLocationWithAI, getApiSettings } from '../../services';
@@ -7,37 +9,50 @@ import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLO
 
 export interface UseMainGameLoopActionsProps {
   knowledgeBase: KnowledgeBase;
+// FIX: Correctly type the setKnowledgeBase parameter.
   setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeBase>>;
   gameMessages: GameMessage[];
+// FIX: Correctly type the setGameMessages parameter.
   setGameMessages: React.Dispatch<React.SetStateAction<GameMessage[]>>;
   addMessageAndUpdateState: (newMessages: GameMessage[], newKnowledgeBase: KnowledgeBase, callback?: () => void) => void;
+// FIX: Correctly type the setRawAiResponsesLog parameter.
   setRawAiResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
   sentPromptsLog: string[];
+// FIX: Correctly type the setSentPromptsLog parameter.
   setSentPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setLatestPromptTokenCount parameter.
   setLatestPromptTokenCount: React.Dispatch<React.SetStateAction<number | null | string>>;
   showNotification: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
   currentPageDisplay: number;
+// FIX: Correctly type the setCurrentPageDisplay parameter.
   setCurrentPageDisplay: React.Dispatch<React.SetStateAction<number>>;
   isAutoPlaying: boolean;
+// FIX: Correctly type the setIsAutoPlaying parameter.
   setIsAutoPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   executeSaveGame: (kbToSave: KnowledgeBase, messagesToSave: GameMessage[], saveName: string, existingId: string | null, isAuto: boolean) => Promise<string | null>;
   logNpcAvatarPromptCallback: (prompt: string) => void;
   setApiErrorWithTimeout: (message: string | null) => void;
   resetApiError: () => void;
   isLoadingApi: boolean;
+// FIX: Correctly type the setIsLoadingApi parameter.
   setIsLoadingApi: React.Dispatch<React.SetStateAction<boolean>>;
   onQuit: () => void;
   currentPageMessagesLog: string;
   previousPageSummaries: string[];
   lastNarrationFromPreviousPage?: string;
+// FIX: Correctly type the setRetrievedRagContextLog parameter.
   setRetrievedRagContextLog: React.Dispatch<React.SetStateAction<string[]>>;
   executeWorldTick: (kbForTick: KnowledgeBase) => Promise<{ updatedKb: KnowledgeBase; worldEventMessages: GameMessage[] }>;
   handleNonCombatDefeat: (kbStateAtDefeat: KnowledgeBase, fatalNarration?: string) => Promise<void>;
+// FIX: Correctly type the setSummarizationResponsesLog parameter.
   setSummarizationResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
   isSummarizingNextPageTransition: boolean;
+// FIX: Correctly type the setIsSummarizingNextPageTransition parameter.
   setIsSummarizingNextPageTransition: React.Dispatch<React.SetStateAction<boolean>>;
   // FIX: Added missing properties to the interface to resolve type errors.
+// FIX: Correctly type the setSentGeneralSubLocationPromptsLog parameter.
   setSentGeneralSubLocationPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setReceivedGeneralSubLocationResponsesLog parameter.
   setReceivedGeneralSubLocationResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
 }
 

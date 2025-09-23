@@ -1,8 +1,7 @@
-
 import React from 'react';
-import { Item as ItemType } from '../../../types/index';
-import { VIETNAMESE } from '../../../constants';
-import * as GameTemplates from '../../../types/index';
+import { Item as ItemType } from '@/types/index';
+import { VIETNAMESE } from '@/constants';
+import * as GameTemplates from '@/types/index';
 
 interface MaterialInventoryListUIProps {
   inventory: ItemType[];

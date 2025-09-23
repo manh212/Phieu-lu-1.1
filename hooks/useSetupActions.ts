@@ -7,16 +7,22 @@ import { generateInitialStory } from '../../services';
 import { performTagProcessing, calculateRealmBaseStats, addTurnHistoryEntryRaw, calculateEffectiveStats, vectorizeKnowledgeBase, DEFAULT_AI_CONTEXT_CONFIG, normalizeLocationName } from '../../utils/gameLogicUtils'; // Import vectorizeKnowledgeBase
 // FIX: Corrected import path for templates
 import * as GameTemplates from '../../types/index';
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
 
 
 interface UseSetupActionsProps {
+// FIX: Correctly type the setIsLoadingApi parameter.
   setIsLoadingApi: React.Dispatch<React.SetStateAction<boolean>>;
   resetApiError: () => void;
+// FIX: Correctly type the setKnowledgeBase parameter.
   setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeBase>>;
+// FIX: Correctly type the setCurrentPageDisplay parameter.
   setCurrentPageDisplay: React.Dispatch<React.SetStateAction<number>>;
   setCurrentScreen: (screen: GameScreen) => void;
   addMessageAndUpdateState: (newMessages: GameMessage[], newKnowledgeBase: KnowledgeBase, callback?: () => void) => void;
   logSentPromptCallback: (prompt: string) => void;
+// FIX: Correctly type the setRawAiResponsesLog parameter.
   setRawAiResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
   setApiErrorWithTimeout: (message: string | null) => void;
   logNpcAvatarPromptCallback?: (prompt: string) => void;

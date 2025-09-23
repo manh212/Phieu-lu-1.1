@@ -1,6 +1,7 @@
 // types/entities/item.ts
 import type { PlayerStats } from './character';
-import type { ItemCategoryValues, EquipmentRarity, EquipmentTypeValues, PotionTypeValues, MaterialTypeValues, CongPhapType, ProfessionType } from '../enums';
+// FIX: Changed barrel file import to direct file import to break circular dependency.
+import type { ItemCategoryValues, EquipmentRarity, EquipmentTypeValues, PotionTypeValues, MaterialTypeValues, CongPhapType, ProfessionType } from '../enums/item';
 
 export type EquipmentSlotId = | 'mainWeapon' | 'offHandWeapon' | 'head' | 'body' | 'hands' | 'legs' | 'artifact' | 'pet' | 'accessory1' | 'accessory2';
 

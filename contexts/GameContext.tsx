@@ -472,7 +472,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSummarizationResponsesLog: gameData.setSummarizationResponsesLog,
         isSummarizingNextPageTransition, setIsSummarizingNextPageTransition,
         setRetrievedRagContextLog: gameData.setRetrievedRagContextLog,
-        // FIX: Pass the missing log setters from gameData to the main game loop actions hook.
+// FIX: Pass the missing log setters from gameData to the main game loop actions hook.
         setSentGeneralSubLocationPromptsLog: gameData.setSentGeneralSubLocationPromptsLog,
         setReceivedGeneralSubLocationResponsesLog: gameData.setReceivedGeneralSubLocationResponsesLog,
     });
@@ -543,7 +543,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
     
     const cultivationActions = useCultivationActions({
-// FIX: Removed incorrect 'isCultivating' prop. 'setIsCultivating' is correct and already present.
         ...gameData, showNotification, setCurrentScreen, setIsCultivating,
         resetApiError, setApiErrorWithTimeout, logNpcAvatarPromptCallback,
         setSentCultivationPromptsLog: gameData.setSentCultivationPromptsLog,

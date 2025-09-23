@@ -9,11 +9,15 @@ import {
 } from '../../services';
 import { performTagProcessing } from '../../utils/gameLogicUtils';
 import { VIETNAMESE } from '../../constants';
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
 
 export interface UsePostCombatActionsProps {
     knowledgeBase: KnowledgeBase;
+// FIX: Correctly type the setKnowledgeBase parameter.
     setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeBase>>;
     isLoadingApi: boolean;
+// FIX: Correctly type the setIsLoadingApi parameter.
     setIsLoadingApi: React.Dispatch<React.SetStateAction<boolean>>;
     resetApiError: () => void;
     setApiErrorWithTimeout: (message: string | null) => void;
@@ -24,11 +28,17 @@ export interface UsePostCombatActionsProps {
     logNpcAvatarPromptCallback: (prompt: string) => void;
 
     // Log setters
+// FIX: Correctly type the setRawAiResponsesLog parameter.
     setRawAiResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setSentPromptsLog parameter.
     setSentPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setSentCombatSummaryPromptsLog parameter.
     setSentCombatSummaryPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setReceivedCombatSummaryResponsesLog parameter.
     setReceivedCombatSummaryResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setSentVictoryConsequencePromptsLog parameter.
     setSentVictoryConsequencePromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setReceivedVictoryConsequenceResponsesLog parameter.
     setReceivedVictoryConsequenceResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
 
     // Context for prompts

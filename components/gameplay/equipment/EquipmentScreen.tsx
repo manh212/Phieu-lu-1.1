@@ -1,13 +1,10 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-// FIX: Corrected import paths to point to the new centralized type export.
-import { GameScreen, KnowledgeBase, Item, EquipmentSlotId, EquipmentSlotConfig, EquipmentTypeValues as EquipmentTypeValue } from '../../../types/index';
-import Button from '../../ui/Button';
-import { VIETNAMESE, EQUIPMENT_SLOTS_CONFIG } from '../../../constants';
-// FIX: Corrected import to use the new centralized type export instead of the empty types file.
-import * as GameTemplates from '../../../types/index';
+import { GameScreen, KnowledgeBase, Item, EquipmentSlotId, EquipmentSlotConfig, EquipmentTypeValues as EquipmentTypeValue } from '@/types/index';
+import Button from '@/components/ui/Button';
+import { VIETNAMESE, EQUIPMENT_SLOTS_CONFIG } from '@/constants';
+import * as GameTemplates from '@/types/index';
 import EquipmentSlotUI from './EquipmentSlotUI';
 import EquipmentInventoryList from './EquipmentInventoryList';
-// FIX: Changed to named import for PlayerStatsWithEquipment
 import { PlayerStatsWithEquipment } from './PlayerStatsWithEquipment';
 import EquippableItemsPopover from './EquippableItemsPopover'; // New component
 
@@ -19,7 +16,6 @@ interface EquipmentScreenProps {
   isUploadingAvatar: boolean;
 }
 
-// FIX: Added named export to resolve module import error.
 export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
   knowledgeBase,
   setCurrentScreen,
@@ -216,6 +212,7 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
               })}
             </div>
           </div>
+          {/* FIX: Added missing 'personId' prop, required for deterministic avatar generation. */}
           <PlayerStatsWithEquipment
             personId={'player'}
             playerStats={knowledgeBase.playerStats}
@@ -230,6 +227,7 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({
             worldConfig={knowledgeBase.worldConfig}
             worldDate={knowledgeBase.worldDate}
             isPlayerContext={true}
+            // FIX: Passed the correct prop 'onUpdatePlayerAvatar' instead of a mismatched function.
             onPlayerAvatarUploadRequest={onUpdatePlayerAvatar}
             isUploadingPlayerAvatar={isUploadingAvatar}
             currentLocationName={currentLocation?.name}

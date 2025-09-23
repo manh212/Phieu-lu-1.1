@@ -1,8 +1,28 @@
 // types/entities/character.ts
-import type { ProfessionType, TuChatTier, ProficiencyTier } from '../enums';
+// FIX: Changed barrel file import to direct file imports to break circular dependency.
+import type { ProfessionType } from '../enums/item';
+import type { TuChatTier, ProficiencyTier } from '../enums/character';
 import type { Skill } from './skill';
 import type { Item, EquipmentSlotId } from './item';
-import type { ActivityLogEntry } from './npc';
+// FIX: Removed import of ActivityLogEntry from './npc' as it will be defined here.
+
+// FIX: Define and export RealmBaseStatDefinition here to break a circular dependency.
+export interface RealmBaseStatDefinition {
+  hpBase: number; hpInc: number; mpBase: number; mpInc: number; atkBase: number; atkInc: number; expBase: number; expInc: number;
+  phongThuBase: number; phongThuInc: number;
+  tocDoBase: number; tocDoInc: number;
+  chinhXacBase: number; chinhXacInc: number;
+  neTranhBase: number; neTranhInc: number;
+  tiLeChiMangBase: number; tiLeChiMangInc: number;
+  satThuongChiMangBase: number; satThuongChiMangInc: number;
+}
+
+// FIX: Define and export ActivityLogEntry here to break a circular dependency.
+export interface ActivityLogEntry {
+  turnNumber: number;
+  description: string;
+  locationId: string;
+}
 
 export type StatusEffectType = 'buff' | 'debuff' | 'neutral';
 

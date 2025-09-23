@@ -1,5 +1,6 @@
 // types/entities/world.ts
-import type { AnyLocationType, FactionAlignmentValues, GameEventType, GameEventStatus } from '../enums';
+// FIX: Changed barrel file import to direct file import to break circular dependency.
+import type { AnyLocationType, FactionAlignmentValues, GameEventType, GameEventStatus } from '../enums/world';
 
 export interface QuestObjective {
   id: string; text: string; completed: boolean;

@@ -48,12 +48,14 @@ const OffCanvasPanel: React.FC<OffCanvasPanelProps> = ({
 
         if (event.shiftKey) { // Shift + Tab
           if (document.activeElement === firstElement) {
-            lastElement.focus();
+            // FIX: Cast element to HTMLElement to ensure .focus() is available.
+            (lastElement as HTMLElement).focus();
             event.preventDefault();
           }
         } else { // Tab
           if (document.activeElement === lastElement) {
-            firstElement.focus();
+            // FIX: Cast element to HTMLElement to ensure .focus() is available.
+            (firstElement as HTMLElement).focus();
             event.preventDefault();
           }
         }
@@ -73,9 +75,9 @@ const OffCanvasPanel: React.FC<OffCanvasPanelProps> = ({
       setTimeout(() => {
         const focusableElements = panelRef.current?.querySelectorAll<HTMLElement>(focusableElementsSelector);
         if (focusableElements && focusableElements.length > 0) {
-          focusableElements[0].focus();
+          (focusableElements[0] as HTMLElement).focus();
         } else {
-          panelRef.current?.focus();
+          (panelRef.current as HTMLElement)?.focus();
         }
         panelRef.current?.addEventListener('keydown', handleKeyDown);
       }, 100);

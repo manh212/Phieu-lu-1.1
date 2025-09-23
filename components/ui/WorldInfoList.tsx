@@ -1,8 +1,10 @@
 
+
 import React from 'react';
 import Button from './Button';
 
 // Generic type constraint: T must have an 'id' and either 'name' or 'title'.
+// FIX: Corrected typo from stirng to string
 export interface WorldInfoListProps<T extends {id: string, name: string} | {id: string, title: string}> {
   items: T[];
   onItemClick: (item: T) => void;

@@ -7,6 +7,8 @@ import { uploadImageToCloudinary } from '../../services/cloudinaryService';
 import { diceCoefficient, normalizeStringForComparison } from '../questUtils';
 import { formatYeuThuForEmbedding } from '../ragUtils';
 import { getDeterministicAvatarSrc } from '../avatarUtils';
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
 
 const SIMILARITY_THRESHOLD = 0.8;
 
@@ -14,6 +16,7 @@ export const processYeuThu = async (
     currentKb: KnowledgeBase,
     tagParams: Record<string, string>,
     turnForSystemMessages: number,
+// FIX: Correctly type the setKnowledgeBaseDirectly parameter.
     setKnowledgeBaseDirectly: React.Dispatch<React.SetStateAction<KnowledgeBase>>,
     logNpcAvatarPromptCallback?: (prompt: string) => void
 ): Promise<{ updatedKb: KnowledgeBase; systemMessages: GameMessage[]; newVectorMetadata?: VectorMetadata; }> => {

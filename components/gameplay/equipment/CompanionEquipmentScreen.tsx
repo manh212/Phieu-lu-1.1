@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { GameScreen, KnowledgeBase, Item, EquipmentSlotId, EquipmentSlotConfig, Wife, Slave, ComplexCompanionBase, PlayerStats } from '@/types/index';
 import Button from '@/components/ui/Button';
@@ -247,6 +246,7 @@ export const CompanionEquipmentScreen: React.FC = () => {
                         </div>
                         {companionFullStats && (
                              <PlayerStatsWithEquipment
+                                // FIX: Added the required 'personId' prop for deterministic avatar generation.
                                 personId={selectedCompanion.id}
                                 playerStats={companionFullStats}
                                 equippedItems={selectedCompanion.equippedItems}
@@ -259,6 +259,9 @@ export const CompanionEquipmentScreen: React.FC = () => {
                                 isPlayerContext={false}
                                 worldDate={knowledgeBase.worldDate}
                                 showFullDetails={false}
+                                // FIX: This prop is not used in this context, so providing a safe empty function.
+                                onPlayerAvatarUploadRequest={() => {}}
+                                isUploadingPlayerAvatar={false}
                             />
                         )}
                     </div>

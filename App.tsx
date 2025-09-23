@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 
 import { GameProvider } from '@/contexts/GameContext';
@@ -89,9 +90,6 @@ const AppContent: React.FC = () => {
         isOpen={!!game.selectedEntity} 
         onClose={game.closeModal} 
         knowledgeBase={game.knowledgeBase} 
-        // FIX: Removed onUpdateNpcAvatar and isUploadingAvatar as they are not defined in EntityDetailModalProps.
-        // onUpdateNpcAvatar={game.onUpdateNpcAvatar} 
-        // isUploadingAvatar={game.isUploadingAvatar}
         onUpdateEntity={game.handleUpdateEntity} 
       />
     </>

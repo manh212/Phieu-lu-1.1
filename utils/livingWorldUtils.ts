@@ -146,27 +146,8 @@ export const convertNpcActionToTag = (action: NpcAction, npc: NPC): string | str
         case 'UPDATE_PLAN':
             return `[NPC_UPDATE: name="${npc.name}", currentPlan="${params.newPlanSteps.join('; ')}"]`;
         case 'ACQUIRE_ITEM':
-            // This is complex. For now, we'll log it. A more robust implementation would
-            // require the AI to specify WHERE the item comes from (looting, buying, finding).
-            // The NPC_INVENTORY_TRANSFER is a better pattern for this.
-            return `[NPC_ACTION_LOG: npcName="${npc.name}", reason="${action.reason}"]`;
-        case 'PRODUCE_ITEM':
-             return `[NPC_PRODUCE_ITEM: npcId="${npc.id}", name="${params.itemName}", quantity=${params.quantity || 1}, category="Material", rarity="Phổ Thông", description="Sản phẩm do ${npc.name} tạo ra."]`;
-        case 'PRACTICE_SKILL':
-        case 'USE_SKILL':
-        case 'INTERACT_OBJECT':
-        case 'CONVERSE':
-        case 'BUILD_RELATIONSHIP':
-        case 'FORM_GROUP':
-        case 'INFLUENCE_FACTION':
-        case 'OFFER_SERVICE':
-        case 'RESEARCH_TOPIC':
-        case 'PATROL_AREA':
-        case 'COMMIT_CRIME':
-        case 'IDLE':
-            // For now, these actions are only reflected in the activity log and don't generate a direct tag.
-            // This can be expanded later.
-            return `[NPC_ACTION_LOG: npcName="${npc.name}", reason="${action.reason}"]`;
+            // This is complex. For now,
+            return null; // This action will be logged but not create a tag yet
         default:
             return null;
     }

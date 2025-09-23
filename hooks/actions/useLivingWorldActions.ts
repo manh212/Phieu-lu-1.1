@@ -10,18 +10,23 @@ import {
     performTagProcessing,
 } from '../../utils/gameLogicUtils';
 import { PROMPT_FUNCTIONS } from '../../prompts';
-import { useCallback } from 'react';
+// FIX: Add missing React import to resolve namespace errors.
+import React, { useCallback } from 'react';
 
 export interface UseLivingWorldActionsProps {
     knowledgeBase: KnowledgeBase;
+// FIX: Correctly type the setKnowledgeBase parameter.
     setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeBase>>;
     addMessageAndUpdateState: (newMessages: GameMessage[], newKnowledgeBase: KnowledgeBase, callback?: () => void) => void;
     showNotification: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
     logNpcAvatarPromptCallback: (prompt: string) => void;
 
     // Log setters
+// FIX: Correctly type the setSentLivingWorldPromptsLog parameter.
     setSentLivingWorldPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setRawLivingWorldResponsesLog parameter.
     setRawLivingWorldResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setLastScoredNpcsForTick parameter.
     setLastScoredNpcsForTick: React.Dispatch<React.SetStateAction<{ npc: NPC, score: number }[]>>;
 }
 

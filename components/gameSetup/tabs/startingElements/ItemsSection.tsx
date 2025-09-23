@@ -74,7 +74,7 @@ const EquipmentEffectEditor: React.FC<{
                 <div className="space-y-2 mb-2">
                     {item.equipmentDetails?.statBonuses && Object.entries(item.equipmentDetails.statBonuses).map(([stat, value]) => (
                         <div key={stat} className="flex items-center justify-between bg-gray-700/50 p-1.5 rounded-md text-xs">
-                            <span>{stat}: <span className="font-bold text-green-400">{value > 0 ? `+${value}`: value}</span></span>
+                            <span>{stat}: <span className="font-bold text-green-400">{Number(value) > 0 ? `+${value}`: value}</span></span>
                             <Button size="sm" variant="danger" className="!p-1 !text-xs" onClick={() => handleRemoveStatBonus(stat)}>Xóa</Button>
                         </div>
                     ))}
@@ -143,7 +143,7 @@ const ItemsSection: React.FC<ItemsSectionProps> = ({ settings, handleStartingIte
 
     return (
         <>
-            {(settings.startingItems || []).map((item, index) => {
+            {(settings.startingItems || []).map((item: StartingItem, index: number) => {
                 const itemForCalc = constructItemForCalc(item);
                 const estimatedValue = calculateItemValue(itemForCalc, realmProgressionList);
                 return (

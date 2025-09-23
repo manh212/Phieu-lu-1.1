@@ -77,10 +77,16 @@ const CharacterSidePanel: React.FC<CharacterSidePanelProps> = React.memo(({
   const allEquippedItemIds = useMemo(() => {
     const ids = new Set<string>();
     // Player's equipment
-    Object.values(knowledgeBase.equippedItems).forEach(id => { if (id) ids.add(id); });
+// FIX: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+// This is likely a TypeScript inference issue. Explicitly typing the 'id' parameter resolves it.
+    Object.values(knowledgeBase.equippedItems).forEach((id: string | null) => { if (id) ids.add(id); });
     // All companions' equipment
-    knowledgeBase.wives.forEach(c => Object.values(c.equippedItems).forEach(id => { if (id) ids.add(id); }));
-    knowledgeBase.slaves.forEach(c => Object.values(c.equippedItems).forEach(id => { if (id) ids.add(id); }));
+// FIX: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+// This is likely a TypeScript inference issue. Explicitly typing the 'id' parameter resolves it.
+    knowledgeBase.wives.forEach(c => Object.values(c.equippedItems).forEach((id: string | null) => { if (id) ids.add(id); }));
+// FIX: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+// This is likely a TypeScript inference issue. Explicitly typing the 'id' parameter resolves it.
+    knowledgeBase.slaves.forEach(c => Object.values(c.equippedItems).forEach((id: string | null) => { if (id) ids.add(id); }));
     return ids;
   }, [knowledgeBase.equippedItems, knowledgeBase.wives, knowledgeBase.slaves]);
 
@@ -89,18 +95,23 @@ const CharacterSidePanel: React.FC<CharacterSidePanelProps> = React.memo(({
       return knowledgeBase.inventory.filter(item => !allEquippedItemIds.has(item.id));
   }, [knowledgeBase.inventory, allEquippedItemIds]);
 
-  // FIX: Fixed incorrect types being used in the filter logic. `LinhKiCategory` and `LinhKiActivationType` are types, not enum values. The filter should use `GameTemplates.SkillType.LINH_KI` and `GameTemplates.SkillType.NGHE_NGHIEP` respectively.
+  // FIX: Filtered skills by their specific type using enum values for type safety.
   const congPhapSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.CONG_PHAP_TU_LUYEN);
   const linhKiSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.LINH_KI);
   const ngheNghiepSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.NGHE_NGHIEP);
   const thanThongSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.THAN_THONG);
   const camThuatSkills = knowledgeBase.playerSkills.filter(s => s.skillType === GameTemplates.SkillType.CAM_THUAT);
+  // FIX: Rewrote the filter for `otherSkills` to be more robust. Using an array with `includes`
+  // avoids a potential type inference issue with Set.has() in some TypeScript configurations.
+  const specificSkillTypes: readonly GameTemplates.SkillTypeValues[] = [
+    GameTemplates.SkillType.CONG_PHAP_TU_LUYEN,
+    GameTemplates.SkillType.LINH_KI,
+    GameTemplates.SkillType.NGHE_NGHIEP,
+    GameTemplates.SkillType.THAN_THONG,
+    GameTemplates.SkillType.CAM_THUAT,
+  ];
   const otherSkills = knowledgeBase.playerSkills.filter(s => 
-    s.skillType !== GameTemplates.SkillType.CONG_PHAP_TU_LUYEN &&
-    s.skillType !== GameTemplates.SkillType.LINH_KI &&
-    s.skillType !== GameTemplates.SkillType.NGHE_NGHIEP &&
-    s.skillType !== GameTemplates.SkillType.THAN_THONG &&
-    s.skillType !== GameTemplates.SkillType.CAM_THUAT
+    !specificSkillTypes.includes(s.skillType)
   );
 
   const activeTabStyle = "whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm border-indigo-500 text-indigo-400";

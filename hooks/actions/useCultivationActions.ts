@@ -1,21 +1,27 @@
 import { useCallback } from 'react';
 // FIX: Corrected import path for types.
-import { KnowledgeBase, GameMessage, GameScreen, Skill, NPC, Wife, Slave } from '@/types/index';
+import { KnowledgeBase, GameMessage, GameScreen, Skill, NPC, Wife, Slave } from '../../types/index';
 import { generateCultivationSession, summarizeCultivationSession } from '../../services';
 import { performTagProcessing, handleLevelUps } from '../../utils/gameLogicUtils';
 import { VIETNAMESE } from '../../constants';
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
 
 interface UseCultivationActionsProps {
   knowledgeBase: KnowledgeBase;
+// FIX: Correctly type the setKnowledgeBase parameter.
   setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeBase>>;
   addMessageAndUpdateState: (newMessages: GameMessage[], newKnowledgeBase: KnowledgeBase, callback?: () => void) => void;
+// FIX: Correctly type the setIsCultivating parameter.
   setIsCultivating: React.Dispatch<React.SetStateAction<boolean>>;
   setApiErrorWithTimeout: (message: string | null) => void;
   resetApiError: () => void;
   showNotification: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
   setCurrentScreen: (screen: GameScreen) => void;
   logNpcAvatarPromptCallback?: (prompt: string) => void; 
+// FIX: Correctly type the setSentCultivationPromptsLog parameter.
   setSentCultivationPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setReceivedCultivationResponsesLog parameter.
   setReceivedCultivationResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
   // New props for context
   currentPageMessagesLog: string;
@@ -85,7 +91,7 @@ export const useCultivationActions = ({
       addMessageAndUpdateState(allMessages, kbAfterLevelUp);
 
       if(response.narration) log.push(response.narration);
-      allMessages.forEach(msg => log.push(`[${msg.content}]`));
+      allMessages.forEach(msg => log.push(`[${typeof msg.content === 'string' ? msg.content : 'System Action'}]`));
 
       return log;
 

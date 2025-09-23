@@ -2,6 +2,8 @@
 import { KnowledgeBase, AIContextConfig } from './types/index';
 import { DEFAULT_PLAYER_STATS } from './constants';
 import { MAX_AUTO_SAVE_SLOTS } from './constants';
+import { DEFAULT_AI_CONTEXT_CONFIG } from './utils/gameLogicUtils';
+import { DEFAULT_AI_RULEBOOK } from './constants/systemRulesNormal';
 
 export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   playerStats: { ...DEFAULT_PLAYER_STATS },
@@ -44,9 +46,8 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   currentLocationId: undefined,
   auctionState: null,
   slaveAuctionState: null, // New
-  // FIX: Removed 'pendingCombat' and added 'pendingOpponentIdsForCombat' to match the KnowledgeBase type.
-  pendingOpponentIdsForCombat: null,
   postCombatState: null, // NEW
+  pendingOpponentIdsForCombat: null, // NEW for combat init
   userPrompts: [], // NEW
   // New Entities
   prisoners: [],
@@ -55,12 +56,14 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   master: null,
   gameEvents: [], // NEW: For event system
   ragVectorStore: { vectors: [], metadata: [] }, // UPDATED: Use metadata instead of texts
-  aiContextConfig: {} as AIContextConfig, // NEW: Initialize to satisfy type, will be populated on new/load game.
+  aiContextConfig: { ...DEFAULT_AI_CONTEXT_CONFIG }, // NEW: Initialize with default values
+  // FIX: Added missing properties to match the KnowledgeBase type.
+  aiRulebook: { ...DEFAULT_AI_RULEBOOK }, // NEW: Initialize with default rule content
+  stagedActions: {}, // NEW: Initialize with empty object
   aiCopilotConfigs: [], // NEW
   activeAICopilotConfigId: null, // NEW
-  
   // NEW: Living World State
   isWorldTicking: false,
-  // FIX: Changed lastWorldTickTurn to lastWorldTickDate to match the KnowledgeBase type.
   lastWorldTickDate: { day: 1, month: 1, year: 1, hour: 0, minute: 0 },
+  narrativeDirectiveForNextTurn: undefined,
 };

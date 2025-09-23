@@ -1,56 +1,87 @@
-import { useCallback, useState } from 'react';
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { KnowledgeBase, GameMessage, PlayerActionInputType, ResponseLength, GameScreen, AiChoice, NPC, FindLocationParams } from '../../types/index';
-import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS, LIVING_WORLD_TICK_INTERVAL_HOURS } from '../../constants';
-// FIX: Corrected import path for services and removed obsolete geminiService module.
-import { generateNextTurn, summarizeTurnHistory, generateCityEconomy, generateGeneralSubLocations, findLocationWithAI, getApiSettings } from '../../services';
+import { countTokens, generateRefreshedChoices, generateNextTurn, summarizeTurnHistory, findLocationWithAI, getApiSettings } from '../../services';
 import { generateEmbeddings } from '../../services/embeddingService';
 import { performTagProcessing, addTurnHistoryEntryRaw, getMessagesForPage, calculateEffectiveStats, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, handleLocationEntryEvents, searchVectors, extractEntityContextsFromString, worldDateToTotalMinutes } from '../../utils/gameLogicUtils';
-import * as GameTemplates from '../../types/index';
+import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS, LIVING_WORLD_TICK_INTERVAL_HOURS } from '../../constants';
 
-interface UseMainGameLoopProps {
+export interface UseMainGameLoopActionsProps {
   knowledgeBase: KnowledgeBase;
+// FIX: Correctly type the setKnowledgeBase parameter.
   setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeBase>>;
   gameMessages: GameMessage[];
+// FIX: Correctly type the setGameMessages parameter.
+  setGameMessages: React.Dispatch<React.SetStateAction<GameMessage[]>>;
   addMessageAndUpdateState: (newMessages: GameMessage[], newKnowledgeBase: KnowledgeBase, callback?: () => void) => void;
+// FIX: Correctly type the setRawAiResponsesLog parameter.
   setRawAiResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
-  logSentPromptCallback: (prompt: string) => void;
-  setSummarizationResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
+  sentPromptsLog: string[];
+// FIX: Correctly type the setSentPromptsLog parameter.
+  setSentPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setLatestPromptTokenCount parameter.
+  setLatestPromptTokenCount: React.Dispatch<React.SetStateAction<number | null | string>>;
   showNotification: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
   currentPageDisplay: number;
+// FIX: Correctly type the setCurrentPageDisplay parameter.
   setCurrentPageDisplay: React.Dispatch<React.SetStateAction<number>>;
+  isAutoPlaying: boolean;
+// FIX: Correctly type the setIsAutoPlaying parameter.
+  setIsAutoPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   executeSaveGame: (kbToSave: KnowledgeBase, messagesToSave: GameMessage[], saveName: string, existingId: string | null, isAuto: boolean) => Promise<string | null>;
-  logNpcAvatarPromptCallback?: (prompt: string) => void;
-  setIsLoadingApi: React.Dispatch<React.SetStateAction<boolean>>;
+  logNpcAvatarPromptCallback: (prompt: string) => void;
   setApiErrorWithTimeout: (message: string | null) => void;
   resetApiError: () => void;
-  setSentEconomyPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
-  setReceivedEconomyResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
-  setSentGeneralSubLocationPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
-  setReceivedGeneralSubLocationResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
-  handleNonCombatDefeat: (kbStateAtDefeat: KnowledgeBase, fatalNarration: string) => Promise<void>;
-  setRetrievedRagContextLog: React.Dispatch<React.SetStateAction<string[]>>;
+  isLoadingApi: boolean;
+// FIX: Correctly type the setIsLoadingApi parameter.
+  setIsLoadingApi: React.Dispatch<React.SetStateAction<boolean>>;
+  onQuit: () => void;
   currentPageMessagesLog: string;
   previousPageSummaries: string[];
   lastNarrationFromPreviousPage?: string;
+// FIX: Correctly type the setRetrievedRagContextLog parameter.
+  setRetrievedRagContextLog: React.Dispatch<React.SetStateAction<string[]>>;
   executeWorldTick: (kbForTick: KnowledgeBase) => Promise<{ updatedKb: KnowledgeBase; worldEventMessages: GameMessage[] }>;
-  isAutoPlaying: boolean;
-  setIsAutoPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  handleNonCombatDefeat: (kbStateAtDefeat: KnowledgeBase, fatalNarration?: string) => Promise<void>;
+// FIX: Correctly type the setSummarizationResponsesLog parameter.
+  setSummarizationResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
+  isSummarizingNextPageTransition: boolean;
+// FIX: Correctly type the setIsSummarizingNextPageTransition parameter.
+  setIsSummarizingNextPageTransition: React.Dispatch<React.SetStateAction<boolean>>;
+  // FIX: Added missing properties to the interface to resolve type errors.
+// FIX: Correctly type the setSentGeneralSubLocationPromptsLog parameter.
+  setSentGeneralSubLocationPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setReceivedGeneralSubLocationResponsesLog parameter.
+  setReceivedGeneralSubLocationResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
-export const useMainGameLoop = (props: UseMainGameLoopProps) => {
-    const {
-        knowledgeBase, setKnowledgeBase, gameMessages, addMessageAndUpdateState,
-        setIsLoadingApi, resetApiError, logSentPromptCallback, setRawAiResponsesLog,
-        currentPageDisplay, executeSaveGame, showNotification, setCurrentPageDisplay,
-        setApiErrorWithTimeout, logNpcAvatarPromptCallback, handleNonCombatDefeat,
-        setRetrievedRagContextLog, currentPageMessagesLog, previousPageSummaries,
-        lastNarrationFromPreviousPage, setSummarizationResponsesLog,
-        setSentEconomyPromptsLog, setReceivedEconomyResponsesLog,
-        setSentGeneralSubLocationPromptsLog, setReceivedGeneralSubLocationResponsesLog,
-        executeWorldTick, isAutoPlaying, setIsAutoPlaying
-    } = props;
 
-    const [isSummarizingNextPageTransition, setIsSummarizingNextPageTransition] = useState<boolean>(false);
+export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
+    const { 
+      setIsLoadingApi, isLoadingApi, 
+      knowledgeBase, gameMessages, setGameMessages, addMessageAndUpdateState, showNotification, 
+      resetApiError, setLatestPromptTokenCount, 
+      setRawAiResponsesLog, setApiErrorWithTimeout,
+      currentPageDisplay, setCurrentPageDisplay,
+      setSummarizationResponsesLog,
+      logNpcAvatarPromptCallback,
+      handleNonCombatDefeat,
+      setRetrievedRagContextLog,
+      currentPageMessagesLog,
+      previousPageSummaries,
+      lastNarrationFromPreviousPage,
+      executeWorldTick,
+      isAutoPlaying, setIsAutoPlaying,
+      setKnowledgeBase,
+      executeSaveGame,
+      isSummarizingNextPageTransition, setIsSummarizingNextPageTransition,
+    } = props;
+    
+    const logSentPromptCallback = useCallback((prompt: string) => {
+      props.setSentPromptsLog(prev => [prompt, ...prev].slice(0, 10));
+      setLatestPromptTokenCount('Chưa kiểm tra');
+    }, [props.setSentPromptsLog, setLatestPromptTokenCount]);
     
     const logSummarizationResponseCallback = useCallback((response: string) => {
         setSummarizationResponsesLog(prev => [response, ...prev].slice(0, 10));
@@ -61,7 +92,8 @@ export const useMainGameLoop = (props: UseMainGameLoopProps) => {
         isChoice: boolean,
         inputType: PlayerActionInputType,
         responseLength: ResponseLength,
-        isStrictMode: boolean
+        isStrictMode: boolean,
+        narrativeDirective?: string // NEW: Added optional directive
     ) => {
         setIsLoadingApi(true);
         resetApiError();
@@ -69,6 +101,10 @@ export const useMainGameLoop = (props: UseMainGameLoopProps) => {
         const knowledgeBaseAtActionStart = JSON.parse(JSON.stringify(knowledgeBase));
         const gameMessagesAtActionStart = [...gameMessages];
         const turnOfPlayerAction = knowledgeBase.playerStats.turn + 1;
+
+        if (narrativeDirective) {
+            knowledgeBaseAtActionStart.narrativeDirectiveForNextTurn = undefined;
+        }
 
         const playerActionMessage: GameMessage = {
             id: Date.now().toString() + Math.random(), type: 'player_action',
@@ -100,11 +136,17 @@ export const useMainGameLoop = (props: UseMainGameLoopProps) => {
             const { response, rawText } = await generateNextTurn(
                 knowledgeBase, action, inputType, responseLength,
                 currentPageMessagesLog, previousPageSummaries, isStrictMode,
-                lastNarrationFromPreviousPage, retrievedContext, logSentPromptCallback
+                lastNarrationFromPreviousPage, retrievedContext, logSentPromptCallback,
+                narrativeDirective
             );
             setRawAiResponsesLog(prev => [rawText, ...prev].slice(0, 50));
             
             let currentTurnKb = JSON.parse(JSON.stringify(knowledgeBaseAtActionStart));
+
+            if (narrativeDirective) {
+                currentTurnKb.narrativeDirectiveForNextTurn = undefined;
+            }
+
             const { newKb: kbAfterTags, systemMessagesFromTags, turnIncrementedByTag } = await performTagProcessing(
                 currentTurnKb, response.tags, turnOfPlayerAction, setKnowledgeBase, logNpcAvatarPromptCallback
             );
@@ -241,11 +283,171 @@ export const useMainGameLoop = (props: UseMainGameLoopProps) => {
         setApiErrorWithTimeout, logNpcAvatarPromptCallback, handleNonCombatDefeat,
         setRetrievedRagContextLog, currentPageMessagesLog, previousPageSummaries,
         lastNarrationFromPreviousPage, setSummarizationResponsesLog,
-        setSentEconomyPromptsLog, setReceivedEconomyResponsesLog,
-        setSentGeneralSubLocationPromptsLog, setReceivedGeneralSubLocationResponsesLog,
         executeWorldTick, isAutoPlaying, setIsAutoPlaying, setKnowledgeBase, logSummarizationResponseCallback
     ]);
     
+    const handleRewriteTurn = useCallback(async (directive: string) => {
+        if (isLoadingApi) return;
+    
+        const history = knowledgeBase.turnHistory;
+        if (!history || history.length < 1) {
+            showNotification("Lỗi viết lại: Không có lịch sử để quay lại.", 'error');
+            return;
+        }
+    
+        const turnToRewrite = knowledgeBase.playerStats.turn;
+        const lastPlayerActionMessage = [...gameMessages].reverse().find(msg => msg.type === 'player_action' && msg.turnNumber === turnToRewrite);
+    
+        if (!lastPlayerActionMessage || typeof lastPlayerActionMessage.content !== 'string') {
+            showNotification("Lỗi viết lại: Không tìm thấy hành động của người chơi cho lượt này.", 'error');
+            return;
+        }
+    
+        setIsLoadingApi(true);
+        resetApiError();
+    
+        const stateToRestore = history[history.length - 1];
+        const newHistory = history.slice(0, -1);
+    
+        const kbForRewrite = {
+            ...stateToRestore.knowledgeBaseSnapshot,
+            turnHistory: newHistory,
+            narrativeDirectiveForNextTurn: directive
+        };
+        
+        const messagesBeforeRewrite = gameMessages.filter(m => m.turnNumber < turnToRewrite);
+        setGameMessages(messagesBeforeRewrite);
+        setKnowledgeBase(kbForRewrite);
+    
+        setTimeout(() => {
+            handlePlayerAction(
+                lastPlayerActionMessage.content as string,
+                !lastPlayerActionMessage.isPlayerInput,
+                'action', 'default', false, directive
+            );
+        }, 100);
+    
+    }, [isLoadingApi, knowledgeBase, gameMessages, showNotification, setKnowledgeBase, setGameMessages, handlePlayerAction, resetApiError]);
+    
+    const handleCheckTokenCount = useCallback(async () => {
+        if (isLoadingApi) return;
+        const latestPrompt = props.sentPromptsLog[0];
+        if (!latestPrompt) {
+            showNotification("Không có prompt nào gần đây để kiểm tra.", 'warning');
+            return;
+        }
+        
+        setIsLoadingApi(true);
+        setLatestPromptTokenCount('Đang tính...');
+        try {
+            const tokenCount = await countTokens(latestPrompt);
+            setLatestPromptTokenCount(tokenCount);
+        } catch (err) {
+            console.error("Error checking token count:", err);
+            setLatestPromptTokenCount('Lỗi');
+            const errorMsg = err instanceof Error ? err.message : "Lỗi khi kiểm tra token.";
+            setApiErrorWithTimeout(errorMsg);
+        } finally {
+            setIsLoadingApi(false);
+        }
+      }, [props.sentPromptsLog, isLoadingApi, setIsLoadingApi, setLatestPromptTokenCount, setApiErrorWithTimeout, showNotification]);
+
+    const handleRefreshChoices = useCallback(async (playerHint: string) => {
+        if (isLoadingApi) return;
+        let lastMessageIndex = -1;
+        for (let i = gameMessages.length - 1; i >= 0; i--) {
+            const msg = gameMessages[i];
+            if (msg.type === 'narration' && msg.choices && msg.choices.length > 0) {
+                lastMessageIndex = i;
+                break;
+            }
+        }
+        if (lastMessageIndex === -1) {
+            showNotification("Không có lựa chọn nào để làm mới.", 'warning');
+            return;
+        }
+        const lastMessage = gameMessages[lastMessageIndex];
+        const lastNarration = typeof lastMessage.content === 'string' ? lastMessage.content : '';
+        const currentChoices = lastMessage.choices || [];
+        setIsLoadingApi(true);
+        resetApiError();
+        try {
+            const { response, rawText } = await generateRefreshedChoices(
+                lastNarration, currentChoices, playerHint, knowledgeBase, logSentPromptCallback
+            );
+            setRawAiResponsesLog(prev => [rawText, ...prev].slice(0, 50));
+            if (response.choices && response.choices.length > 0) {
+                setGameMessages(prevMessages => {
+                    const newMessages = [...prevMessages];
+                    const targetMessage = newMessages[lastMessageIndex];
+                    if (targetMessage) newMessages[lastMessageIndex] = { ...targetMessage, choices: response.choices };
+                    return newMessages;
+                });
+            } else {
+                showNotification("AI không thể tạo ra lựa chọn mới. Vui lòng thử lại.", 'warning');
+            }
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : "Lỗi khi làm mới lựa chọn.";
+            setApiErrorWithTimeout(errorMsg);
+        } finally {
+            setIsLoadingApi(false);
+        }
+    }, [isLoadingApi, gameMessages, knowledgeBase, showNotification, setIsLoadingApi, resetApiError, logSentPromptCallback, setRawAiResponsesLog, setApiErrorWithTimeout, setGameMessages]);
+
+    const onRollbackTurn = useCallback(() => {
+        if (isSummarizingNextPageTransition || isLoadingApi) return;
+
+        // We need at least one state to roll back TO. The initial state (length 1) cannot be rolled back from.
+        if (!knowledgeBase.turnHistory || knowledgeBase.turnHistory.length < 2) {
+            showNotification(VIETNAMESE.cannotRollbackFurther, 'error');
+            return;
+        }
+        
+        const historyCopy = [...knowledgeBase.turnHistory];
+        
+        // Pop the state for the beginning of the *current* turn. This IS the state we want to restore.
+        const lastTurnState = historyCopy.pop(); 
+        
+        if (lastTurnState) {
+            // The state to restore is the snapshot from the popped entry...
+            const kbToRestore = lastTurnState.knowledgeBaseSnapshot;
+            
+            // ...but we explicitly overwrite its history with the new, shorter history array.
+            // This is the critical fix to allow multiple rollbacks.
+            kbToRestore.turnHistory = historyCopy;
+
+            setKnowledgeBase(kbToRestore);
+            setGameMessages(lastTurnState.gameMessagesSnapshot);
+
+            // Recalculate current page display based on the restored turn number.
+            const newTurn = kbToRestore.playerStats.turn;
+            const historyForPageCalc = kbToRestore.currentPageHistory || [1];
+            
+            let newPage = 1;
+            for (let i = historyForPageCalc.length - 1; i >= 0; i--) {
+                if (newTurn >= historyForPageCalc[i]) {
+                    newPage = i + 1;
+                    break;
+                }
+            }
+            setCurrentPageDisplay(newPage);
+
+            showNotification(VIETNAMESE.rollbackSuccess, 'success');
+        } else {
+            // This case should be rare given the length check above.
+            showNotification("Lỗi: Không tìm thấy trạng thái để lùi về.", 'error');
+        }
+    }, [
+        knowledgeBase.turnHistory,
+        setKnowledgeBase,
+        setGameMessages,
+        setCurrentPageDisplay,
+        showNotification,
+        isSummarizingNextPageTransition,
+        isLoadingApi
+    ]);
+
+
     const handleFindLocation = useCallback(async (params: FindLocationParams) => {
         setIsLoadingApi(true);
         resetApiError();
@@ -254,8 +456,9 @@ export const useMainGameLoop = (props: UseMainGameLoopProps) => {
             const { response: { narration, tags } } = await findLocationWithAI(
                 knowledgeBase, params, currentPageMessagesLog, previousPageSummaries,
                 lastNarrationFromPreviousPage,
-                (prompt) => setSentGeneralSubLocationPromptsLog(prev => [prompt, ...prev].slice(0, 10))
+                (prompt) => props.setSentGeneralSubLocationPromptsLog(prev => [prompt, ...prev].slice(0, 10))
             );
+            props.setReceivedGeneralSubLocationResponsesLog(prev => [narration, ...prev].slice(0, 10)); // Assuming narration is the raw text for this service
             const { newKb: kbAfterTags, systemMessagesFromTags } = await performTagProcessing(
                 knowledgeBase, tags, knowledgeBase.playerStats.turn, setKnowledgeBase, logNpcAvatarPromptCallback
             );
@@ -274,13 +477,20 @@ export const useMainGameLoop = (props: UseMainGameLoopProps) => {
     }, [
         knowledgeBase, setIsLoadingApi, resetApiError, showNotification,
         addMessageAndUpdateState, setKnowledgeBase, logNpcAvatarPromptCallback,
-        setSentGeneralSubLocationPromptsLog, setApiErrorWithTimeout,
-        currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage
+        setApiErrorWithTimeout,
+        currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage,
+        // Dependencies were using props. but should not
+        props.setSentGeneralSubLocationPromptsLog, props.setReceivedGeneralSubLocationResponsesLog
     ]);
 
     return {
-        handlePlayerAction,
-        isSummarizingNextPageTransition,
-        handleFindLocation
+      handlePlayerAction,
+      onRollbackTurn,
+      handleFindLocation,
+      isSummarizingNextPageTransition,
+      handleRefreshChoices,
+      handleCheckTokenCount,
+      logSentPromptCallback,
+      handleRewriteTurn,
     };
 };

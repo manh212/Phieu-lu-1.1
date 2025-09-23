@@ -1,14 +1,9 @@
 // types/entities/npc.ts
-import type { PersonBase, ComplexCompanionBase, PlayerStats } from './character';
+// FIX: Updated import to get ActivityLogEntry from character.ts, breaking a circular dependency.
+import type { PersonBase, ComplexCompanionBase, PlayerStats, ActivityLogEntry } from './character';
 import type { ItemCategoryValues } from '../enums/item';
 import type { Skill } from './skill';
 import type { TuChatTier } from '../enums';
-
-export interface ActivityLogEntry {
-  turnNumber: number;
-  description: string;
-  locationId: string;
-}
 
 // FIX: Define and export RelationshipEntry
 export interface RelationshipEntry {

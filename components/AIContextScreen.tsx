@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AIContextConfig, AIRulebook } from '../types/index';
 import Button from './ui/Button';
@@ -8,6 +9,7 @@ import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
 import { DEFAULT_AI_RULEBOOK } from '../constants/systemRulesNormal';
 import Modal from './ui/Modal';
 import RuleEditModal from './RuleEditModal'; // NEW: Import the new edit modal
+import ToggleSwitch from './ui/ToggleSwitch';
 
 const contextConfigToRulebookKeyMap: Partial<Record<keyof AIContextConfig, keyof AIRulebook>> = {
     sendShowDontTellRule: 'narrationAndVividness',
@@ -34,7 +36,17 @@ const contextConfigToRulebookKeyMap: Partial<Record<keyof AIContextConfig, keyof
 };
 
 
-const ToggleRow = ({ label, description, isEnabled, onToggle, onEdit, id }: { label: string, description: string, isEnabled: boolean, onToggle: () => void, onEdit?: () => void, id: string }) => (
+// FIX: Refactored ToggleRow to use a dedicated props interface and React.FC to resolve a TypeScript error with the 'key' prop in loops.
+interface ToggleRowProps {
+    label: string;
+    description: string;
+    isEnabled: boolean;
+    onToggle: () => void;
+    onEdit?: () => void;
+    id: string;
+}
+
+const ToggleRow: React.FC<ToggleRowProps> = ({ label, description, isEnabled, onToggle, onEdit, id }) => (
     <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg transition-colors hover:bg-gray-800/80">
         <div className="mr-4 flex-grow">
             <label htmlFor={id} className="font-semibold text-gray-200 cursor-pointer block">{label}</label>
@@ -82,8 +94,8 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
     );
     const [hasChanges, setHasChanges] = useState(false);
 
-    // NEW: State for the rule editing modal
-    const [editingRule, setEditingRule] = useState<{ key: keyof AIRulebook; label: string } | null>(null);
+    // State for the rule editing modal
+    const [editingRule, setEditingRule] = useState<{ ruleKey: keyof AIRulebook; label: string } | null>(null);
 
     useEffect(() => {
         setSettings(knowledgeBase.aiContextConfig || DEFAULT_AI_CONTEXT_CONFIG);
@@ -133,15 +145,15 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
     const [isRulesOpen, setIsRulesOpen] = useState(false);
 
     const ruleDefinitions: {
-        id: keyof AIContextConfig;
+        configKey: keyof AIContextConfig;
         label: string;
         description: string;
     }[] = [
-        { id: 'sendShowDontTellRule', label: "Quy Tắc 'Tả, đừng kể'", description: "Yêu cầu AI sử dụng ngũ quan, mô tả chi tiết thay vì kể chung chung." },
-        { id: 'sendProactiveNpcRule', label: "Quy Tắc 'NPC chủ động'", description: "Yêu cầu AI để ít nhất một NPC thực hiện hành động chủ động trong mỗi cảnh." },
-        { id: 'sendRumorMillRule', label: "Quy Tắc 'Cối xay tin đồn'", description: "Yêu cầu AI tạo ra các tin đồn đa dạng qua hội thoại của NPC." },
-        { id: 'sendWorldProgressionRules', label: "Quy Tắc Thế Giới Tự Vận Hành", description: "Cho phép AI tự tạo sự kiện phe phái, môi trường và các diễn biến ở xa." },
-        { id: 'sendSpecialEventRules', label: "Hướng Dẫn Sự Kiện Cốt Truyện Đặc Biệt", description: `Kích hoạt một sự kiện lớn, bất ngờ sau mỗi ${SPECIAL_EVENT_INTERVAL_TURNS} lượt chơi.` },
+        { configKey: 'sendShowDontTellRule', label: "Quy Tắc 'Tả, đừng kể'", description: "Yêu cầu AI sử dụng ngũ quan, mô tả chi tiết thay vì kể chung chung." },
+        { configKey: 'sendProactiveNpcRule', label: "Quy Tắc 'NPC chủ động'", description: "Yêu cầu AI để ít nhất một NPC thực hiện hành động chủ động trong mỗi cảnh." },
+        { configKey: 'sendRumorMillRule', label: "Quy Tắc 'Cối xay tin đồn'", description: "Yêu cầu AI tạo ra các tin đồn đa dạng qua hội thoại của NPC." },
+        { configKey: 'sendWorldProgressionRules', label: "Quy Tắc Thế Giới Tự Vận Hành", description: "Cho phép AI tự tạo sự kiện phe phái, môi trường và các diễn biến ở xa." },
+        { configKey: 'sendSpecialEventRules', label: "Hướng Dẫn Sự Kiện Cốt Truyện Đặc Biệt", description: `Kích hoạt một sự kiện lớn, bất ngờ sau mỗi ${SPECIAL_EVENT_INTERVAL_TURNS} lượt chơi.` },
     ];
 
     return (
@@ -174,16 +186,16 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                     <CollapsibleSection title="Quy Tắc Kể Chuyện & Thế Giới Động" isOpen={isStorytellingOpen} onToggle={() => setIsStorytellingOpen(!isStorytellingOpen)}>
                         <div className="space-y-3">
                              {ruleDefinitions.map(rule => {
-                                const rulebookKey = contextConfigToRulebookKeyMap[rule.id];
+                                const rulebookKey = contextConfigToRulebookKeyMap[rule.configKey];
                                 return (
                                     <ToggleRow
-                                        key={rule.id}
-                                        id={`toggle-rule-${rule.id}`}
+                                        key={rule.configKey}
+                                        id={`toggle-rule-${rule.configKey}`}
                                         label={rule.label}
                                         description={rule.description}
-                                        isEnabled={settings[rule.id]}
-                                        onToggle={() => handleToggle(rule.id)}
-                                        onEdit={rulebookKey ? () => setEditingRule({ key: rulebookKey, label: rule.label }) : undefined}
+                                        isEnabled={settings[rule.configKey]}
+                                        onToggle={() => handleToggle(rule.configKey)}
+                                        onEdit={rulebookKey ? () => setEditingRule({ ruleKey: rulebookKey, label: rule.label }) : undefined}
                                     />
                                 );
                             })}
@@ -192,22 +204,22 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
 
                     <CollapsibleSection title="Quy Tắc Tags Chi Tiết (System Tags)" isOpen={isRulesOpen} onToggle={() => setIsRulesOpen(!isRulesOpen)}>
                         <div className="space-y-3">
-                             <ToggleRow id="toggle-rule-formatting" label="Quy Tắc Định Dạng & Hội Thoại" description="Bao gồm cấm tag trong lời kể và quy tắc đánh dấu hội thoại." isEnabled={settings.sendFormattingRules} onToggle={() => handleToggle('sendFormattingRules')} onEdit={() => setEditingRule({ key: 'formattingRules', label: 'Quy Tắc Định Dạng & Hội Thoại' })}/>
-                             <ToggleRow id="toggle-rule-time" label="Quy Tắc Về Thời Gian ([CHANGE_TIME])" description="Gửi hướng dẫn về việc sử dụng tag thời gian." isEnabled={settings.sendTimeRules} onToggle={() => handleToggle('sendTimeRules')} onEdit={() => setEditingRule({ key: 'timeRules', label: 'Quy Tắc Về Thời Gian ([CHANGE_TIME])' })}/>
-                             <ToggleRow id="toggle-rule-stats" label="Quy Tắc Về Chỉ Số ([STATS_UPDATE])" description="Gửi hướng dẫn về việc cập nhật chỉ số người chơi." isEnabled={settings.sendStatRules} onToggle={() => handleToggle('sendStatRules')} onEdit={() => setEditingRule({ key: 'statRules', label: 'Quy Tắc Về Chỉ Số ([STATS_UPDATE])' })}/>
-                             <ToggleRow id="toggle-rule-cultivation" label="Quy Tắc Về Tu Luyện" description="Gửi hướng dẫn về các tag đặc thù của tu luyện (vd: Bình Cảnh)." isEnabled={settings.sendCultivationRules} onToggle={() => handleToggle('sendCultivationRules')} onEdit={() => setEditingRule({ key: 'cultivationRules', label: 'Quy Tắc Về Tu Luyện' })}/>
-                             <ToggleRow id="toggle-rule-items" label="Quy Tắc Về Vật Phẩm ([ITEM_*])" description="Gửi hướng dẫn về việc tạo, dùng, cập nhật vật phẩm." isEnabled={settings.sendItemRules} onToggle={() => handleToggle('sendItemRules')} onEdit={() => setEditingRule({ key: 'itemRules', label: 'Quy Tắc Về Vật Phẩm ([ITEM_*])' })}/>
-                             <ToggleRow id="toggle-rule-skills" label="Quy Tắc Về Kỹ Năng ([SKILL_*])" description="Gửi hướng dẫn về việc học và cập nhật kỹ năng." isEnabled={settings.sendSkillRules} onToggle={() => handleToggle('sendSkillRules')} onEdit={() => setEditingRule({ key: 'skillRules', label: 'Quy Tắc Về Kỹ Năng ([SKILL_*])' })}/>
-                             <ToggleRow id="toggle-rule-quests" label="Quy Tắc Về Nhiệm Vụ ([QUEST_*])" description="Gửi hướng dẫn về việc quản lý nhiệm vụ." isEnabled={settings.sendQuestRules} onToggle={() => handleToggle('sendQuestRules')} onEdit={() => setEditingRule({ key: 'questRules', label: 'Quy Tắc Về Nhiệm Vụ ([QUEST_*])' })}/>
-                             <ToggleRow id="toggle-rule-creation" label="Quy Tắc Về Tạo Mới Thế Giới" description="Gửi hướng dẫn về việc tạo NPC, địa điểm, phe phái..." isEnabled={settings.sendCreationRules} onToggle={() => handleToggle('sendCreationRules')} onEdit={() => setEditingRule({ key: 'creationRules', label: 'Quy Tắc Về Tạo Mới Thế Giới' })}/>
-                             <ToggleRow id="toggle-rule-update" label="Quy Tắc Về Cập Nhật Thế Giới" description="Gửi hướng dẫn về việc cập nhật NPC, địa điểm..." isEnabled={settings.sendUpdateRules} onToggle={() => handleToggle('sendUpdateRules')} onEdit={() => setEditingRule({ key: 'updateRules', label: 'Quy Tắc Về Cập Nhật Thế Giới' })}/>
-                             <ToggleRow id="toggle-rule-deletion" label="Quy Tắc Về Xóa Thông Tin" description="Gửi hướng dẫn về việc xóa NPC, phe phái..." isEnabled={settings.sendDeletionRules} onToggle={() => handleToggle('sendDeletionRules')} onEdit={() => setEditingRule({ key: 'deletionRules', label: 'Quy Tắc Về Xóa Thông Tin' })}/>
-                             <ToggleRow id="toggle-rule-special-status" label="Quy Tắc Về Thân Phận Đặc Biệt" description="Gửi hướng dẫn về các tag cho Tù nhân/Nô lệ." isEnabled={settings.sendSpecialStatusRules} onToggle={() => handleToggle('sendSpecialStatusRules')} onEdit={() => setEditingRule({ key: 'specialStatusRules', label: 'Quy Tắc Về Thân Phận Đặc Biệt' })}/>
-                             <ToggleRow id="toggle-rule-choice" label="Quy Tắc Về Lựa Chọn Mới ([CHOICE])" description="Gửi hướng dẫn về việc tạo các lựa chọn hành động." isEnabled={settings.sendChoiceRules} onToggle={() => handleToggle('sendChoiceRules')} onEdit={() => setEditingRule({ key: 'choiceRules', label: 'Quy Tắc Về Lựa Chọn Mới ([CHOICE])' })}/>
-                             <ToggleRow id="toggle-rule-turn" label="Quy Tắc Về Lượt Chơi (turn=+1)" description="Yêu cầu bắt buộc phải có tag tăng lượt chơi." isEnabled={settings.sendTurnRules} onToggle={() => handleToggle('sendTurnRules')} onEdit={() => setEditingRule({ key: 'turnRules', label: 'Quy Tắc Về Lượt Chơi (turn=+1)' })}/>
-                             <ToggleRow id="toggle-rule-status-effect" label="Quy Tắc Về Hiệu Ứng Trạng Thái" description="Hướng dẫn sử dụng tag [STATUS_EFFECT_*]." isEnabled={settings.sendStatusEffectRules} onToggle={() => handleToggle('sendStatusEffectRules')} onEdit={() => setEditingRule({ key: 'statusEffectRules', label: 'Quy Tắc Về Hiệu Ứng Trạng Thái' })}/>
-                             <ToggleRow id="toggle-rule-combat-start" label="Quy Tắc Bắt Đầu Chiến Đấu" description="Hướng dẫn sử dụng tag [BEGIN_COMBAT]." isEnabled={settings.sendCombatStartRules} onToggle={() => handleToggle('sendCombatStartRules')} onEdit={() => setEditingRule({ key: 'combatStartRules', label: 'Quy Tắc Bắt Đầu Chiến Đấu' })}/>
-                             <ToggleRow id="toggle-rule-simple-companion" label="Quy Tắc Về Đồng Hành (Đơn giản)" description="Hướng dẫn sử dụng tag [COMPANION_*]." isEnabled={settings.sendSimpleCompanionRules} onToggle={() => handleToggle('sendSimpleCompanionRules')} onEdit={() => setEditingRule({ key: 'simpleCompanionRules', label: 'Quy Tắc Về Đồng Hành (Đơn giản)' })}/>
+                             <ToggleRow id="toggle-rule-formatting" label="Quy Tắc Định Dạng & Hội Thoại" description="Bao gồm cấm tag trong lời kể và quy tắc đánh dấu hội thoại." isEnabled={settings.sendFormattingRules} onToggle={() => handleToggle('sendFormattingRules')} onEdit={() => setEditingRule({ ruleKey: 'formattingRules', label: 'Quy Tắc Định Dạng & Hội Thoại' })}/>
+                             <ToggleRow id="toggle-rule-time" label="Quy Tắc Về Thời Gian ([CHANGE_TIME])" description="Gửi hướng dẫn về việc sử dụng tag thời gian." isEnabled={settings.sendTimeRules} onToggle={() => handleToggle('sendTimeRules')} onEdit={() => setEditingRule({ ruleKey: 'timeRules', label: 'Quy Tắc Về Thời Gian ([CHANGE_TIME])' })}/>
+                             <ToggleRow id="toggle-rule-stats" label="Quy Tắc Về Chỉ Số ([STATS_UPDATE])" description="Gửi hướng dẫn về việc cập nhật chỉ số người chơi." isEnabled={settings.sendStatRules} onToggle={() => handleToggle('sendStatRules')} onEdit={() => setEditingRule({ ruleKey: 'statRules', label: 'Quy Tắc Về Chỉ Số ([STATS_UPDATE])' })}/>
+                             <ToggleRow id="toggle-rule-cultivation" label="Quy Tắc Về Tu Luyện" description="Gửi hướng dẫn về các tag đặc thù của tu luyện (vd: Bình Cảnh)." isEnabled={settings.sendCultivationRules} onToggle={() => handleToggle('sendCultivationRules')} onEdit={() => setEditingRule({ ruleKey: 'cultivationRules', label: 'Quy Tắc Về Tu Luyện' })}/>
+                             <ToggleRow id="toggle-rule-items" label="Quy Tắc Về Vật Phẩm ([ITEM_*])" description="Gửi hướng dẫn về việc tạo, dùng, cập nhật vật phẩm." isEnabled={settings.sendItemRules} onToggle={() => handleToggle('sendItemRules')} onEdit={() => setEditingRule({ ruleKey: 'itemRules', label: 'Quy Tắc Về Vật Phẩm ([ITEM_*])' })}/>
+                             <ToggleRow id="toggle-rule-skills" label="Quy Tắc Về Kỹ Năng ([SKILL_*])" description="Gửi hướng dẫn về việc học và cập nhật kỹ năng." isEnabled={settings.sendSkillRules} onToggle={() => handleToggle('sendSkillRules')} onEdit={() => setEditingRule({ ruleKey: 'skillRules', label: 'Quy Tắc Về Kỹ Năng ([SKILL_*])' })}/>
+                             <ToggleRow id="toggle-rule-quests" label="Quy Tắc Về Nhiệm Vụ ([QUEST_*])" description="Gửi hướng dẫn về việc quản lý nhiệm vụ." isEnabled={settings.sendQuestRules} onToggle={() => handleToggle('sendQuestRules')} onEdit={() => setEditingRule({ ruleKey: 'questRules', label: 'Quy Tắc Về Nhiệm Vụ ([QUEST_*])' })}/>
+                             <ToggleRow id="toggle-rule-creation" label="Quy Tắc Về Tạo Mới Thế Giới" description="Gửi hướng dẫn về việc tạo NPC, địa điểm, phe phái..." isEnabled={settings.sendCreationRules} onToggle={() => handleToggle('sendCreationRules')} onEdit={() => setEditingRule({ ruleKey: 'creationRules', label: 'Quy Tắc Về Tạo Mới Thế Giới' })}/>
+                             <ToggleRow id="toggle-rule-update" label="Quy Tắc Về Cập Nhật Thế Giới" description="Gửi hướng dẫn về việc cập nhật NPC, địa điểm..." isEnabled={settings.sendUpdateRules} onToggle={() => handleToggle('sendUpdateRules')} onEdit={() => setEditingRule({ ruleKey: 'updateRules', label: 'Quy Tắc Về Cập Nhật Thế Giới' })}/>
+                             <ToggleRow id="toggle-rule-deletion" label="Quy Tắc Về Xóa Thông Tin" description="Gửi hướng dẫn về việc xóa NPC, phe phái..." isEnabled={settings.sendDeletionRules} onToggle={() => handleToggle('sendDeletionRules')} onEdit={() => setEditingRule({ ruleKey: 'deletionRules', label: 'Quy Tắc Về Xóa Thông Tin' })}/>
+                             <ToggleRow id="toggle-rule-special-status" label="Quy Tắc Về Thân Phận Đặc Biệt" description="Gửi hướng dẫn về các tag cho Tù nhân/Nô lệ." isEnabled={settings.sendSpecialStatusRules} onToggle={() => handleToggle('sendSpecialStatusRules')} onEdit={() => setEditingRule({ ruleKey: 'specialStatusRules', label: 'Quy Tắc Về Thân Phận Đặc Biệt' })}/>
+                             <ToggleRow id="toggle-rule-choice" label="Quy Tắc Về Lựa Chọn Mới ([CHOICE])" description="Gửi hướng dẫn về việc tạo các lựa chọn hành động." isEnabled={settings.sendChoiceRules} onToggle={() => handleToggle('sendChoiceRules')} onEdit={() => setEditingRule({ ruleKey: 'choiceRules', label: 'Quy Tắc Về Lựa Chọn Mới ([CHOICE])' })}/>
+                             <ToggleRow id="toggle-rule-turn" label="Quy Tắc Về Lượt Chơi (turn=+1)" description="Yêu cầu bắt buộc phải có tag tăng lượt chơi." isEnabled={settings.sendTurnRules} onToggle={() => handleToggle('sendTurnRules')} onEdit={() => setEditingRule({ ruleKey: 'turnRules', label: 'Quy Tắc Về Lượt Chơi (turn=+1)' })}/>
+                             <ToggleRow id="toggle-rule-status-effect" label="Quy Tắc Về Hiệu Ứng Trạng Thái" description="Hướng dẫn sử dụng tag [STATUS_EFFECT_*]." isEnabled={settings.sendStatusEffectRules} onToggle={() => handleToggle('sendStatusEffectRules')} onEdit={() => setEditingRule({ ruleKey: 'statusEffectRules', label: 'Quy Tắc Về Hiệu Ứng Trạng Thái' })}/>
+                             <ToggleRow id="toggle-rule-combat-start" label="Quy Tắc Bắt Đầu Chiến Đấu" description="Hướng dẫn sử dụng tag [BEGIN_COMBAT]." isEnabled={settings.sendCombatStartRules} onToggle={() => handleToggle('sendCombatStartRules')} onEdit={() => setEditingRule({ ruleKey: 'combatStartRules', label: 'Quy Tắc Bắt Đầu Chiến Đấu' })}/>
+                             <ToggleRow id="toggle-rule-simple-companion" label="Quy Tắc Về Đồng Hành (Đơn giản)" description="Hướng dẫn sử dụng tag [COMPANION_*]." isEnabled={settings.sendSimpleCompanionRules} onToggle={() => handleToggle('sendSimpleCompanionRules')} onEdit={() => setEditingRule({ ruleKey: 'simpleCompanionRules', label: 'Quy Tắc Về Đồng Hành (Đơn giản)' })}/>
                         </div>
                     </CollapsibleSection>
                 </div>
@@ -231,10 +243,10 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
             <RuleEditModal
                 isOpen={!!editingRule}
                 onClose={() => setEditingRule(null)}
-                ruleKey={editingRule.key}
+                ruleKey={editingRule.ruleKey}
                 ruleLabel={editingRule.label}
-                currentContent={rulebook[editingRule.key] || ''}
-                defaultContent={DEFAULT_AI_RULEBOOK[editingRule.key] || ''}
+                currentContent={rulebook[editingRule.ruleKey] || ''}
+                defaultContent={DEFAULT_AI_RULEBOOK[editingRule.ruleKey] || ''}
                 onSave={handleSaveRule as (key: string, content: string) => void}
             />
         )}

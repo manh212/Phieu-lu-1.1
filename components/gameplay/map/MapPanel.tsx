@@ -1,16 +1,14 @@
 import React, { useState, useRef, MouseEvent } from 'react';
-// FIX: Corrected import paths to point to the new centralized type export.
 import { KnowledgeBase, GameLocation, GameScreen, Region, LocationConnection, FindLocationParams } from '@/types/index';
 import InteractiveMap from './InteractiveMap';
-import Button from '../../../components/ui/Button';
-import { VIETNAMESE } from '../../../constants/index';
+import Button from '@/components/ui/Button';
+import { VIETNAMESE } from '@/constants/index';
 import { MAP_COLORS, MAP_SIZES } from './mapConstants';
-import Modal from '../../../components/ui/Modal';
-// FIX: Corrected import to use the new centralized type export instead of the empty templates file.
+import Modal from '@/components/ui/Modal';
 import * as GameTemplates from '@/types/index';
 import * as LocationIcons from './mapIcons';
 import FindLocationModal from './FindLocationModal'; // New Import
-import { useGame } from '../../../hooks/useGame'; // New Import
+import { useGame } from '@/hooks/useGame'; // New Import
 
 interface MapPanelProps {
   knowledgeBase: KnowledgeBase;

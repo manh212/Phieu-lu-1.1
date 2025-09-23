@@ -1,9 +1,10 @@
 
 
-
 import { useState, useRef, useCallback } from 'react';
 // FIX: Correct import path for types
 import { PlayerActionInputType, ResponseLength, AiChoice } from '../types/index';
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
 
 interface UsePlayerInputProps {
   onPlayerAction: (action: AiChoice | string, isChoice: boolean, inputType: PlayerActionInputType, responseLength: ResponseLength, isStrictMode: boolean) => void;

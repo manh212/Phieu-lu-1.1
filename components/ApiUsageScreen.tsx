@@ -20,7 +20,8 @@ const ApiUsageScreen: React.FC = () => {
     };
 
     const { totalCalls, sortedStats } = useMemo(() => {
-        const total = Object.values(stats).reduce((sum, count) => sum + (count || 0), 0);
+        // FIX: Ensure 'count' is treated as a number to avoid type errors with the '+' operator.
+        const total = Object.values(stats).reduce<number>((sum, count) => sum + (Number(count) || 0), 0);
         const sorted = (Object.entries(stats) as [ApiCallCategory, number][])
             .filter(([, count]) => count > 0)
             .sort(([, countA], [, countB]) => countB - countA);

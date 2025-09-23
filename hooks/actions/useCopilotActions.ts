@@ -2,18 +2,23 @@
 import { useCallback } from 'react';
 import { KnowledgeBase, GameMessage } from '../../types/index';
 import { generateCopilotResponse, getApiSettings } from '../../services';
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
 
 export interface UseCopilotActionsProps {
     knowledgeBase: KnowledgeBase;
     gameMessages: GameMessage[];
     isLoadingApi: boolean;
+// FIX: Correctly type the setIsLoadingApi parameter.
     setIsLoadingApi: React.Dispatch<React.SetStateAction<boolean>>;
     resetApiError: () => void;
     setApiErrorWithTimeout: (message: string | null) => void;
     aiCopilotMessages: GameMessage[];
+// FIX: Correctly type the setAiCopilotMessages parameter.
     setAiCopilotMessages: React.Dispatch<React.SetStateAction<GameMessage[]>>;
     sentPromptsLog: string[];
     sentCopilotPromptsLog: string[];
+// FIX: Correctly type the setSentCopilotPromptsLog parameter.
     setSentCopilotPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
 }
 

@@ -1,10 +1,9 @@
-
 import React from 'react';
-import { KnowledgeBase, NPC, GameLocation, WorldLoreEntry, Faction, Companion, YeuThu } from '../../types/index';
-import * as GameTemplates from '../../types/index';
-import { VIETNAMESE } from '../../constants';
-import WorldInfoList from '../ui/WorldInfoList';
-import { getDeterministicAvatarSrc } from '../../utils/avatarUtils';
+import { KnowledgeBase, NPC, GameLocation, WorldLoreEntry, Faction, Companion, YeuThu } from '@/types/index';
+import * as GameTemplates from '@/types/index';
+import { VIETNAMESE } from '@/constants';
+import WorldInfoList from '@/components/ui/WorldInfoList';
+import { getDeterministicAvatarSrc } from '@/utils/avatarUtils';
 
 interface WorldSidePanelProps {
   knowledgeBase: KnowledgeBase;

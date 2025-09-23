@@ -1,9 +1,10 @@
 
 
-
 import { useState, useCallback } from 'react';
 // FIX: Correct import path for types
 import type { GameEntity, GameEntityType } from './types';
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
 
 export const usePopover = () => {
     const [popover, setPopover] = useState<{

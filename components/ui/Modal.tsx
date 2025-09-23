@@ -28,12 +28,14 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
         
         if (event.shiftKey) { // Shift + Tab
           if (document.activeElement === firstElement) {
-            lastElement.focus();
+            // FIX: Cast element to HTMLElement to ensure .focus() is available.
+            (lastElement as HTMLElement).focus();
             event.preventDefault();
           }
         } else { // Tab
           if (document.activeElement === lastElement) {
-            firstElement.focus();
+            // FIX: Cast element to HTMLElement to ensure .focus() is available.
+            (firstElement as HTMLElement).focus();
             event.preventDefault();
           }
         }
@@ -54,9 +56,9 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       setTimeout(() => {
         const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(focusableElementsSelector);
         if (focusableElements && focusableElements.length > 0) {
-          focusableElements[0].focus();
+          (focusableElements[0] as HTMLElement).focus();
         } else {
-          modalRef.current?.focus();
+          (modalRef.current as HTMLElement)?.focus();
         }
         // Add tab trapping listener after initial focus is set
         modalRef.current?.addEventListener('keydown', handleKeyDown);

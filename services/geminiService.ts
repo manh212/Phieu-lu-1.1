@@ -1,6 +1,7 @@
 // src/services/geminiService.ts
 // FIX: Use getAiClient instead of new GoogleGenAI
 import { getAiClient } from './api/geminiClient';
+// FIX: Corrected import path for getApiSettings.
 import { getApiSettings } from './api/geminiClient';
 import { WorldSettings, GeneratedWorldElements, GenreType, NsfwDescriptionStyle, ViolenceLevel, StoryTone } from '@/types/index';
 import { PROMPT_FUNCTIONS } from '../prompts';
@@ -9,6 +10,8 @@ import { parseGeneratedWorldDetails } from '../utils/responseParser';
 import { VIETNAMESE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, DEFAULT_NSFW_DESCRIPTION_STYLE } from "@/constants/index";
 import { incrementApiCallCount } from "../utils/apiUsageTracker";
 import { generateContentWithRateLimit, generateContentAndCheck } from "./api/geminiClient";
+// FIX: Removed unused GoogleGenAI import
+// import { GoogleGenAI } from '@google/genai';
 
 // This file centralizes calls to the Gemini API for world generation.
 
@@ -73,7 +76,7 @@ export async function generateCompletionForWorldDetails(
     onPromptConstructed?: (prompt: string) => void
 ): Promise<{response: GeneratedWorldElements, rawText: string, constructedPrompt: string}> {
     const { model } = getApiSettings();
-    // FIX: Use imported default constants instead of hardcoded Vietnamese strings from VIETNAMESE object to prevent property not found errors.
+    // FIX: Use imported default constants instead of hardcoded strings to prevent property not found errors.
     const prompt = PROMPT_FUNCTIONS.completeWorldDetails(settings, settings.nsfwMode || false, settings.genre, settings.isCultivationEnabled, settings.violenceLevel || DEFAULT_VIOLENCE_LEVEL, settings.storyTone || DEFAULT_STORY_TONE, settings.customGenreName, settings.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE);
     incrementApiCallCount('WORLD_COMPLETION');
 
@@ -92,14 +95,14 @@ export async function analyzeWritingStyle(textToAnalyze: string): Promise<string
 }
 
 export async function countTokens(text: string): Promise<number> {
-    // FIX: Use shared getAiClient instead of creating a new instance
+    // FIX: Use the shared getAiClient instance instead of creating a new one.
     const ai = getAiClient();
     const { model } = getApiSettings();
     incrementApiCallCount('TOKEN_COUNT');
-    // FIX: The countTokens API expects a `GenerateContentParameters` object. The `contents` property should be an array of Content objects.
-    const response = await ai.models.countTokens({
+    // FIX: Correctly call the countTokens method on the shared client instance.
+    const { totalTokens } = await ai.models.countTokens({
         model,
         contents: [{ parts: [{ text }] }],
     });
-    return response.totalTokens;
+    return totalTokens;
 }

@@ -9,6 +9,8 @@ import {
 } from '../../services';
 import { performTagProcessing, calculateSlaveValue } from '../../utils/gameLogicUtils';
 import { VIETNAMESE } from '../../constants';
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
 
 // Define the props interface for the hook
 export interface UseCharacterActionsProps {

@@ -184,7 +184,7 @@ export const processSlaveAdd = (
     return { updatedKb: newKb, systemMessages, newVectorMetadata };
 };
 
-const processPersonUpdate = <T extends Prisoner | Wife | Slave>(
+const processPersonUpdate = <T extends { id: string; name: string }>(
     // FIX: Add 'name' property to the generic constraint for T.
     personList: T[],
     tagParams: Record<string, string>,
@@ -211,14 +211,14 @@ const processPersonUpdate = <T extends Prisoner | Wife | Slave>(
     if (tagParams.newName) {
         const newTrimmedName = tagParams.newName.trim();
         // FIX: Ensure personToUpdate has a name property before comparing.
-        if (newTrimmedName && newTrimmedName.toLowerCase() !== (personToUpdate as any).name.trim().toLowerCase()) {
+        if (newTrimmedName && newTrimmedName.toLowerCase() !== personToUpdate.name.trim().toLowerCase()) {
             const collisionExists = updatedList.some((p, idx) => 
                 // FIX: Ensure p has a name property before comparing.
-                idx !== personIndex && (p as any).name.trim().toLowerCase() === newTrimmedName.toLowerCase()
+                idx !== personIndex && p.name.trim().toLowerCase() === newTrimmedName.toLowerCase()
             );
             if (!collisionExists) {
                 // FIX: Ensure personToUpdate has a name property before assigning.
-                (personToUpdate as any).name = newTrimmedName;
+                personToUpdate.name = newTrimmedName;
                 updatedFieldsCount++;
             } else {
                  console.warn(`[${personType.toUpperCase()}_UPDATE]: New name "${newTrimmedName}" for person "${personName}" collides with an existing person. Name not updated.`);
@@ -294,14 +294,13 @@ export const processWifeUpdate = (
         if (updatedPerson) {
             updatedVectorMetadata = {
                 // FIX: Ensure updatedPerson has an 'id' property.
-                entityId: (updatedPerson as any).id,
+                entityId: updatedPerson.id,
                 entityType: 'wife',
                 text: formatPersonForEmbedding(updatedPerson, newKb),
                 turnNumber: turnForSystemMessages
             };
         }
     }
-    
     return { updatedKb: newKb, systemMessages: [], updatedVectorMetadata };
 };
 
@@ -312,21 +311,20 @@ export const processSlaveUpdate = (
 ): { updatedKb: KnowledgeBase; systemMessages: GameMessage[]; updatedVectorMetadata?: VectorMetadata; } => {
     const newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
     const { updatedList, updatedPerson, updatedFieldsCount } = processPersonUpdate(newKb.slaves, tagParams, 'slave');
-     let updatedVectorMetadata: VectorMetadata | undefined = undefined;
-    
+    let updatedVectorMetadata: VectorMetadata | undefined = undefined;
+
     if (updatedList && updatedFieldsCount > 0) {
         newKb.slaves = updatedList;
         if (updatedPerson) {
             updatedVectorMetadata = {
                 // FIX: Ensure updatedPerson has an 'id' property.
-                entityId: (updatedPerson as any).id,
+                entityId: updatedPerson.id,
                 entityType: 'slave',
                 text: formatPersonForEmbedding(updatedPerson, newKb),
                 turnNumber: turnForSystemMessages
             };
         }
     }
-    
     return { updatedKb: newKb, systemMessages: [], updatedVectorMetadata };
 };
 
@@ -338,24 +336,49 @@ export const processPrisonerUpdate = (
     const newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
     const { updatedList, updatedPerson, updatedFieldsCount } = processPersonUpdate(newKb.prisoners, tagParams, 'prisoner');
     let updatedVectorMetadata: VectorMetadata | undefined = undefined;
-    
+
     if (updatedList && updatedFieldsCount > 0) {
         newKb.prisoners = updatedList;
         if (updatedPerson) {
             updatedVectorMetadata = {
                 // FIX: Ensure updatedPerson has an 'id' property.
-                entityId: (updatedPerson as any).id,
+                entityId: updatedPerson.id,
                 entityType: 'prisoner',
                 text: formatPersonForEmbedding(updatedPerson, newKb),
                 turnNumber: turnForSystemMessages
             };
         }
     }
-    
     return { updatedKb: newKb, systemMessages: [], updatedVectorMetadata };
 };
 
-// --- NEW REMOVE FUNCTIONS ---
+
+// Generic remove function
+// FIX: Add 'id' property to the generic constraint for T.
+const processPersonRemove = <T extends { name: string; id: string; }>(
+    list: T[],
+    name: string,
+    listName: string,
+    turn: number
+): { newList: T[]; systemMessages: GameMessage[] } => {
+    const systemMessages: GameMessage[] = [];
+    const foundMatch = findPersonByName(list, name);
+    if (foundMatch) {
+        const { person: personToRemove } = foundMatch;
+        const newList = list.filter(p => p.id !== personToRemove.id);
+        systemMessages.push({
+            id: `${listName}-removed-${Date.now()}`,
+            type: 'system',
+            content: `${personToRemove.name} đã không còn là ${listName} của bạn.`,
+            timestamp: Date.now(),
+            turnNumber: turn
+        });
+        return { newList, systemMessages };
+    } else {
+        console.warn(`[${listName.toUpperCase()}_REMOVE]: Person "${name}" not found.`);
+        return { newList: list, systemMessages };
+    }
+};
 
 export const processWifeRemove = (
     currentKb: KnowledgeBase,
@@ -363,28 +386,8 @@ export const processWifeRemove = (
     turnForSystemMessages: number
 ): { updatedKb: KnowledgeBase; systemMessages: GameMessage[] } => {
     const newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
-    const systemMessages: GameMessage[] = [];
-    const name = tagParams.name;
-
-    if (!name) {
-        console.warn("WIFE_REMOVE: Missing name.", tagParams);
-        return { updatedKb: newKb, systemMessages };
-    }
-
-    const foundMatch = findPersonByName(newKb.wives, name);
-    if (foundMatch) {
-        newKb.wives.splice(foundMatch.index, 1);
-        systemMessages.push({
-            id: `wife-removed-${foundMatch.person.name.replace(/\s+/g, '-')}`,
-            type: 'system',
-            content: `Đạo lữ ${foundMatch.person.name} đã không còn bên bạn nữa.`,
-            timestamp: Date.now(),
-            turnNumber: turnForSystemMessages
-        });
-    } else {
-        console.warn(`WIFE_REMOVE: Wife "${name}" not found.`);
-    }
-
+    const { newList, systemMessages } = processPersonRemove(newKb.wives, tagParams.name, 'đạo lữ', turnForSystemMessages);
+    newKb.wives = newList;
     return { updatedKb: newKb, systemMessages };
 };
 
@@ -394,28 +397,8 @@ export const processSlaveRemove = (
     turnForSystemMessages: number
 ): { updatedKb: KnowledgeBase; systemMessages: GameMessage[] } => {
     const newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
-    const systemMessages: GameMessage[] = [];
-    const name = tagParams.name;
-
-    if (!name) {
-        console.warn("SLAVE_REMOVE: Missing name.", tagParams);
-        return { updatedKb: newKb, systemMessages };
-    }
-
-    const foundMatch = findPersonByName(newKb.slaves, name);
-    if (foundMatch) {
-        newKb.slaves.splice(foundMatch.index, 1);
-        systemMessages.push({
-            id: `slave-removed-${foundMatch.person.name.replace(/\s+/g, '-')}`,
-            type: 'system',
-            content: `Nô lệ ${foundMatch.person.name} đã không còn nữa.`,
-            timestamp: Date.now(),
-            turnNumber: turnForSystemMessages
-        });
-    } else {
-        console.warn(`SLAVE_REMOVE: Slave "${name}" not found.`);
-    }
-
+    const { newList, systemMessages } = processPersonRemove(newKb.slaves, tagParams.name, 'nô lệ', turnForSystemMessages);
+    newKb.slaves = newList;
     return { updatedKb: newKb, systemMessages };
 };
 
@@ -425,27 +408,7 @@ export const processPrisonerRemove = (
     turnForSystemMessages: number
 ): { updatedKb: KnowledgeBase; systemMessages: GameMessage[] } => {
     const newKb = JSON.parse(JSON.stringify(currentKb)) as KnowledgeBase;
-    const systemMessages: GameMessage[] = [];
-    const name = tagParams.name;
-
-    if (!name) {
-        console.warn("PRISONER_REMOVE: Missing name.", tagParams);
-        return { updatedKb: newKb, systemMessages };
-    }
-
-    const foundMatch = findPersonByName(newKb.prisoners, name);
-    if (foundMatch) {
-        newKb.prisoners.splice(foundMatch.index, 1);
-        systemMessages.push({
-            id: `prisoner-removed-${foundMatch.person.name.replace(/\s+/g, '-')}`,
-            type: 'system',
-            content: `Tù nhân ${foundMatch.person.name} đã không còn bị giam giữ.`,
-            timestamp: Date.now(),
-            turnNumber: turnForSystemMessages
-        });
-    } else {
-        console.warn(`PRISONER_REMOVE: Prisoner "${name}" not found.`);
-    }
-
+    const { newList, systemMessages } = processPersonRemove(newKb.prisoners, tagParams.name, 'tù nhân', turnForSystemMessages);
+    newKb.prisoners = newList;
     return { updatedKb: newKb, systemMessages };
 };

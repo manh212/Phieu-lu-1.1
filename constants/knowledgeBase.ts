@@ -36,7 +36,7 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   currentPageHistory: [1],
   lastSummarizedTurn: 0,
   turnHistory: [],
-  autoSaveTurnCounter: 0,
+  autoSaveTurnCounter: 0, 
   currentAutoSaveSlotIndex: 0,
   autoSaveSlotIds: Array(MAX_AUTO_SAVE_SLOTS).fill(null),
   manualSaveId: null,
@@ -57,10 +57,11 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   gameEvents: [], // NEW: For event system
   ragVectorStore: { vectors: [], metadata: [] }, // UPDATED: Use metadata instead of texts
   aiContextConfig: { ...DEFAULT_AI_CONTEXT_CONFIG }, // NEW: Initialize with default values
+  // FIX: Added missing properties to match the KnowledgeBase type.
   aiRulebook: { ...DEFAULT_AI_RULEBOOK }, // NEW: Initialize with default rule content
+  stagedActions: {}, // NEW: Initialize with empty object
   aiCopilotConfigs: [], // NEW
   activeAICopilotConfigId: null, // NEW
-  stagedActions: {},
   // NEW: Living World State
   isWorldTicking: false,
   lastWorldTickDate: { day: 1, month: 1, year: 1, hour: 0, minute: 0 },

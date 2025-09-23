@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-// FIX: Correct import path for types
-import { GameMessage } from '../../../types/index';
+import { GameMessage } from '@/types/index';
 
 interface SystemMessageGroupProps {
   messages: GameMessage[];

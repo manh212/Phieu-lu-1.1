@@ -4,20 +4,26 @@ import { KnowledgeBase, GameMessage, GameScreen, Item, AuctionItem, AuctionComme
 import { generateAuctionData, runAuctionTurn, runAuctioneerCall } from '../../services';
 import { performTagProcessing, calculateItemValue } from '../../utils/gameLogicUtils';
 import { VIETNAMESE } from '../../constants';
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
 
 interface UseAuctionActionsProps {
-  knowledgeBase: KnowledgeBase;
-  setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeBase>>;
-  isLoadingApi: boolean;
-  setIsLoadingApi: React.Dispatch<React.SetStateAction<boolean>>;
-  resetApiError: () => void;
-  showNotification: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
-  setCurrentScreen: (screen: GameScreen) => void;
-  setSentEconomyPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
-  setReceivedEconomyResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
-  logNpcAvatarPromptCallback?: (prompt: string) => void;
-  setApiErrorWithTimeout: (message: string | null) => void;
-  addMessageAndUpdateState: (newMessages: GameMessage[], newKnowledgeBase: KnowledgeBase, callback?: () => void) => void;
+    knowledgeBase: KnowledgeBase;
+// FIX: Correctly type the setKnowledgeBase parameter.
+    setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeBase>>;
+    isLoadingApi: boolean;
+// FIX: Correctly type the setIsLoadingApi parameter.
+    setIsLoadingApi: React.Dispatch<React.SetStateAction<boolean>>;
+    resetApiError: () => void;
+    showNotification: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+    setCurrentScreen: (screen: GameScreen) => void;
+// FIX: Correctly type the setSentEconomyPromptsLog parameter.
+    setSentEconomyPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
+// FIX: Correctly type the setReceivedEconomyResponsesLog parameter.
+    setReceivedEconomyResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
+    logNpcAvatarPromptCallback?: (prompt: string) => void;
+    setApiErrorWithTimeout: (message: string | null) => void;
+    addMessageAndUpdateState: (newMessages: GameMessage[], newKnowledgeBase: KnowledgeBase, callback?: () => void) => void;
 }
 
 export const useAuctionActions = ({

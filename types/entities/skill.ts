@@ -1,6 +1,8 @@
 // types/entities/skill.ts
 import type { PlayerStats } from './character';
-import type { SkillTypeValues, SkillTargetType, ProficiencyTier, CongPhapType, CongPhapGrade, LinhKiCategory, LinhKiActivationType, ProfessionType, ProfessionGrade } from '../enums';
+// FIX: Changed barrel file import to direct file imports to break circular dependency.
+import type { SkillTypeValues, SkillTargetType, CongPhapType, CongPhapGrade, LinhKiCategory, LinhKiActivationType, ProfessionType, ProfessionGrade } from '../enums/item';
+import type { ProficiencyTier } from '../enums/character';
 
 export interface Skill {
     id: string; name: string; description: string; skillType: SkillTypeValues; detailedEffect: string; icon?: string; manaCost: number; damageMultiplier: number; baseDamage: number; healingAmount: number; healingMultiplier: number;

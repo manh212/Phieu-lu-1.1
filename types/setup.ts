@@ -1,9 +1,11 @@
 // types/setup.ts
-import type { GenreType, CustomGenreType, NsfwDescriptionStyle, ViolenceLevel, StoryTone, TuChatTier } from './enums';
-import type { ItemCategoryValues, EquipmentRarity, EquipmentTypeValues, PotionTypeValues, MaterialTypeValues, CongPhapType, ProfessionType, SkillTypeValues, CongPhapGrade, LinhKiCategory, LinhKiActivationType, ProfessionGrade } from './enums';
-import type { LocationTypeValues, FactionAlignmentValues } from './enums';
-import type { PlayerStats } from './entities';
-import type { WorldDate } from './entities';
+// FIX: Changed barrel file imports to direct file imports to break circular dependencies.
+// FIX: Corrected import path for GenreType and CustomGenreType.
+import type { NsfwDescriptionStyle, ViolenceLevel, StoryTone, LocationTypeValues, FactionAlignmentValues } from './enums/world';
+import type { GenreType, CustomGenreType, ItemCategoryValues, EquipmentRarity, EquipmentTypeValues, PotionTypeValues, MaterialTypeValues, CongPhapType, ProfessionType, SkillTypeValues, CongPhapGrade, LinhKiCategory, LinhKiActivationType, ProfessionGrade } from './enums/item';
+import type { TuChatTier } from './enums/character';
+import type { PlayerStats } from './entities/character';
+import type { WorldDate } from './entities/world';
 
 export interface StartingSkill {
   id?: string;

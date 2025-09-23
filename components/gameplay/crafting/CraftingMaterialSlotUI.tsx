@@ -1,10 +1,7 @@
-
-
 import React from 'react';
-// FIX: Corrected import path for types.
-import { Item as ItemType } from '../../../types/index';
-import { VIETNAMESE } from '../../../constants';
-import Button from '../../ui/Button';
+import { Item as ItemType } from '@/types/index';
+import { VIETNAMESE } from '@/constants';
+import Button from '@/components/ui/Button';
 
 interface CraftingMaterialSlotUIProps {
   slotId: string; // Unique ID for this slot instance

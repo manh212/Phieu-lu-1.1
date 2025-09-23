@@ -1,9 +1,9 @@
 import React, { useState, useCallback, ChangeEvent } from 'react';
-import { GameScreen, KnowledgeBase, Item as ItemType } from '../../../types/index';
-import Button from '../../ui/Button';
-import InputField from '../../ui/InputField';
-import { VIETNAMESE } from '../../../constants';
-import * as GameTemplates from '../../../types/index';
+import { GameScreen, KnowledgeBase, Item as ItemType } from '@/types/index';
+import Button from '@/components/ui/Button';
+import InputField from '@/components/ui/InputField';
+import { VIETNAMESE } from '@/constants';
+import * as GameTemplates from '@/types/index';
 import CraftingMaterialSlotUI from './CraftingMaterialSlotUI';
 import MaterialInventoryListUI from './MaterialInventoryListUI';
 import MaterialSelectionModal from './MaterialSelectionModal'; // Import the new modal

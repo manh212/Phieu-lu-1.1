@@ -60,6 +60,8 @@ import { processNarrativeDirective } from './tagProcessors/narrativeDirectiveTag
 import { processAiContextConfigUpdate } from './tagProcessors/aiContextTagProcessor'; // NEW
 import { processAiRuleUpdate, processAiRuleReset } from './tagProcessors/aiRulebookTagProcessor'; // NEW
 import { processRewriteTurn } from './tagProcessors/rewriteTurnTagProcessor'; // NEW
+// FIX: Add missing React import to resolve namespace errors.
+import type React from 'react';
 
 
 export { parseTagValue }; 
@@ -187,6 +189,7 @@ export const performTagProcessing = async (
     currentKb: KnowledgeBase, 
     tagBatch: string[], 
     turnForSystemMessages: number,
+// FIX: Correctly type the setKnowledgeBaseDirectly parameter.
     setKnowledgeBaseDirectly: React.Dispatch<React.SetStateAction<KnowledgeBase>>, 
     logNpcAvatarPromptCallback?: (prompt: string) => void 
 ): Promise<{ 

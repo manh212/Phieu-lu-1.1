@@ -1,4 +1,3 @@
-
 // FIX: Correct import path for types
 import { KnowledgeBase, GameMessage } from '../types/index';
 import { VIETNAMESE } from '../constants';

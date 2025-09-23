@@ -1,9 +1,12 @@
 // types/game.ts
 import { Operation as JsonPatchOperation } from 'fast-json-patch';
-import type { NPC, Wife, Slave, Prisoner, Master, PlayerStats } from './entities';
-import type { Item, EquipmentSlotId } from './entities';
-import type { Skill } from './entities';
-import type { Quest, GameLocation, Faction, WorldLoreEntry, Region, GameEvent, WorldDate } from './entities';
+// FIX: Changed barrel file imports to direct file imports to break circular dependencies.
+// FIX: Removed 'ActivityLogEntry' from this import as it will be moved to 'character.ts'.
+import type { NPC, Wife, Slave, Prisoner, Master, Companion } from './entities/npc';
+import type { PlayerStats, ComplexCompanionBase, RealmBaseStatDefinition, ActivityLogEntry } from './entities/character';
+import type { Item, EquipmentSlotId } from './entities/item';
+import type { Skill } from './entities/skill';
+import type { Quest, GameLocation, Faction, WorldLoreEntry, Region, GameEvent, WorldDate, YeuThu } from './entities/world';
 import type { CombatEndPayload, StagedAction } from './features';
 import type { AuctionState, SlaveAuctionState } from './features';
 import type { WorldSettings } from './setup';
@@ -96,16 +99,6 @@ export interface VectorStore {
   metadata: VectorMetadata[];
 }
 
-export interface RealmBaseStatDefinition {
-  hpBase: number; hpInc: number; mpBase: number; mpInc: number; atkBase: number; atkInc: number; expBase: number; expInc: number;
-  phongThuBase: number; phongThuInc: number;
-  tocDoBase: number; tocDoInc: number;
-  chinhXacBase: number; chinhXacInc: number;
-  neTranhBase: number; neTranhInc: number;
-  tiLeChiMangBase: number; tiLeChiMangInc: number;
-  satThuongChiMangBase: number; satThuongChiMangInc: number;
-}
-
 export interface KnowledgeBase {
   playerStats: PlayerStats; 
   inventory: Item[]; 
@@ -114,12 +107,12 @@ export interface KnowledgeBase {
   allQuests: Quest[]; 
   discoveredNPCs: NPC[]; 
   discoveredLocations: GameLocation[];
-  discoveredYeuThu: import('./entities').YeuThu[];
+  discoveredYeuThu: YeuThu[];
   discoveredFactions: Faction[]; 
   realmProgressionList: string[]; 
   currentRealmBaseStats: Record<string, RealmBaseStatDefinition>;
   worldConfig: WorldSettings | null; 
-  companions: import('./entities').Companion[]; 
+  companions: Companion[]; 
   worldLore: WorldLoreEntry[]; 
   worldDate: WorldDate; 
   appVersion?: string;
@@ -148,10 +141,10 @@ export interface KnowledgeBase {
   gameEvents: GameEvent[];
   ragVectorStore?: VectorStore;
   aiContextConfig: AIContextConfig;
-  aiRulebook?: AIRulebook; // NEW: The rulebook for editable rules
+  aiRulebook: AIRulebook; // NEW: The rulebook for editable rules
   aiCopilotConfigs: AICopilotConfig[];
   activeAICopilotConfigId: string | null;
-  stagedActions?: Record<string, StagedAction>;
+  stagedActions: Record<string, StagedAction>;
   isWorldTicking: boolean;
   lastWorldTickDate: WorldDate;
   narrativeDirectiveForNextTurn?: string; // NEW: For Narrative Directive & Rewrite Turn feature

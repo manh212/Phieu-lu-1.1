@@ -1,6 +1,8 @@
 // types/features/combat.ts
-import type { PlayerStats, AiChoice, StatusEffect } from '../index';
-import type { CombatDisposition } from '../enums';
+// FIX: Changed barrel file imports to direct file imports to break circular dependency.
+import type { PlayerStats, StatusEffect } from '../entities/character';
+import type { AiChoice } from '../game';
+import type { CombatDisposition } from '../enums/combat';
 
 export type CombatDispositionMap = Record<string, CombatDisposition>;
 
