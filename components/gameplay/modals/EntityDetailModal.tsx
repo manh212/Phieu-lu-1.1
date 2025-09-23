@@ -3,7 +3,7 @@ import { GameEntity, GameEntityType } from '../../../hooks/types';
 import { KnowledgeBase, PlayerStats, Item, Skill, Quest, NPC, GameLocation, WorldLoreEntry, Companion, Faction, YeuThu, Wife, Slave, Prisoner, ActivityLogEntry, QuestObjective, StartingNPC, RelationshipEntry } from '../../../types/index';
 import * as GameTemplates from '../../../types/index';
 import Modal from '../../ui/Modal';
-import { VIETNAMESE, PROFICIENCY_DMG_HEAL_MULTIPLIERS, PROFICIENCY_COST_COOLDOWN_MULTIPLIERS, PROFICIENCY_EXP_THRESHOLDS, ALL_FACTION_ALIGNMENTS } from '../../../constants/index';
+import { VIETNAMESE, PROFICIENCY_DMG_HEAL_MULTIPLIERS, PROFICIENCY_COST_COOLDOWN_MULTIPLIERS, PROFICIENCY_EXP_THRESHOLDS, ALL_FACTION_ALIGNMENTS, STAT_POINT_VALUES } from '../../../constants/index';
 import { PROFICIENCY_TIERS, TU_CHAT_TIERS } from '../../../types/index';
 import { getDeterministicAvatarSrc } from '../../../utils/avatarUtils';
 import InputField from '../../ui/InputField';
@@ -354,9 +354,18 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                     <InputField label="Tư chất" id="npc-tuChat" type="select" options={[...TU_CHAT_TIERS]} value={npc.tuChat} onChange={e => handleFormChange('tuChat', e.target.value)} />
                     <InputField label="Linh căn" id="npc-spiritualRoot" value={npc.spiritualRoot} onChange={e => handleFormChange('spiritualRoot', e.target.value)} />
                     <InputField label="Thể chất" id="npc-specialPhysique" value={npc.specialPhysique} onChange={e => handleFormChange('specialPhysique', e.target.value)} />
+                    <InputField label="Thọ Nguyên" type="number" id="npc-thoNguyen" value={npc.stats?.thoNguyen ?? ''} onChange={e => handleFormChange('stats.thoNguyen', e.target.value, 'number')} />
+                    <InputField label="Thọ Nguyên Tối Đa" type="number" id="npc-maxThoNguyen" value={npc.stats?.maxThoNguyen ?? ''} onChange={e => handleFormChange('stats.maxThoNguyen', e.target.value, 'number')} />
                     <InputField label="Mô tả" id="npc-description" value={npc.description} onChange={e => handleFormChange('description', e.target.value)} textarea rows={3} className="md:col-span-2"/>
                     <InputField label="Mục tiêu dài hạn" id="npc-longTermGoal" value={npc.longTermGoal} onChange={e => handleFormChange('longTermGoal', e.target.value)} textarea rows={2} className="md:col-span-2"/>
                     <InputField label="Mục tiêu ngắn hạn" id="npc-shortTermGoal" value={npc.shortTermGoal} onChange={e => handleFormChange('shortTermGoal', e.target.value)} textarea rows={2} className="md:col-span-2"/>
+                    <DetailSection title="Chỉ số chiến đấu" defaultOpen={false}>
+                        <InputField label="Sinh lực" type="number" id="npc-hp" value={npc.stats?.sinhLuc ?? ''} onChange={e => handleFormChange('stats.sinhLuc', e.target.value, 'number')} />
+                        <InputField label="Sinh lực tối đa" type="number" id="npc-maxHp" value={npc.stats?.maxSinhLuc ?? ''} onChange={e => handleFormChange('stats.maxSinhLuc', e.target.value, 'number')} />
+                        <InputField label="Linh lực" type="number" id="npc-mp" value={npc.stats?.linhLuc ?? ''} onChange={e => handleFormChange('stats.linhLuc', e.target.value, 'number')} />
+                        <InputField label="Linh lực tối đa" type="number" id="npc-maxMp" value={npc.stats?.maxLinhLuc ?? ''} onChange={e => handleFormChange('stats.maxLinhLuc', e.target.value, 'number')} />
+                        <InputField label="Sức tấn công" type="number" id="npc-atk" value={npc.stats?.sucTanCong ?? ''} onChange={e => handleFormChange('stats.sucTanCong', e.target.value, 'number')} />
+                    </DetailSection>
                 </div>
             ) : <PersonDetails person={npc} knowledgeBase={knowledgeBase} onClose={onClose} />;
             break;
@@ -445,6 +454,8 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
         }
         case 'item': {
             const item = formData as Item;
+            const isEquipment = item.category === GameTemplates.ItemCategory.EQUIPMENT;
+            const equip = isEquipment ? item as GameTemplates.EquipmentTemplate : null;
             title = `Chi Tiết Vật Phẩm: ${isEditing ? '' : item.name}`;
             content = isEditing ? (
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
@@ -453,6 +464,33 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                     <InputField label="Độ hiếm" id="item-rarity" type="select" options={Object.values(GameTemplates.ItemRarity)} value={item.rarity} onChange={e => handleFormChange('rarity', e.target.value)} />
                     <InputField label="Cảnh giới vật phẩm" id="item-itemRealm" value={item.itemRealm} onChange={e => handleFormChange('itemRealm', e.target.value)} />
                     <InputField label="Mô tả" id="item-description" value={item.description} onChange={e => handleFormChange('description', e.target.value)} textarea rows={3} className="md:col-span-2"/>
+                    {isEquipment && equip && (
+                        <div className="md:col-span-2">
+                        <DetailSection title="Thuộc tính trang bị" defaultOpen={true}>
+                            <div className="grid grid-cols-2 gap-x-4">
+                            {Object.keys(STAT_POINT_VALUES).map(statKey => (
+                                <InputField
+                                key={statKey}
+                                label={`Bonus: ${statKey}`}
+                                id={`item-statBonus-${statKey}`}
+                                type="number"
+                                value={(equip.statBonuses as any)[statKey] ?? ''}
+                                onChange={e => handleFormChange(`statBonuses.${statKey}`, e.target.value, 'number')}
+                                />
+                            ))}
+                             <InputField
+                                label="Hiệu ứng đặc biệt (cách nhau bởi ';')"
+                                id="item-uniqueEffects"
+                                value={equip.uniqueEffects?.join(';') || ''}
+                                onChange={e => handleFormChange('uniqueEffects', e.target.value.split(';').map(s => s.trim()))}
+                                textarea
+                                rows={3}
+                                className="col-span-2"
+                            />
+                            </div>
+                        </DetailSection>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="space-y-2">
@@ -464,23 +502,23 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                         <InfoPair label="Cảnh giới">{item.itemRealm || 'Không rõ'}</InfoPair>
                         <InfoPair label="Giá trị">{item.value?.toLocaleString() || 'Không rõ'}</InfoPair>
                     </StatGrid>
-                    {item.category === GameTemplates.ItemCategory.EQUIPMENT && (
+                    {isEquipment && equip && (
                         <DetailSection title="Thuộc tính trang bị">
                             <StatGrid>
-                                <InfoPair label="Loại trang bị">{(item as GameTemplates.EquipmentTemplate).equipmentType}</InfoPair>
-                                <InfoPair label="Vị trí">{(item as GameTemplates.EquipmentTemplate).slot || 'Không rõ'}</InfoPair>
+                                <InfoPair label="Loại trang bị">{equip.equipmentType}</InfoPair>
+                                <InfoPair label="Vị trí">{equip.slot || 'Không rõ'}</InfoPair>
                             </StatGrid>
-                            {(item as GameTemplates.EquipmentTemplate).statBonuses && Object.keys((item as GameTemplates.EquipmentTemplate).statBonuses).length > 0 && (
+                            {equip.statBonuses && Object.keys(equip.statBonuses).length > 0 && (
                                 <InfoPair label="Chỉ số cộng thêm" fullWidth>
                                     <ul className="list-disc list-inside">
-                                        {Object.entries((item as GameTemplates.EquipmentTemplate).statBonuses).map(([key, value]) => value !== 0 && <li key={key}>{key}: +{value}</li>)}
+                                        {Object.entries(equip.statBonuses).map(([key, value]) => value !== 0 && <li key={key}>{key}: +{value}</li>)}
                                     </ul>
                                 </InfoPair>
                             )}
-                            {(item as GameTemplates.EquipmentTemplate).uniqueEffects && (item as GameTemplates.EquipmentTemplate).uniqueEffects.length > 0 && (
+                            {equip.uniqueEffects && equip.uniqueEffects.length > 0 && (
                                 <InfoPair label="Hiệu ứng đặc biệt" fullWidth>
                                     <ul className="list-disc list-inside">
-                                        {(item as GameTemplates.EquipmentTemplate).uniqueEffects.map((effect, i) => <li key={i}>{effect}</li>)}
+                                        {equip.uniqueEffects.map((effect, i) => <li key={i}>{effect}</li>)}
                                     </ul>
                                 </InfoPair>
                             )}
@@ -633,17 +671,23 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
 
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={title}>
+        <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? `Chỉnh Sửa - ${title}` : title}>
             <div className="space-y-2 text-sm">
                 {content}
             </div>
-             {isEditing && (
+             {isEditing ? (
                 <div className="mt-6 pt-4 border-t border-gray-700 flex justify-end flex-shrink-0">
                     <Button onClick={onClose} variant="secondary" type="button" className="mr-3">
                         {VIETNAMESE.cancelEditButton || "Hủy"}
                     </Button>
                     <Button onClick={handleSaveChanges} variant="primary" type="button">
                         {VIETNAMESE.saveEditButton || "Lưu Thay Đổi"}
+                    </Button>
+                </div>
+            ) : (
+                 <div className="mt-6 pt-4 border-t border-gray-700 flex justify-end flex-shrink-0">
+                    <Button onClick={onClose} variant="secondary" type="button">
+                        {VIETNAMESE.closeButton}
                     </Button>
                 </div>
             )}
