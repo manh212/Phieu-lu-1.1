@@ -1,6 +1,6 @@
 import React, { createContext, ReactNode, useRef, useState, useCallback, useEffect } from 'react';
 import * as jsonpatch from 'fast-json-patch';
-import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction, CombatLogContent, YeuThu, Companion, Faction, WorldLoreEntry } from '@/types/index';
+import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction, CombatLogContent, YeuThu, Companion, Faction, WorldLoreEntry, VectorMetadata, Quest } from '@/types/index';
 import { INITIAL_KNOWLEDGE_BASE, VIETNAMESE, APP_VERSION, MAX_AUTO_SAVE_SLOTS, TURNS_PER_PAGE, DEFAULT_TIERED_STATS, KEYFRAME_INTERVAL, EQUIPMENT_SLOTS_CONFIG, DEFAULT_WORLD_SETTINGS, DEFAULT_PLAYER_STATS } from '@/constants/index';
 import { saveGameToIndexedDB, loadGamesFromIndexedDB, loadSpecificGameFromIndexedDB, deleteGameFromIndexedDB, importGameToIndexedDB, resetDBConnection as resetIndexedDBConnection } from '../services/indexedDBService';
 import * as GameTemplates from '@/types/index';
@@ -20,11 +20,15 @@ import {
     generateWorldTickUpdate,
     generateImageUnified,
     generateCopilotResponse,
-    getApiSettings as getGeminiApiSettings
+    getApiSettings as getGeminiApiSettings,
+    generateEmbeddings // NEW: Import embedding service
 } from '../services';
 import { uploadImageToCloudinary } from '../services/cloudinaryService';
 import { isValidImageUrl } from '../utils/imageValidationUtils';
-import { performTagProcessing, handleLevelUps, calculateEffectiveStats, addTurnHistoryEntryRaw, updateGameEventsStatus, handleLocationEntryEvents } from '../utils/gameLogicUtils';
+import { performTagProcessing, handleLevelUps, calculateEffectiveStats, addTurnHistoryEntryRaw, updateGameEventsStatus, handleLocationEntryEvents, calculateRealmBaseStats } from '../utils/gameLogicUtils';
+// NEW: Import RAG formatters
+import { formatItemForEmbedding, formatSkillForEmbedding, formatQuestForEmbedding, formatPersonForEmbedding, formatLocationForEmbedding, formatLoreForEmbedding, formatFactionForEmbedding, formatYeuThuForEmbedding } from '../utils/ragUtils';
+
 
 // Import action hooks
 import { useMainGameLoopActions } from '../hooks/actions/useMainGameLoopActions';
@@ -106,7 +110,7 @@ export interface GameContextType {
 
     // Actions (will be populated by allActions)
     startQuickPlay: () => void;
-    handleUpdateEntity: (entityType: GameEntityType, entityData: GameEntity) => void;
+    handleUpdateEntity: (entityType: GameEntityType, entityData: GameEntity) => Promise<void>; // NOW ASYNC
     resetCopilotConversation: () => void;
     [key: string]: any; // Index signature to allow dynamic action properties
 }
@@ -168,7 +172,27 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         showNotification("Cuộc trò chuyện với Siêu Trợ Lý đã được làm mới.", "info");
     }, [gameData.setAiCopilotMessages, gameData.setSentCopilotPromptsLog, showNotification]);
 
-    const handleUpdateEntity = useCallback((entityType: GameEntityType, entityData: GameEntity) => {
+    const handleUpdateEntity = useCallback(async (entityType: GameEntityType, entityData: GameEntity) => {
+        // A helper function to get the correct formatted text for the RAG system
+        const getFormattedTextForEntity = (kb: KnowledgeBase): string | null => {
+            switch(entityType) {
+                case 'npc': return formatPersonForEmbedding(entityData as NPC, kb);
+                case 'item': return formatItemForEmbedding(entityData as ItemType, kb);
+                case 'skill': return formatSkillForEmbedding(entityData as Skill, kb);
+                case 'quest': return formatQuestForEmbedding(entityData as Quest, kb);
+                case 'location': return formatLocationForEmbedding(entityData as GameLocation, kb);
+                case 'lore': return formatLoreForEmbedding(entityData as WorldLoreEntry, kb);
+                case 'faction': return formatFactionForEmbedding(entityData as Faction, kb);
+                case 'yeuThu': return formatYeuThuForEmbedding(entityData as YeuThu, kb);
+                case 'wife': return formatPersonForEmbedding(entityData as Wife, kb);
+                case 'slave': return formatPersonForEmbedding(entityData as Slave, kb);
+                case 'prisoner': return formatPersonForEmbedding(entityData as Prisoner, kb);
+                // Companions are simple and not in RAG for now
+                case 'companion': return null; 
+                default: return null;
+            }
+        };
+
         gameData.setKnowledgeBase(prevKb => {
             const newKb = JSON.parse(JSON.stringify(prevKb));
             let listToUpdate: any[] | undefined;
@@ -190,10 +214,80 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if(listToUpdate) {
                 const index = listToUpdate.findIndex(item => item.id === (entityData as any).id);
                 if (index > -1) {
-                    listToUpdate[index] = entityData;
-                    showNotification(`Đã cập nhật: ${(entityData as any).name || (entityData as any).title}`, 'success');
+                    const originalEntity = listToUpdate[index];
+                    let finalEntityData = entityData; 
 
-                    // If an item was updated, player stats might need recalculation
+                    const isPersonLike = ['npc', 'yeuThu', 'wife', 'slave', 'prisoner'].includes(entityType);
+                    if (isPersonLike && originalEntity.realm !== (entityData as NPC | YeuThu).realm) {
+                        const updatedEntity = { ...finalEntityData } as NPC | YeuThu | Wife | Slave | Prisoner;
+                        
+                        let realmProgressionList: string[];
+                        if (entityType === 'yeuThu') {
+                            realmProgressionList = (newKb.worldConfig?.yeuThuRealmSystem || '').split(' - ').map((s: string) => s.trim());
+                        } else {
+                            const personRace = (updatedEntity as NPC).race || 'Nhân Tộc';
+                            const raceSystem = newKb.worldConfig?.raceCultivationSystems.find((rs: any) => rs.raceName === personRace);
+                            realmProgressionList = (raceSystem?.realmSystem || newKb.realmProgressionList.join(' - ')).split(' - ').map((s: string) => s.trim());
+                        }
+
+                        const newBaseStats = calculateRealmBaseStats(updatedEntity.realm || '', realmProgressionList, newKb.currentRealmBaseStats);
+                        
+                        const statsForCalc: PlayerStats = {
+                            ...DEFAULT_PLAYER_STATS,
+                            ...(updatedEntity.stats || {}),
+                            ...newBaseStats,
+                            realm: updatedEntity.realm || '',
+                        };
+                        const equippedItemsForCalc = ('equippedItems' in updatedEntity && updatedEntity.equippedItems) ? updatedEntity.equippedItems : { ...INITIAL_KNOWLEDGE_BASE.equippedItems };
+                        const newEffectiveStats = calculateEffectiveStats(statsForCalc, equippedItemsForCalc, newKb.inventory);
+
+                        updatedEntity.stats = {
+                           ...newEffectiveStats,
+                           sinhLuc: Math.min(statsForCalc.sinhLuc || newEffectiveStats.maxSinhLuc, newEffectiveStats.maxSinhLuc),
+                           linhLuc: Math.min(statsForCalc.linhLuc || newEffectiveStats.maxSinhLuc, newEffectiveStats.maxSinhLuc)
+                        };
+                        
+                        finalEntityData = updatedEntity;
+                    }
+
+                    listToUpdate[index] = finalEntityData;
+                    
+                    // --- NEW: RAG UPDATE LOGIC ---
+                    const textForEmbedding = getFormattedTextForEntity(newKb);
+                    if (textForEmbedding && newKb.ragVectorStore) {
+                        (async () => {
+                            try {
+                                const newVector = await generateEmbeddings([textForEmbedding]);
+                                if (newVector && newVector.length > 0) {
+                                    const metadata: VectorMetadata = {
+                                        entityId: (finalEntityData as any).id,
+                                        entityType: entityType as any,
+                                        text: textForEmbedding,
+                                        turnNumber: newKb.playerStats.turn,
+                                    };
+
+                                    // Find and update existing vector, or add a new one
+                                    const vectorIndex = newKb.ragVectorStore.metadata.findIndex(m => m.entityId === (finalEntityData as any).id);
+                                    if (vectorIndex > -1) {
+                                        newKb.ragVectorStore.vectors[vectorIndex] = newVector[0];
+                                        newKb.ragVectorStore.metadata[vectorIndex] = metadata;
+                                        console.log(`[RAG SYNC] Updated vector for edited entity: ${metadata.entityId}`);
+                                    } else {
+                                        newKb.ragVectorStore.vectors.push(newVector[0]);
+                                        newKb.ragVectorStore.metadata.push(metadata);
+                                         console.log(`[RAG SYNC] Added new vector for edited entity: ${metadata.entityId}`);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error("Error updating RAG vector on manual edit:", e);
+                                // Don't block UI, just log the error
+                            }
+                        })();
+                    }
+                    // --- END RAG UPDATE ---
+                    
+                    showNotification(`Đã cập nhật: ${(finalEntityData as any).name || (finalEntityData as any).title}`, 'success');
+
                     if (entityType === 'item') {
                         newKb.playerStats = calculateEffectiveStats(newKb.playerStats, newKb.equippedItems, newKb.inventory);
                     }
@@ -444,7 +538,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setReceivedCombatSummaryResponsesLog: gameData.setReceivedCombatSummaryResponsesLog,
         setSentVictoryConsequencePromptsLog: gameData.setSentVictoryConsequencePromptsLog,
         setReceivedVictoryConsequenceResponsesLog: gameData.setReceivedVictoryConsequenceResponsesLog,
-// FIX: Changed 'previousPageSummaries' to 'previousPageSummariesContent' to match the declared variable.
         currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
     });
 
@@ -456,14 +549,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     const mainGameLoopActions = useMainGameLoopActions({
-// FIX: Added missing 'setCurrentPageDisplay' prop.
         ...gameData, showNotification, setCurrentPageDisplay: gameData.setCurrentPageDisplay, onQuit, isLoadingApi, setIsLoadingApi,
         resetApiError, setApiErrorWithTimeout, isAutoPlaying, setIsAutoPlaying,
         executeSaveGame: gameActions.onSaveGame as any,
         logNpcAvatarPromptCallback,
         handleNonCombatDefeat: postCombatActions.handleNonCombatDefeat,
         executeWorldTick: livingWorldActions.executeWorldTick,
-// FIX: Changed 'previousPageSummaries' to 'previousPageSummariesContent' to match the declared variable.
         currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
         setRawAiResponsesLog: gameData.setRawAiResponsesLog,
         sentPromptsLog: gameData.sentPromptsLog,
@@ -472,7 +563,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSummarizationResponsesLog: gameData.setSummarizationResponsesLog,
         isSummarizingNextPageTransition, setIsSummarizingNextPageTransition,
         setRetrievedRagContextLog: gameData.setRetrievedRagContextLog,
-// FIX: Pass the missing log setters from gameData to the main game loop actions hook.
         setSentGeneralSubLocationPromptsLog: gameData.setSentGeneralSubLocationPromptsLog,
         setReceivedGeneralSubLocationResponsesLog: gameData.setReceivedGeneralSubLocationResponsesLog,
     });
@@ -494,6 +584,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // NEW: Handle Rewrite Turn directive from Copilot
             if (rewriteTurnDirective) {
+                // FIX: Pass 'rewriteTurnDirective' instead of undefined 'directive'.
                 await mainGameLoopActions.handleRewriteTurn(rewriteTurnDirective);
                 return; // Stop further processing for this call
             }
@@ -547,14 +638,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         resetApiError, setApiErrorWithTimeout, logNpcAvatarPromptCallback,
         setSentCultivationPromptsLog: gameData.setSentCultivationPromptsLog,
         setReceivedCultivationResponsesLog: gameData.setReceivedCultivationResponsesLog,
-// FIX: Changed 'previousPageSummaries' to 'previousPageSummariesContent' to match the declared variable.
         currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
     });
 
     const characterActions = useCharacterActions({
         ...gameData, showNotification, setCurrentScreen, isLoadingApi, setIsLoadingApi,
         resetApiError, setApiErrorWithTimeout, logNpcAvatarPromptCallback,
-// FIX: Changed 'previousPageSummaries' to 'previousPageSummariesContent' to match the declared variable.
         handleProcessDebugTags, currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
         prisonerInteractionLog: gameData.prisonerInteractionLog, setPrisonerInteractionLog: gameData.setPrisonerInteractionLog,
         sentPrisonerPromptsLog: gameData.sentPrisonerPromptsLog, setSentPrisonerPromptsLog: gameData.setSentPrisonerPromptsLog,

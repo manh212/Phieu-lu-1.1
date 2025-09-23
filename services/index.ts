@@ -6,3 +6,5 @@ export * from './storyService';
 export * from './economyService';
 export * from './characterService';
 export * from './livingWorldService';
+// FIX: Add missing export for the embedding service.
+export * from './embeddingService';

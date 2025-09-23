@@ -3,7 +3,7 @@ import { GameEntity, GameEntityType } from '../../../hooks/types';
 import { KnowledgeBase, PlayerStats, Item, Skill, Quest, NPC, GameLocation, WorldLoreEntry, Companion, Faction, YeuThu, Wife, Slave, Prisoner, ActivityLogEntry, QuestObjective, StartingNPC, RelationshipEntry } from '../../../types/index';
 import * as GameTemplates from '../../../types/index';
 import Modal from '../../ui/Modal';
-import { VIETNAMESE, PROFICIENCY_DMG_HEAL_MULTIPLIERS, PROFICIENCY_COST_COOLDOWN_MULTIPLIERS, PROFICIENCY_EXP_THRESHOLDS, ALL_FACTION_ALIGNMENTS, STAT_POINT_VALUES } from '../../../constants/index';
+import { VIETNAMESE, PROFICIENCY_DMG_HEAL_MULTIPLIERS, PROFICIENCY_COST_COOLDOWN_MULTIPLIERS, PROFICIENCY_EXP_THRESHOLDS, ALL_FACTION_ALIGNMENTS, STAT_POINT_VALUES, SUB_REALM_NAMES } from '../../../constants/index';
 import { PROFICIENCY_TIERS, TU_CHAT_TIERS } from '../../../types/index';
 import { getDeterministicAvatarSrc } from '../../../utils/avatarUtils';
 import InputField from '../../ui/InputField';
@@ -56,6 +56,26 @@ const ProgressBar: React.FC<{ value: number; max: number; colorClass?: string; }
 );
 
 type PersonDetailTab = 'info' | 'personality' | 'log';
+
+// Helper to generate all possible realm strings for dropdowns
+const generateFullRealmOptions = (kb: KnowledgeBase, raceName?: string): string[] => {
+    const race = raceName || kb.worldConfig?.playerRace || 'Nhân Tộc';
+    const raceSystem = kb.worldConfig?.raceCultivationSystems.find(rs => rs.raceName === race);
+    const mainRealms = raceSystem?.realmSystem.split(' - ').map(s => s.trim()) || kb.realmProgressionList;
+    
+    if (!kb.worldConfig?.isCultivationEnabled) {
+        return [VIETNAMESE.mortalRealmName];
+    }
+    
+    const fullOptions = [VIETNAMESE.mortalRealmName, "Không rõ"];
+    mainRealms.forEach(main => {
+        SUB_REALM_NAMES.forEach(sub => {
+            fullOptions.push(`${main} ${sub}`);
+        });
+    });
+    return fullOptions;
+};
+
 
 // --- Reusable Person Details Component with Tabs ---
 const PersonDetails: React.FC<{ person: NPC | Wife | Slave | Prisoner; knowledgeBase: KnowledgeBase; children?: React.ReactNode; onClose: () => void; }> = ({ person, knowledgeBase, children, onClose }) => {
@@ -213,6 +233,10 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
     const isEditing = selectedEntity?.isEditing || false;
     const { openEntityModal } = useGame();
 
+    const fullRealmOptions = useMemo(() => generateFullRealmOptions(knowledgeBase, (formData as NPC)?.race), [knowledgeBase, formData]);
+    const raceOptions = useMemo(() => knowledgeBase.worldConfig?.raceCultivationSystems.map(rs => rs.raceName) || ['Nhân Tộc'], [knowledgeBase.worldConfig]);
+
+
     useEffect(() => {
         setFormData(selectedEntity?.entity ? JSON.parse(JSON.stringify(selectedEntity.entity)) : null);
     }, [selectedEntity]);
@@ -348,8 +372,8 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                     <InputField label="Tên" id="npc-name" value={npc.name} onChange={e => handleFormChange('name', e.target.value)} />
                     <InputField label="Chức danh" id="npc-title" value={npc.title} onChange={e => handleFormChange('title', e.target.value)} />
                     <InputField label="Giới tính" id="npc-gender" type="select" options={['Nam', 'Nữ', 'Khác', 'Không rõ']} value={npc.gender} onChange={e => handleFormChange('gender', e.target.value)} />
-                    <InputField label="Chủng tộc" id="npc-race" value={npc.race} onChange={e => handleFormChange('race', e.target.value)} />
-                    <InputField label="Cảnh giới" id="npc-realm" value={npc.realm} onChange={e => handleFormChange('realm', e.target.value)} />
+                    <InputField label="Chủng tộc" id="npc-race" type="select" options={raceOptions} value={npc.race} onChange={e => handleFormChange('race', e.target.value)} />
+                    <InputField label="Cảnh giới" id="npc-realm" type="select" options={fullRealmOptions} value={npc.realm} onChange={e => handleFormChange('realm', e.target.value)} />
                     <InputField label="Thiện cảm" id="npc-affinity" type="number" value={npc.affinity} onChange={e => handleFormChange('affinity', e.target.value, 'number')} />
                     <InputField label="Tư chất" id="npc-tuChat" type="select" options={[...TU_CHAT_TIERS]} value={npc.tuChat} onChange={e => handleFormChange('tuChat', e.target.value)} />
                     <InputField label="Linh căn" id="npc-spiritualRoot" value={npc.spiritualRoot} onChange={e => handleFormChange('spiritualRoot', e.target.value)} />
@@ -359,13 +383,6 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                     <InputField label="Mô tả" id="npc-description" value={npc.description} onChange={e => handleFormChange('description', e.target.value)} textarea rows={3} className="md:col-span-2"/>
                     <InputField label="Mục tiêu dài hạn" id="npc-longTermGoal" value={npc.longTermGoal} onChange={e => handleFormChange('longTermGoal', e.target.value)} textarea rows={2} className="md:col-span-2"/>
                     <InputField label="Mục tiêu ngắn hạn" id="npc-shortTermGoal" value={npc.shortTermGoal} onChange={e => handleFormChange('shortTermGoal', e.target.value)} textarea rows={2} className="md:col-span-2"/>
-                    <DetailSection title="Chỉ số chiến đấu" defaultOpen={false}>
-                        <InputField label="Sinh lực" type="number" id="npc-hp" value={npc.stats?.sinhLuc ?? ''} onChange={e => handleFormChange('stats.sinhLuc', e.target.value, 'number')} />
-                        <InputField label="Sinh lực tối đa" type="number" id="npc-maxHp" value={npc.stats?.maxSinhLuc ?? ''} onChange={e => handleFormChange('stats.maxSinhLuc', e.target.value, 'number')} />
-                        <InputField label="Linh lực" type="number" id="npc-mp" value={npc.stats?.linhLuc ?? ''} onChange={e => handleFormChange('stats.linhLuc', e.target.value, 'number')} />
-                        <InputField label="Linh lực tối đa" type="number" id="npc-maxMp" value={npc.stats?.maxLinhLuc ?? ''} onChange={e => handleFormChange('stats.maxLinhLuc', e.target.value, 'number')} />
-                        <InputField label="Sức tấn công" type="number" id="npc-atk" value={npc.stats?.sucTanCong ?? ''} onChange={e => handleFormChange('stats.sucTanCong', e.target.value, 'number')} />
-                    </DetailSection>
                 </div>
             ) : <PersonDetails person={npc} knowledgeBase={knowledgeBase} onClose={onClose} />;
             break;
@@ -380,6 +397,7 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
             content = isEditing ? (
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
                     <InputField label="Tên" id="person-name" value={person.name} onChange={e => handleFormChange('name', e.target.value)} />
+                    <InputField label="Cảnh giới" id="person-realm" type="select" options={fullRealmOptions} value={person.realm} onChange={e => handleFormChange('realm', e.target.value)} />
                     <InputField label="Thiện cảm" id="person-affinity" type="number" value={person.affinity} onChange={e => handleFormChange('affinity', e.target.value, 'number')} />
                     <InputField label="Ý chí" id="person-willpower" type="number" value={person.willpower} onChange={e => handleFormChange('willpower', e.target.value, 'number')} />
                     <InputField label="Phục tùng" id="person-obedience" type="number" value={person.obedience} onChange={e => handleFormChange('obedience', e.target.value, 'number')} />
@@ -462,7 +480,7 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                     <InputField label="Tên" id="item-name" value={item.name} onChange={e => handleFormChange('name', e.target.value)} />
                     <InputField label="Số lượng" id="item-quantity" type="number" value={item.quantity} onChange={e => handleFormChange('quantity', e.target.value, 'number')} />
                     <InputField label="Độ hiếm" id="item-rarity" type="select" options={Object.values(GameTemplates.ItemRarity)} value={item.rarity} onChange={e => handleFormChange('rarity', e.target.value)} />
-                    <InputField label="Cảnh giới vật phẩm" id="item-itemRealm" value={item.itemRealm} onChange={e => handleFormChange('itemRealm', e.target.value)} />
+                    <InputField label="Cảnh giới vật phẩm" id="item-itemRealm" type="select" options={generateFullRealmOptions(knowledgeBase, knowledgeBase.worldConfig?.playerRace)} value={item.itemRealm} onChange={e => handleFormChange('itemRealm', e.target.value)} />
                     <InputField label="Mô tả" id="item-description" value={item.description} onChange={e => handleFormChange('description', e.target.value)} textarea rows={3} className="md:col-span-2"/>
                     {isEquipment && equip && (
                         <div className="md:col-span-2">
@@ -572,10 +590,7 @@ const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ selectedEntity, i
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
                     <InputField label="Tên" id="yt-name" value={yt.name} onChange={e => handleFormChange('name', e.target.value)} />
                     <InputField label="Loài" id="yt-species" value={yt.species} onChange={e => handleFormChange('species', e.target.value)} />
-                    <InputField label="Cảnh giới" id="yt-realm" value={yt.realm} onChange={e => handleFormChange('realm', e.target.value)} />
-                    <InputField label="Sinh lực" id="yt-hp" type="number" value={yt.stats?.sinhLuc} onChange={e => handleFormChange('stats.sinhLuc', e.target.value, 'number')} />
-                    <InputField label="Sinh lực tối đa" id="yt-maxHp" type="number" value={yt.stats?.maxSinhLuc} onChange={e => handleFormChange('stats.maxSinhLuc', e.target.value, 'number')} />
-                    <InputField label="Sức tấn công" id="yt-atk" type="number" value={yt.stats?.sucTanCong} onChange={e => handleFormChange('stats.sucTanCong', e.target.value, 'number')} />
+                    <InputField label="Cảnh giới" id="yt-realm" type="select" options={generateFullRealmOptions(knowledgeBase, 'Yêu Tộc')} value={yt.realm} onChange={e => handleFormChange('realm', e.target.value)} />
                     <InputField label="Mô tả" id="yt-desc" value={yt.description} onChange={e => handleFormChange('description', e.target.value)} textarea rows={3} className="md:col-span-2"/>
                     <InputField label="Thù địch?" id="yt-hostile" type="checkbox" checked={yt.isHostile} onChange={e => handleFormChange('isHostile', (e.target as HTMLInputElement).checked, 'checkbox')} />
                  </div>

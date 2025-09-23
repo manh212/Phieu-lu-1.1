@@ -4,7 +4,8 @@ import { KnowledgeBase, GameMessage, WorldSettings, GameScreen, RealmBaseStatDef
 import { INITIAL_KNOWLEDGE_BASE, APP_VERSION, DEFAULT_PLAYER_STATS, DEFAULT_TIERED_STATS, VIETNAMESE, MAX_AUTO_SAVE_SLOTS, DEFAULT_MODEL_ID } from '../../constants';
 // FIX: Corrected import path for services
 import { generateInitialStory } from '../../services';
-import { performTagProcessing, calculateRealmBaseStats, addTurnHistoryEntryRaw, calculateEffectiveStats, vectorizeKnowledgeBase, DEFAULT_AI_CONTEXT_CONFIG, normalizeLocationName } from '../../utils/gameLogicUtils'; // Import vectorizeKnowledgeBase
+// FIX: The function `normalizeLocationName` was causing a type collision. It is now imported with an alias `normalizeLocName` to resolve the error.
+import { performTagProcessing, calculateRealmBaseStats, addTurnHistoryEntryRaw, calculateEffectiveStats, vectorizeKnowledgeBase, DEFAULT_AI_CONTEXT_CONFIG, normalizeLocationName as normalizeLocName } from '../../utils/gameLogicUtils'; // Import vectorizeKnowledgeBase
 // FIX: Corrected import path for templates
 import * as GameTemplates from '../../types/index';
 // FIX: Add missing React import to resolve namespace errors.
@@ -55,13 +56,13 @@ export const useSetupActions = ({
     
     // Seed the map with user-defined locations
     updatedLocations.forEach(location => {
-        locationNameToObjectMap.set(normalizeLocationName(location.name), location);
+        locationNameToObjectMap.set(normalizeLocName(location.name), location);
     });
 
     // Process NPCs to find or create their starting locations
     (worldConfigForKb.startingNPCs || []).forEach(npc => {
         if (npc.locationName && npc.locationName.trim()) {
-            const normalizedLocationName = normalizeLocationName(npc.locationName);
+            const normalizedLocationName = normalizeLocName(npc.locationName);
             if (!locationNameToObjectMap.has(normalizedLocationName)) {
                 // Location doesn't exist, create it.
                 const newLocation: StartingLocation = {
@@ -204,7 +205,7 @@ export const useSetupActions = ({
       if (finalKbForDisplay.discoveredNPCs.length > 0 && settings.startingNPCs.length > 0) {
         const locationNameToIdMap = new Map<string, string>();
         finalKbForDisplay.discoveredLocations.forEach(location => {
-            locationNameToIdMap.set(normalizeLocationName(location.name), location.id);
+            locationNameToIdMap.set(normalizeLocName(location.name), location.id);
         });
 
         settings.startingNPCs.forEach(startingNpc => {
@@ -215,7 +216,7 @@ export const useSetupActions = ({
                 );
 
                 if (discoveredNpc) {
-                    const normalizedLocationName = normalizeLocationName(startingNpc.locationName);
+                    const normalizedLocationName = normalizeLocName(startingNpc.locationName);
                     const locationId = locationNameToIdMap.get(normalizedLocationName);
 
                     if (locationId) {
