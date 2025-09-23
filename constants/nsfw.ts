@@ -136,7 +136,70 @@ export const NSFW_TRANSLATIONS = {
   violenceLevelLabel: "Mức Độ Bạo Lực",
   storyToneLabel: "Tông Màu Câu Chuyện",
   nsfwGuidanceTranTuc: `LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đã được BẬT với phong cách "Trần Tục". Bạn ĐƯỢC PHÉP và ĐƯỢC YÊU CẦU mô tả các cảnh 18+ một cách chi tiết, thẳng thắn, và không né tránh. Sử dụng ngôn ngữ trực diện, không vòng vo. Có thể sử dụng từ ngữ thông tục nếu phù hợp với nhân vật và bối cảnh.`,
-  nsfwGuidanceGoiCam: `LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đã được BẬT với phong cách "Gợi Cảm". Bạn ĐƯỢC PHÉP và ĐƯỢC KHUYẾN KHÍCH mô tả các cảnh 18+ một cách tinh tế, tập trung vào cảm xúc, cảm giác và không khí, khơi gợi trí tưởng tượng của người đọc. Nguyên tắc cốt lõi: "Gợi nhiều hơn Tả".`,
+  nsfwGuidanceGoiCam: `LƯU Ý QUAN TRỌNG:
+Chế độ Người Lớn đã được BẬT với phong cách "Gợi Cảm". Bạn ĐƯỢC PHÉP và ĐƯỢC KHUYẾN KHÍCH mô tả các cảnh 18+ một cách tinh tế, tập trung vào cảm xúc, cảm giác và không khí, khơi gợi trí tưởng tượng của người đọc.
+Nguyên tắc cốt lõi:
+Thay vì mô tả hành động một cách máy móc, hãy tập trung vào trải nghiệm giác quan và diễn biến tâm lý của nhân vật.
+Hướng dẫn chi tiết:
+1. Tập Trung Vào Giác Quan:
+•
+Thị giác:
+Ánh mắt si mê, làn da ửng hồng, những đường cong ẩn hiện, giọt mồ hôi lăn dài, biểu cảm đê mê trên khuôn mặt. Ví dụ: "Ánh nến mờ ảo hắt lên làn da mịn màng của nàng, nơi những đường cong tuyệt mỹ ẩn hiện sau lớp lụa mỏng." hoặc "Đôi mắt chàng tối sầm lại vì ham muốn, nhìn nàng như muốn nuốt chửng."
+•
+Thính giác:
+Tiếng thở dốc ngày một gấp gáp, tiếng rên rỉ khe khẽ, tiếng tim đập thình thịch, tiếng vải lụa sột soạt, tiếng thì thầm bên tai. Ví dụ: "Hơi thở của nàng trở nên gấp gáp, phả vào tai hắn những tiếng rên khẽ ngọt ngào."
+•
+Khứu giác:
+Mùi hương cơ thể quyến rũ, mùi nước hoa thoang thoảng, mùi rượu vang, mùi mồ hôi hòa quyện. Ví dụ: "Mùi hương xạ hương nam tính từ cơ thể chàng khiến nàng choáng váng."
+•
+Vị giác:
+Vị ngọt của nụ hôn, vị mặn của mồ hôi trên da, vị rượu còn vương trên môi. Ví dụ: "Nụ hôn của họ mang vị ngọt ngào của rượu trái cây và sự cuồng nhiệt của đam mê."
+•
+Xúc giác:
+Sự mềm mại của làn da, hơi ấm lan tỏa, những cái chạm nhẹ như điện giật, sự siết chặt của vòng tay, cảm giác tê dại nơi đầu ngón tay. Ví dụ: "Những ngón tay thon dài của chàng lướt nhẹ trên làn da mịn màng của nàng, để lại một vệt nóng bỏng khiến nàng khẽ run rẩy."
+2. Khai Thác Cảm Xúc và Tâm Trạng:
+•
+Ham muốn:
+Sự khao khát cháy bỏng, ánh mắt nhìn nhau không rời, sự căng thẳng khi khoảng cách dần thu hẹp.
+•
+Khoái cảm:
+Sự đê mê, cảm giác lâng lâng, cơ thể run rẩy, tâm trí trống rỗng, những cơn sóng khoái lạc dâng trào.
+•
+Sự kết nối:
+Cảm giác hòa quyện, thấu hiểu, sự đồng điệu về tâm hồn và thể xác.
+•
+Hồi hộp/Ngượng ngùng:
+Tim đập nhanh, má ửng hồng, hơi thở ngắt quãng, sự e ấp ban đầu.
+3. Xây Dựng Không Khí:
+•
+Lãng mạn:
+Ánh nến, hoa hồng, nhạc du dương, không gian riêng tư, ấm cúng.
+•
+Đam mê:
+Sự mãnh liệt, gấp gáp, không thể kìm nén.
+•
+Vụng trộm/Bí ẩn:
+Những cái nhìn lén lút, những cuộc hẹn hò bí mật, sự cấm đoán kích thích.
+4. Sử Dụng Ngôn Ngữ Gợi Mở và Hình Ảnh Tinh Tế:
+•
+Ẩn dụ nhẹ nhàng:
+"Như một đóa hoa hé nở", "cơn sóng tình dâng trào", "lửa tình bùng cháy".
+•
+Mô tả gián tiếp:
+Thay vì nói "họ cởi đồ", có thể tả "chiếc váy lụa mềm mại trượt xuống vai nàng, để lộ làn da trắng ngần". Thay vì "họ quan hệ", có thể tả "hai cơ thể hòa quyện vào nhau trong vũ điệu của tình yêu".
+•
+Tập trung vào phản ứng:
+"Nàng khẽ rùng mình khi hơi thở nóng rực của chàng phả vào gáy." hoặc "Chàng cảm nhận được từng nhịp đập thổn thức của trái tim nàng áp vào lồng ngực mình."
+5. Miêu tả Vẻ Đẹp Cơ Thể Một Cách Nghệ Thuật:
+•
+Sử dụng từ ngữ ca ngợi vẻ đẹp tự nhiên của cơ thể, những đường cong, làn da, mái tóc. Ví dụ: "Mái tóc đen nhánh của nàng xõa tung trên gối, vài sợi vương trên bờ vai thon thả."
+6. Bạo Lực Gợi Cảm (Nếu có):
+•
+Tập trung vào sự căng thẳng, nỗi sợ hãi, cảm giác bất lực hoặc sự hưng phấn trong nguy hiểm.
+•
+Mô tả tác động tâm lý của bạo lực hơn là chỉ mô tả máu me một cách trần trụi. Có thể gợi ý về nỗi đau thông qua biểu cảm, âm thanh, sự run rẩy.
+Yêu cầu cuối cùng:
+Hãy vận dụng những yếu tố trên để tạo ra những cảnh 18+ tinh tế, quyến rũ, chạm đến cảm xúc và trí tưởng tượng của người đọc. Mục tiêu là làm cho người đọc cảm nhận được sự gợi cảm và sức hấp dẫn của cảnh đó, chứ không chỉ đơn thuần là liệt kê hành động.`,
   nsfwGuidanceManhBaoBDSM: `LƯU Ý QUAN TRỌNG: Chế độ Người Lớn đã được BẬT với phong cách "Mạnh Bạo (BDSM)". Bạn ĐƯỢC PHÉP và ĐƯỢC KHUYẾN KHÍCH mô tả các cảnh 18+ liên quan đến thống trị, phục tùng, trói buộc và các yếu tố BDSM khác một cách rõ ràng. Tập trung vào sự tương phản quyền lực, sự kiểm soát, và những cảm giác mạnh mẽ.`,
   violenceLevelGuidanceNheNhang: "Hướng dẫn cho Bạo lực Nhẹ Nhàng: Tránh mô tả chi tiết các vết thương. Kết quả của bạo lực được ám chỉ hơn là thể hiện. Không có máu me hay cảnh tượng tàn bạo.",
   violenceLevelGuidanceThucTe: "Hướng dẫn cho Bạo lực Thực Tế: Mô tả bạo lực một cách chân thực. Có thể có máu và mô tả vết thương, nhưng không tập trung vào sự ghê rợn. Hậu quả của bạo lực là thực tế.",
