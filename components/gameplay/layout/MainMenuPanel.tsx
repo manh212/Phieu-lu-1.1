@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useGame } from '../../../hooks/useGame';
-import { GameScreen } from '../../../types/index';
+import { GameScreen } from '../../../types/enums/core';
 import Button from '../../ui/Button';
 import { VIETNAMESE } from '../../../constants';
 
@@ -85,8 +85,9 @@ export const MainMenuPanel: React.FC<MainMenuPanelProps> = ({ onClose, setIsChar
             </MenuGroup>
 
             <MenuGroup title="Hệ Thống">
+                <MenuButton label="Trí Nhớ RAG" icon="🧠" onClick={() => handleScreenNavigation(GameScreen.RAGMemoryViewer)} title="Xem và ghim các ký ức của AI" />
                 <MenuButton label="Lời Nhắc" icon="📝" onClick={() => handleScreenNavigation(GameScreen.Prompts)} title="Lời nhắc cho AI" />
-                <MenuButton label="Cấu Hình AI" icon="🧠" onClick={() => handleAction(() => setIsAiContextModalOpen(true))} />
+                <MenuButton label="Cấu Hình AI" icon="🤖" onClick={() => handleAction(() => setIsAiContextModalOpen(true))} />
                 <MenuButton label={VIETNAMESE.gameplaySettingsButtonShort || "Hiển thị"} icon="⚙️" onClick={() => handleAction(() => setIsStyleSettingsModalOpen(true))} />
                 <Button
                     variant={showDebugPanel ? "primary" : "ghost"}

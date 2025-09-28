@@ -1,6 +1,6 @@
 // src/utils/livingWorldUtils.ts
 // FIX: Correct import path for types
-import { KnowledgeBase, NPC, WorldTickUpdate, NpcAction, NpcActionPlan, ActivityLogEntry, ActionParameters } from '@/types/index';
+import { KnowledgeBase, NPC, WorldTickUpdate, NpcAction, NpcActionPlan, ActivityLogEntry, ActionParameters } from '../types/index';
 
 const TICK_CANDIDATE_COUNT = 25;
 
@@ -144,7 +144,11 @@ export const convertNpcActionToTag = (action: NpcAction, npc: NPC): string | str
             return `[NPC_UPDATE: ${parts.join(', ')}]`;
         }
         case 'UPDATE_PLAN':
-            return `[NPC_UPDATE: name="${npc.name}", currentPlan="${params.newPlanSteps.join('; ')}"]`;
+            if (params.newPlanSteps && Array.isArray(params.newPlanSteps)) {
+                return `[NPC_UPDATE: name="${npc.name}", currentPlan="${params.newPlanSteps.join('; ')}"]`;
+            }
+            console.warn(`[Living World] Received UPDATE_PLAN action for NPC "${npc.name}" but 'newPlanSteps' was missing or not an array.`, params);
+            return null;
         case 'ACQUIRE_ITEM':
             // This is complex. For now,
             return null; // This action will be logged but not create a tag yet

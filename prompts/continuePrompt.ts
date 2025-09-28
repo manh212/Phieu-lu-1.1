@@ -6,6 +6,8 @@ import { buildRulesSection, DEFAULT_AI_RULEBOOK } from '../constants/systemRules
 import { getWorldDateDifferenceString } from '../utils/dateUtils';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
 import { getNsfwGuidance, getDifficultyGuidance } from './promptUtils';
+import { formatItemForEmbedding, formatSkillForEmbedding, formatPersonForEmbedding, formatLocationForEmbedding, formatLoreForEmbedding, formatFactionForEmbedding, formatYeuThuForEmbedding, formatQuestForEmbedding } from '../utils/ragUtils';
+
 
 const STRICT_MODE_GUIDANCE = `
 CHÚ Ý:
@@ -94,56 +96,51 @@ Bạn hỏi xong rồi lập tức bắt đầu thuyết phục hắn đi theo m
 Bạn hỏi hắn điều đó có thật không. Giọng bạn hơi khàn, nhưng ánh mắt không rời khuôn mặt đối phương. Một thoáng im lặng trôi qua, bạn lặp lại câu hỏi, lần này chắc giọng hơn. Ngay sau đó, bạn khẽ nghiêng đầu, chờ phản ứng. Hắn nhướn mày, rồi cười nhẹ đầy ẩn ý.
 `;
 
-const buildPinnedContext = (worldConfig: WorldSettings): string => {
-    const pinnedContextParts: string[] = [];
-    const { isCultivationEnabled } = worldConfig;
+export const buildPinnedContext = (knowledgeBase: KnowledgeBase): { pinnedContext: string; pinnedIds: string[] } => {
+    const pinnedItems: string[] = [];
+    const pinnedIds: string[] = [];
+    const kb = knowledgeBase;
 
-    const escapeQuotes = (str?: string) => str ? str.replace(/"/g, '\\"') : '';
+    const processList = (list: any[], type: string) => {
+        if (!list) return;
+        list.forEach(e => {
+            if (e.isPinned) {
+                let text = '';
+                switch(type) {
+                    case 'item': text = formatItemForEmbedding(e, kb); break;
+                    case 'skill': text = formatSkillForEmbedding(e, kb); break;
+                    case 'quest': text = formatQuestForEmbedding(e, kb); break;
+                    case 'npc': case 'wife': case 'slave': case 'prisoner': text = formatPersonForEmbedding(e, kb); break;
+                    case 'location': text = formatLocationForEmbedding(e, kb); break;
+                    case 'lore': text = formatLoreForEmbedding(e, kb); break;
+                    case 'faction': text = formatFactionForEmbedding(e, kb); break;
+                    case 'yeuThu': text = formatYeuThuForEmbedding(e, kb); break;
+                }
+                if (text) {
+                    pinnedItems.push(text);
+                    pinnedIds.push(e.id);
+                }
+            }
+        });
+    };
 
-    (worldConfig.startingSkills || []).filter(e => e.isPinned).forEach(skill => {
-        let tag = `[Kỹ năng Ghim: name="${escapeQuotes(skill.name)}" description="${escapeQuotes(skill.description)}" skillType="${skill.skillType || GameTemplates.SkillType.KHAC}"`;
-        // Add other details similar to initialPrompt
-        tag += ']';
-        pinnedContextParts.push(tag);
-    });
+    processList(kb.inventory, 'item');
+    processList(kb.playerSkills, 'skill');
+    processList(kb.allQuests, 'quest');
+    processList(kb.discoveredNPCs, 'npc');
+    processList(kb.discoveredYeuThu, 'yeuThu');
+    processList(kb.wives, 'wife');
+    processList(kb.slaves, 'slave');
+    processList(kb.prisoners, 'prisoner');
+    processList(kb.discoveredLocations, 'location');
+    processList(kb.worldLore, 'lore');
+    processList(kb.discoveredFactions, 'faction');
 
-    (worldConfig.startingItems || []).filter(e => e.isPinned).forEach(item => {
-        let itemString = `[Vật phẩm Ghim: name="${escapeQuotes(item.name)}", quantity=${item.quantity}, category=${item.category}, description="${escapeQuotes(item.description)}"]`;
-        pinnedContextParts.push(itemString);
-    });
-
-    (worldConfig.startingNPCs || []).filter(e => e.isPinned).forEach(npc => {
-        let npcString = `[NPC Ghim: name="${escapeQuotes(npc.name)}", gender="${npc.gender || 'Không rõ'}", race="${npc.race || 'Không rõ'}", personality="${escapeQuotes(npc.personality)}", affinity=${npc.initialAffinity}, details="${escapeQuotes(npc.details)}"`;
-        if (isCultivationEnabled && npc.realm) npcString += `, realm="${npc.realm}"`;
-        if (isCultivationEnabled && npc.tuChat) npcString += `, tuChat="${npc.tuChat}"`;
-        if (npc.relationshipToPlayer) npcString += `, relationshipToPlayer="${escapeQuotes(npc.relationshipToPlayer)}"`;
-        if (isCultivationEnabled && npc.longTermGoal) npcString += `, longTermGoal="${escapeQuotes(npc.longTermGoal)}"`;
-        if (isCultivationEnabled && npc.shortTermGoal) npcString += `, shortTermGoal="${escapeQuotes(npc.shortTermGoal)}"`;
-        npcString += ']';
-        pinnedContextParts.push(npcString);
-    });
-    
-    (worldConfig.startingYeuThu || []).filter(e => e.isPinned).forEach(yt => {
-        pinnedContextParts.push(`[Yêu Thú Ghim: name="${escapeQuotes(yt.name)}", species="${escapeQuotes(yt.species)}", description="${escapeQuotes(yt.description)}", isHostile=${yt.isHostile}, realm="${yt.realm || 'Không rõ'}"]`);
-    });
-
-    (worldConfig.startingLore || []).filter(e => e.isPinned).forEach(lore => {
-        pinnedContextParts.push(`[Tri Thức Ghim: title="${escapeQuotes(lore.title)}"]\nNội dung đầy đủ: """\n${lore.content}\n"""`);
-    });
-
-    (worldConfig.startingLocations || []).filter(e => e.isPinned).forEach(loc => {
-        pinnedContextParts.push(`[Địa Điểm Ghim: name="${escapeQuotes(loc.name)}", description="${escapeQuotes(loc.description)}", type="${loc.locationType || 'Mặc định'}", isSafeZone=${loc.isSafeZone || false}]`);
-    });
-
-    (worldConfig.startingFactions || []).filter(e => e.isPinned).forEach(fac => {
-        pinnedContextParts.push(`[Phe Phái Ghim: name="${escapeQuotes(fac.name)}", description="${escapeQuotes(fac.description)}", alignment="${fac.alignment}", initialPlayerReputation=${fac.initialPlayerReputation}]`);
-    });
-    
-    if (pinnedContextParts.length === 0) {
-        return "Không có yếu tố nào được ghim.";
+    if (pinnedItems.length === 0) {
+        return { pinnedContext: "", pinnedIds: [] };
     }
 
-    return pinnedContextParts.join('\n\n');
+    return { pinnedContext: pinnedItems.join('\n\n'), pinnedIds };
 };
 
 
@@ -200,7 +197,8 @@ export const generateContinuePrompt = (
   };
   // --- END: CONSTRUCT CORE CONTEXT ---
   
-  const pinnedContext = worldConfig ? buildPinnedContext(worldConfig) : '';
+  const { pinnedContext } = buildPinnedContext(knowledgeBase);
+  const combinedRagContext = [pinnedContext, retrievedContext].filter(Boolean).join('\n\n---\n\n');
 
 
   const mainRealms = (knowledgeBase.realmProgressionList || []);
@@ -228,8 +226,8 @@ ${writingStyleGuideSection}
       finalPrompt += `
 **A. BỐI CẢNH TRUY XUẤT (RAG CONTEXT - LONG-TERM MEMORY):**
 Dưới đây là một số thông tin liên quan từ các sự kiện trong quá khứ có thể hữu ích cho lượt này. Hãy sử dụng nó để đảm bảo tính nhất quán của câu chuyện.
-${retrievedContext ? `\`\`\`
-${retrievedContext}
+${combinedRagContext ? `\`\`\`
+${combinedRagContext}
 \`\`\`` : "Không có bối cảnh truy xuất nào."}`;
   }
 
@@ -242,15 +240,6 @@ ${JSON.stringify(coreContext, null, 2)}
 \`\`\``;
   }
   
-  if (pinnedContext) {
-      finalPrompt += `
-**C. BỐI CẢNH CỐT LÕI ĐƯỢC GHIM (PINNED CORE CONTEXT):**
-Đây là những yếu tố CỰC KỲ QUAN TRỌNG mà bạn phải luôn ghi nhớ và ưu tiên trong mọi lời kể và quyết định. Chúng định hình nên bản chất của thế giới và câu chuyện. Toàn bộ nội dung của chúng được cung cấp đầy đủ dưới đây.
-${pinnedContext}
-`;
-  }
-
-
   if (dynamicAiContextConfig.sendConversationalContext) {
       finalPrompt += `
 **D. BỐI CẢNH HỘI THOẠI (CONVERSATIONAL CONTEXT - SHORT-TERM MEMORY):**

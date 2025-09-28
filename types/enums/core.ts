@@ -13,6 +13,7 @@ export enum GameScreen {
   Combat = 'Combat',
   ApiUsage = 'ApiUsage',
   ParameterSettings = 'ParameterSettings',
+  RAGMemoryViewer = 'RAGMemoryViewer',
 }
 
 export type PlayerActionInputType = 'action' | 'story';

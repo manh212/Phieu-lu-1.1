@@ -111,6 +111,7 @@ export interface GameContextType {
     // Actions (will be populated by allActions)
     startQuickPlay: () => void;
     handleUpdateEntity: (entityType: GameEntityType, entityData: GameEntity) => Promise<void>; // NOW ASYNC
+    handlePinEntity: (entityType: GameEntityType, entityId: string) => void; // NEW
     resetCopilotConversation: () => void;
     [key: string]: any; // Index signature to allow dynamic action properties
 }
@@ -171,6 +172,42 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         gameData.setSentCopilotPromptsLog([]);
         showNotification("Cuộc trò chuyện với Siêu Trợ Lý đã được làm mới.", "info");
     }, [gameData.setAiCopilotMessages, gameData.setSentCopilotPromptsLog, showNotification]);
+
+    const handlePinEntity = useCallback((entityType: GameEntityType, entityId: string) => {
+        gameData.setKnowledgeBase(prevKb => {
+            const newKb = JSON.parse(JSON.stringify(prevKb));
+            let listToUpdate: any[] | undefined;
+
+            switch(entityType) {
+                case 'npc': listToUpdate = newKb.discoveredNPCs; break;
+                case 'item': listToUpdate = newKb.inventory; break;
+                case 'skill': listToUpdate = newKb.playerSkills; break;
+                case 'quest': listToUpdate = newKb.allQuests; break;
+                case 'location': listToUpdate = newKb.discoveredLocations; break;
+                case 'lore': listToUpdate = newKb.worldLore; break;
+                case 'faction': listToUpdate = newKb.discoveredFactions; break;
+                case 'companion': listToUpdate = newKb.companions; break;
+                case 'yeuThu': listToUpdate = newKb.discoveredYeuThu; break;
+                case 'wife': listToUpdate = newKb.wives; break;
+                case 'slave': listToUpdate = newKb.slaves; break;
+                case 'prisoner': listToUpdate = newKb.prisoners; break;
+            }
+
+            if(listToUpdate) {
+                const entity = listToUpdate.find(item => item.id === entityId);
+                if (entity) {
+                    entity.isPinned = !entity.isPinned;
+                    showNotification(`Đã ${entity.isPinned ? 'ghim' : 'bỏ ghim'} '${entity.name || entity.title}'.`, 'info');
+                } else {
+                    console.warn(`handlePinEntity: Could not find entity with ID ${entityId} in list ${entityType}`);
+                }
+            } else {
+                 console.warn(`handlePinEntity: Could not find list for entity type ${entityType}`);
+            }
+
+            return newKb;
+        });
+    }, [gameData.setKnowledgeBase, showNotification]);
 
     const handleUpdateEntity = useCallback(async (entityType: GameEntityType, entityData: GameEntity) => {
         // A helper function to get the correct formatted text for the RAG system
@@ -672,7 +709,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCurrentScreen, setKnowledgeBase: gameData.setKnowledgeBase, setGameMessages: gameData.setGameMessages,
         setStyleSettings, openEntityModal, closeModal, closeEconomyModal, closeSlaveMarketModal,
         setIsStyleSettingsModalOpen, setIsAiContextModalOpen, setActiveEconomyModal, setActiveSlaveMarketModal,
-        handleUpdateEntity,
+        handleUpdateEntity, handlePinEntity,
         ...allActions, onQuit, startQuickPlay, resetCopilotConversation, isCurrentlyActivePage, gameplayScrollPosition, justLoadedGame,
         onGoToPrevPage, onGoToNextPage, onJumpToPage,
     };

@@ -50,7 +50,7 @@ export interface Master extends PersonBase {
 }
 
 export interface Companion {
-  id: string; name: string; description: string; hp: number; maxHp: number; mana: number; maxMana: number; atk: number;
+  id: string; name: string; description: string; hp: number; maxHp: number; mana: number; maxMana: number; atk: number; isPinned?: boolean;
 }
 
 export interface NPC {

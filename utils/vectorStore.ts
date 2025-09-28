@@ -51,13 +51,15 @@ export function cosineSimilarity(vecA: number[], vecB: number[]): number {
  * @param vectorStore The store containing all the document vectors and their metadata.
  * @param topK The number of top results to return.
  * @param currentTurn The current turn number of the game.
+ * @param excludeIds An array of entity IDs to exclude from the search results.
  * @returns An array of the top K most similar text chunks.
  */
 export function searchVectors(
     queryVector: number[],
     vectorStore: VectorStore,
     topK: number = 3,
-    currentTurn: number
+    currentTurn: number,
+    excludeIds: string[] = []
 ): string[] {
     if (!vectorStore || vectorStore.vectors.length === 0) {
         return [];
@@ -69,8 +71,8 @@ export function searchVectors(
     // Calculate similarity scores for all vectors in the store
     const scores = vectorStore.vectors.map((vec, index) => {
         const metadata = vectorStore.metadata[index];
-        if (!metadata) {
-            return { score: -1, text: '' }; // Should not happen if data is consistent
+        if (!metadata || excludeIds.includes(metadata.entityId)) {
+            return { score: -Infinity, text: '' }; // Exclude or handle missing metadata
         }
         
         const semanticScore = cosineSimilarity(queryVector, vec);

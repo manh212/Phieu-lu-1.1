@@ -12,7 +12,7 @@ export interface EquipmentSlotConfig {
   icon?: string;
 }
 
-export interface BaseItemTemplate { id: string; name: string; description: string; category: ItemCategoryValues; rarity: EquipmentRarity; value?: number; icon?: string; stackable?: boolean; maxStack?: number; quantity: number; itemRealm?: string; }
+export interface BaseItemTemplate { id: string; name: string; description: string; category: ItemCategoryValues; rarity: EquipmentRarity; value?: number; icon?: string; stackable?: boolean; maxStack?: number; quantity: number; itemRealm?: string; isPinned?: boolean; }
 export interface EquipmentTemplate extends BaseItemTemplate { category: "Equipment"; equipmentType: EquipmentTypeValues; slot?: string; statBonuses: Partial<Omit<PlayerStats, 'realm' | 'currency' | 'isInCombat' | 'turn' | 'hieuUngBinhCanh' | 'baseMaxKinhNghiem' | 'baseMaxLinhLuc' | 'baseMaxSinhLuc' | 'baseSucTanCong' | 'activeStatusEffects' | 'sinhLuc' | 'linhLuc' | 'kinhNghiem' | 'spiritualRoot' | 'specialPhysique' | 'professions' | 'tuChat' | 'playerSpecialStatus' | 'basePhongThu' | 'baseTocDo' | 'baseChinhXac' | 'baseNeTranh' | 'baseTiLeChiMang' | 'baseSatThuongChiMang'>>; uniqueEffects: string[]; durability?: number; maxDurability?: number; levelRequirement?: number; usable?: boolean; consumable?: boolean; }
 export interface PotionTemplate extends BaseItemTemplate { category: "Potion"; potionType: PotionTypeValues; effects: string[]; durationTurns?: number; isConsumedOnUse: true; cooldownTurns?: number; usable: true; consumable: true; }
 export interface MaterialTemplate extends BaseItemTemplate { category: "Material"; materialType: MaterialTypeValues; usable: false; consumable: false; }

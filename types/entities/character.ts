@@ -84,6 +84,7 @@ export interface PersonBase {
     specialPhysique?: string;
     stats: Partial<PlayerStats>;
     locationId?: string;
+    isPinned?: boolean;
 }
 
 export interface ComplexCompanionBase extends PersonBase {

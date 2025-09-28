@@ -1,17 +1,20 @@
 import React from 'react';
-import { GameScreen } from '@/types/enums/core';
+// FIX: Correct import path for types
+import { GameScreen } from '@/types/index';
 import { useGame } from '../hooks/useGame';
 
 // Import all screen components
 import InitialScreen from './InitialScreen';
 import GameSetupScreen from './GameSetupScreen';
 import { GameplayScreen } from './GameplayScreen';
+// FIX: Changed to a named import as EquipmentScreen does not have a default export.
 import { EquipmentScreen } from './gameplay/equipment/EquipmentScreen';
 import { CraftingScreen } from './gameplay/crafting/CraftingScreen';
 import ApiSettingsScreen from './ApiSettingsScreen';
 import LoadGameScreen from './LoadGameScreen';
 import StorageSettingsScreen from './StorageSettingsScreen';
 import ImportExportScreen from './ImportExportScreen';
+// FIX: Changed to named import for MapPanel
 import { MapPanel } from './gameplay/map/MapPanel';
 import AuctionScreen from './AuctionScreen';
 import CultivationScreen from './CultivationScreen';
@@ -32,6 +35,7 @@ const AppRouter: React.FC = () => {
 
     switch (game.currentScreen) {
         case GameScreen.Initial:
+// FIX: The InitialScreen component no longer accepts props as it sources them from the useGame hook. The unnecessary props have been removed.
             return <InitialScreen />;
         case GameScreen.GameSetup:
             return <GameSetupScreen 
@@ -141,9 +145,11 @@ const AppRouter: React.FC = () => {
             />;
         case GameScreen.Prompts:
             return <PromptsScreen />;
+        // FIX: Add missing ApiUsage screen case to the router.
         case GameScreen.ApiUsage:
             return <ApiUsageScreen />;
         default:
+// FIX: The InitialScreen component no longer accepts props as it sources them from the useGame hook. The unnecessary props have been removed.
             return <InitialScreen />;
     }
 };

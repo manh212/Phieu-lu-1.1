@@ -8,10 +8,12 @@ export interface QuestObjective {
 
 export interface Quest {
   id: string; title: string; description: string; status: 'active' | 'completed' | 'failed'; objectives: QuestObjective[];
+  isPinned?: boolean;
 }
 
 export interface WorldLoreEntry {
   id: string; title: string; content: string;
+  isPinned?: boolean;
 }
 
 export interface WorldDate {
@@ -32,6 +34,7 @@ export interface GameLocation extends LocationTemplate {
     mapY?: number; 
     connections?: LocationConnection[];
     lastAuctionYear?: number;
+    isPinned?: boolean;
 }
 
 export interface Faction { 
@@ -48,7 +51,8 @@ export interface Faction {
     playerReputation: number; 
     npcReputations?: Record<string, number>;
     reputationTiers?: Record<string, { threshold: number; title: string; benefits?: string[] }>; 
-    ranks?: Array<{ rankName: string; reputationRequired: number; benefits?: string[] }>; 
+    ranks?: Array<{ rankName: string; reputationRequired: number; benefits?: string[] }>;
+    isPinned?: boolean;
 }
 
 export interface YeuThu {
@@ -63,6 +67,7 @@ export interface YeuThu {
     skills?: string[];
     lootTable?: Array<{ itemId: string, dropChance: number, minQuantity: number, maxQuantity: number }>;
     locationId?: string;
+    isPinned?: boolean;
 }
 
 export interface EventDetail {

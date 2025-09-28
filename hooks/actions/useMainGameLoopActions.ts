@@ -6,6 +6,7 @@ import { countTokens, generateRefreshedChoices, generateNextTurn, summarizeTurnH
 import { generateEmbeddings } from '../../services/embeddingService';
 import { performTagProcessing, addTurnHistoryEntryRaw, getMessagesForPage, calculateEffectiveStats, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, handleLocationEntryEvents, searchVectors, extractEntityContextsFromString, worldDateToTotalMinutes } from '../../utils/gameLogicUtils';
 import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS, LIVING_WORLD_TICK_INTERVAL_HOURS } from '../../constants';
+import { buildPinnedContext } from '../../prompts/continuePrompt';
 
 export interface UseMainGameLoopActionsProps {
   knowledgeBase: KnowledgeBase;
@@ -115,22 +116,33 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         let retrievedContext: string | undefined = undefined;
         const apiSettings = getApiSettings();
         const ragTopK = apiSettings.ragTopK ?? 10;
+        
+        // New Pinned Context Logic
+        const { pinnedContext, pinnedIds } = buildPinnedContext(knowledgeBase);
+        let ragSearchResultsText = '';
+
         if (knowledgeBase.ragVectorStore && knowledgeBase.ragVectorStore.vectors.length > 0 && ragTopK > 0) {
             try {
                 const contextChunks = new Set<string>(extractEntityContextsFromString(action, knowledgeBase));
                 const queryEmbedding = await generateEmbeddings([action]);
                 if (queryEmbedding && queryEmbedding.length > 0) {
-                    const searchResults = searchVectors(queryEmbedding[0], knowledgeBase.ragVectorStore, ragTopK, knowledgeBase.playerStats.turn);
+                    const searchResults = searchVectors(queryEmbedding[0], knowledgeBase.ragVectorStore, ragTopK, knowledgeBase.playerStats.turn, pinnedIds);
                     searchResults.forEach(ctx => contextChunks.add(ctx));
                 }
                 if (contextChunks.size > 0) {
-                    retrievedContext = Array.from(contextChunks).join('\n---\n');
-                    setRetrievedRagContextLog(prev => [retrievedContext!, ...prev].slice(0, 10));
+                    ragSearchResultsText = Array.from(contextChunks).join('\n---\n');
                 }
             } catch (e) {
                 showNotification("Lỗi khi truy xuất ký ức (RAG).", 'error');
             }
         }
+        
+        // Combine pinned and search results
+        retrievedContext = [pinnedContext, ragSearchResultsText].filter(Boolean).join('\n\n---\n\n');
+        if(retrievedContext) {
+            setRetrievedRagContextLog(prev => [retrievedContext!, ...prev].slice(0, 10));
+        }
+
 
         try {
             const { response, rawText } = await generateNextTurn(

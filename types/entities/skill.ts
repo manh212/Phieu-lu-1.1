@@ -1,6 +1,6 @@
 // types/entities/skill.ts
 import type { PlayerStats } from './character';
-// FIX: Changed barrel file import to direct file imports to break circular dependency.
+// FIX: Changed barrel file import to direct file import to break circular dependency.
 import type { SkillTypeValues, SkillTargetType, CongPhapType, CongPhapGrade, LinhKiCategory, LinhKiActivationType, ProfessionType, ProfessionGrade } from '../enums/item';
 import type { ProficiencyTier } from '../enums/character';
 
@@ -18,6 +18,7 @@ export interface Skill {
     professionDetails?: { type?: ProfessionType; grade?: ProfessionGrade; skillDescription?: string; };
     camThuatDetails?: { sideEffects?: string; };
     thanThongDetails?: {};
+    isPinned?: boolean;
 }
 
 export type SkillTemplate = Skill;
