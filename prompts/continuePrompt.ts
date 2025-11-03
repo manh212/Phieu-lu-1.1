@@ -194,7 +194,7 @@ export const generateContinuePrompt = (
                 break;
             
             case 'custom':
-                if (block.content) {
+                if (block.content !== undefined && block.content !== null) {
                     blockContent = `**${block.label}:**\n${interpolate(block.content, knowledgeBase)}`;
                 }
                 break;

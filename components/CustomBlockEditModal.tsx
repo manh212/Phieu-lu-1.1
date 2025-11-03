@@ -41,7 +41,7 @@ const CustomBlockEditModal: React.FC<CustomBlockEditModalProps> = ({ isOpen, onC
         const interpolated = interpolate(editedBlock.content || '', knowledgeBase);
         setPreviewContent(interpolated);
     }
-  }, [editedBlock, knowledgeBase, isOpen]);
+  }, [editedBlock?.content, isOpen]);
 
 
   if (!isOpen || !editedBlock) {

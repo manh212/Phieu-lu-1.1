@@ -145,7 +145,8 @@ const processTemplate = (template: string, context: any): string => {
         output += match[1]; // Text before tag
         const tagType = match[2];
         const tagContent = match[3].trim();
-        remaining = remaining.substring(match[0].length);
+        const tagFull = match[0];
+        remaining = remaining.substring(tagFull.length);
 
         if (tagType === '{{') { // Expression: {{ ... }}
             try {
@@ -177,41 +178,53 @@ const processTemplate = (template: string, context: any): string => {
             const [command, ...args] = tagContent.split(/\s+/);
             
             if (command === 'if') {
-                const condition = args.join(' ');
                 const endifRegex = /{%-?\s*endif\s*-?%}/s;
+                const endifMatch = remaining.match(endifRegex);
+
+                if (!endifMatch) {
+                    output += tagFull; // Treat broken tag as literal text
+                    continue; // Continue parsing after it
+                }
+
+                const condition = args.join(' ');
                 const elseRegex = /{%-?\s*else\s*-?%}/s;
                 
-                let contentToEndif = remaining;
-                const endifMatch = contentToEndif.match(endifRegex);
-                if (endifMatch && endifMatch.index !== undefined) {
-                    contentToEndif = remaining.substring(0, endifMatch.index);
-                    remaining = remaining.substring(endifMatch.index + endifMatch[0].length);
-                }
+                const contentToEndif = remaining.substring(0, endifMatch.index!);
+                remaining = remaining.substring(endifMatch.index! + endifMatch[0].length);
 
                 const elseMatch = contentToEndif.match(elseRegex);
                 if (evaluateCondition(condition, context)) {
-                    const ifContent = elseMatch ? contentToEndif.substring(0, elseMatch.index) : contentToEndif;
+                    const ifContent = elseMatch ? contentToEndif.substring(0, elseMatch.index!) : contentToEndif;
                     output += processTemplate(ifContent, context);
                 } else if (elseMatch) {
-                    const elseContent = contentToEndif.substring(elseMatch.index + elseMatch[0].length);
+                    const elseContent = contentToEndif.substring(elseMatch.index! + elseMatch[0].length);
                     output += processTemplate(elseContent, context);
                 }
             } else if (command === 'for') {
                 const loopVar = args[0];
                 const arrayPath = args[2];
                 const array = evaluateExpression(arrayPath, context);
-
+                
                 const endforRegex = /{%-?\s*endfor\s*-?%}/s;
-                const forMatch = remaining.match(endforRegex);
-                if (forMatch && forMatch.index !== undefined && Array.isArray(array)) {
-                    const loopContent = remaining.substring(0, forMatch.index);
-                    remaining = remaining.substring(forMatch.index + forMatch[0].length);
+                const endforMatch = remaining.match(endforRegex);
 
-                    for (const item of array) {
-                        const loopContext = { ...context, [loopVar]: item };
-                        output += processTemplate(loopContent, loopContext);
+                if (!endforMatch || !Array.isArray(array)) {
+                    output += tagFull; // Treat as literal
+                    if (!Array.isArray(array)) {
+                        output += `[Lỗi: '${arrayPath}' không phải là một mảng]`;
                     }
+                    continue; // Continue parsing after this broken tag
                 }
+
+                const loopContent = remaining.substring(0, endforMatch.index!);
+                remaining = remaining.substring(endforMatch.index! + endforMatch[0].length);
+
+                for (const item of array) {
+                    const loopContext = { ...context, [loopVar]: item };
+                    output += processTemplate(loopContent, loopContext);
+                }
+            } else {
+                 output += tagFull; // Unknown command
             }
         }
     }
@@ -220,7 +233,7 @@ const processTemplate = (template: string, context: any): string => {
 
 
 export const interpolate = (text: string, knowledgeBase: KnowledgeBase): string => {
-    if (!text || typeof text !== 'string') return '';
+    if (text === null || text === undefined || typeof text !== 'string') return '';
     try {
         const context = { knowledgeBase };
         return processTemplate(text, context);

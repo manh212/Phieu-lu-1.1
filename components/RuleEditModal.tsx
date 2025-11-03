@@ -110,7 +110,7 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({ isOpen, onClose, block, k
         const interpolated = interpolate(editedContent, knowledgeBase);
         setPreviewContent(interpolated);
     }
-  }, [editedContent, knowledgeBase, isOpen, activeTab]);
+  }, [editedContent, isOpen, activeTab]);
 
   const handleAnyChange = () => {
     if (!hasChanges) setHasChanges(true);

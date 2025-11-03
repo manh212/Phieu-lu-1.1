@@ -251,7 +251,7 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                 showNotification(`Đã nạp preset "${presetName}".`, 'info');
             }
         }
-        setHasChanges(false);
+        setHasChanges(true); // FIX: Mark changes as true when a preset is loaded
     };
 
     const handleSaveChangesAsPreset = (name: string, description: string) => {
