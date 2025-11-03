@@ -365,15 +365,15 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                        </div>
                     </div>
 
-                    <div className="flex-grow overflow-y-auto custom-scrollbar -mx-6 px-6 pb-4 space-y-1">
+                    <div className="flex-grow overflow-y-auto custom-scrollbar -mx-6 px-6 pb-4 space-y-2">
                         {promptStructure.map((block, index) => {
                             if (block.type === 'header') {
-                                return <h3 key={block.id} className="text-lg font-semibold text-gray-400 mt-4 pt-2 border-t border-gray-700">{block.label}</h3>;
+                                // Headers are now removed as per the new request.
+                                return null;
                             }
 
                             const hasConditions = block.conditions && block.conditions.length > 0;
                             
-                            // Render based on moveModeState
                             if (moveModeState) {
                                 const isSource = moveModeState.sourceIndex === index;
                                 return (
@@ -395,35 +395,37 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                                 );
                             }
 
-                            // Normal rendering when not in move mode
                             return (
-                                <div key={block.id} className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg transition-colors hover:bg-gray-800/80 group">
-                                    <div className="flex items-center gap-3 flex-grow overflow-hidden">
+                                <div key={block.id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg transition-colors hover:bg-gray-800/80 group border border-transparent hover:border-gray-700">
+                                    <h2 className="text-base font-semibold text-gray-200 truncate flex-grow mr-4" title={`${block.label}: ${block.description}`}>
+                                        <label htmlFor={`toggle-${block.id}`} className="cursor-pointer flex items-center gap-2">
+                                            <span>
+                                                {block.label}
+                                                <span className="text-xs text-gray-400 font-normal ml-2">
+                                                    - {block.description}
+                                                </span>
+                                            </span>
+                                            {hasConditions && (
+                                                <div title={formatConditionsForTooltip(block.conditions!)} className="flex-shrink-0">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-cyan-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V17a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4.586L3.293 6.707A1 1 0 013 6V3zm3.146 5.854l4-4 .708.708-4 4-.708-.708zm4.708-3.146l-4 4-.708-.708 4-4 .708.708z" clipRule="evenodd" /></svg>
+                                                </div>
+                                            )}
+                                        </label>
+                                    </h2>
+                                    
+                                    <div className="flex items-center flex-shrink-0 ml-auto gap-2">
                                         <button
                                             onClick={() => block.isMovable && handleInitiateMove(index)}
                                             disabled={!block.isMovable}
-                                            className="p-1 text-gray-500 hover:text-white cursor-grab disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-indigo-400 rounded"
+                                            className="p-1 text-gray-500 hover:text-white cursor-grab disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-indigo-400 rounded opacity-50 group-hover:opacity-100 focus:opacity-100"
                                             aria-label={`Di chuyển ${block.label}`}
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
                                             </svg>
                                         </button>
-                                        <div className="overflow-hidden flex items-center gap-2">
-                                            {hasConditions && (
-                                                <div title={formatConditionsForTooltip(block.conditions!)}>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-cyan-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V17a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4.586L3.293 6.707A1 1 0 013 6V3zm3.146 5.854l4-4 .708.708-4 4-.708-.708zm4.708-3.146l-4 4-.708-.708 4-4 .708.708z" clipRule="evenodd" /></svg>
-                                                </div>
-                                            )}
-                                            <div>
-                                                <label htmlFor={`toggle-${block.id}`} className="font-medium text-gray-200 cursor-pointer block truncate" title={block.label}>{block.label}</label>
-                                                <p className="text-xs text-gray-400 truncate" title={block.description}>{block.description}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center flex-shrink-0 ml-2">
                                         {block.isEditable && (
-                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(block)} className="!py-1 !px-2 text-xs border border-gray-600 mr-2 opacity-50 group-hover:opacity-100 focus:opacity-100" title={`Chỉnh sửa ${block.label}`}>Sửa</Button>
+                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(block)} className="!py-1 !px-2 text-xs border border-gray-600 opacity-50 group-hover:opacity-100 focus:opacity-100" title={`Chỉnh sửa ${block.label}`}>Sửa</Button>
                                         )}
                                         <div className="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" id={`toggle-${block.id}`} checked={block.enabled} onChange={() => handleToggle(block.id)} className="sr-only peer"/>
@@ -441,7 +443,6 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                     </div>
                 </div>
 
-                {/* NEW: Cancel Move Button */}
                 {moveModeState !== null && (
                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4">
                         <Button variant="danger" onClick={handleCancelMove} className="w-full shadow-lg">
