@@ -117,11 +117,19 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
 
     useEffect(() => {
         const initialStructure = knowledgeBase.promptStructure || DEFAULT_PROMPT_STRUCTURE;
+        const initialRulebook = knowledgeBase.aiRulebook || DEFAULT_AI_RULEBOOK;
         setPromptStructure(JSON.parse(JSON.stringify(initialStructure)));
-        setRulebook(knowledgeBase.aiRulebook || DEFAULT_AI_RULEBOOK);
+        setRulebook(JSON.parse(JSON.stringify(initialRulebook)));
+
+        const activePresetNameInGame = knowledgeBase.activeAiPresetName;
+        if (activePresetNameInGame && aiPresets[activePresetNameInGame]) {
+            setSelectedPresetName(activePresetNameInGame);
+        } else {
+            setSelectedPresetName('load_current_game_config');
+        }
+
         setHasChanges(false);
-        setSelectedPresetName('load_current_game_config');
-    }, [knowledgeBase.promptStructure, knowledgeBase.aiRulebook]);
+    }, []); // Empty dependency array is the key fix.
 
     // NEW: Effect to handle Escape key for canceling move mode
     useEffect(() => {
@@ -135,8 +143,9 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
     }, [moveModeState]);
 
     const markChanges = () => {
-        setHasChanges(true);
-        setSelectedPresetName('custom');
+        if (!hasChanges) {
+            setHasChanges(true);
+        }
     };
 
     const handleToggle = (id: string) => {
@@ -228,23 +237,18 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
     
     const handlePresetChange = (e: ChangeEvent<HTMLSelectElement>) => {
         const presetName = e.target.value;
-        if (presetName === 'custom') {
-            if (!hasChanges) {
-                setSelectedPresetName('load_current_game_config');
-            }
-            return;
-        };
+        if (presetName === selectedPresetName) return;
 
         if (hasChanges && !window.confirm("Bạn có thay đổi chưa lưu. Bạn có chắc muốn tải cấu hình khác và hủy các thay đổi hiện tại không?")) {
+            e.target.value = selectedPresetName;
             return;
         }
-
-        setSelectedPresetName(presetName);
 
         if (presetName === 'load_current_game_config') {
             setPromptStructure(JSON.parse(JSON.stringify(knowledgeBase.promptStructure || DEFAULT_PROMPT_STRUCTURE)));
             setRulebook(knowledgeBase.aiRulebook || DEFAULT_AI_RULEBOOK);
             showNotification('Đã nạp cấu hình hiện tại của game.', 'info');
+            setHasChanges(false);
         } else {
             const preset = aiPresets[presetName];
             if (preset) {
@@ -252,8 +256,9 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                 setRulebook(preset.configuration.rulebookContent || DEFAULT_AI_RULEBOOK);
                 showNotification(`Đã nạp preset "${presetName}".`, 'info');
             }
+            setHasChanges(true); 
         }
-        setHasChanges(true);
+        setSelectedPresetName(presetName);
     };
 
     const handleSaveChangesAsPreset = (name: string, description: string) => {
@@ -272,13 +277,29 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
         };
         saveNewAIPreset(name, newPreset);
         setSelectedPresetName(name);
-        setHasChanges(false);
     };
 
     const handleApplyAndClose = () => {
-        setKnowledgeBase(prevKb => ({ ...prevKb, promptStructure, aiRulebook: rulebook }));
+        const presetNameToPersist = selectedPresetName === 'load_current_game_config' ? null : selectedPresetName;
+    
+        setKnowledgeBase(prevKb => ({
+            ...prevKb,
+            promptStructure,
+            aiRulebook: rulebook,
+            activeAiPresetName: presetNameToPersist
+        }));
         showNotification('Cài đặt Cấu Hình AI đã được áp dụng!', 'success');
         onClose();
+    };
+
+    const handleCloseWithConfirmation = () => {
+        if (hasChanges) {
+            if (window.confirm("Bạn có các thay đổi chưa được áp dụng. Bạn có chắc muốn đóng và hủy bỏ các thay đổi này không?")) {
+                onClose();
+            }
+        } else {
+            onClose();
+        }
     };
 
     const buildPreviewPrompt = (structure: PromptBlock[], rules: AIRulebook, worldConfig: WorldSettings | null): string => {
@@ -334,12 +355,9 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
 
     const presetOptions = useMemo(() => {
         const options = [{ value: 'load_current_game_config', label: VIETNAMESE.loadCurrentConfigPresetName }];
-        if (hasChanges) {
-            options.unshift({ value: 'custom', label: VIETNAMESE.customPresetName });
-        }
         const savedPresets = Object.keys(aiPresets).sort().map(name => ({ value: name, label: name }));
         return [...options, ...savedPresets];
-    }, [aiPresets, hasChanges]);
+    }, [aiPresets]);
 
     const filteredPromptStructure = useMemo(() => {
         switch (viewFilter) {
@@ -355,13 +373,13 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
 
     return (
         <>
-            <Modal isOpen={true} onClose={onClose} title="Cấu Hình Prompt AI">
+            <Modal isOpen={true} onClose={handleCloseWithConfirmation} title="Cấu Hình Prompt AI">
                 <div className="flex flex-col h-[70vh]">
                     <div className="flex-shrink-0 bg-gray-800 p-3 rounded-lg border border-gray-700 space-y-3 mb-4">
                        <p className="text-sm text-gray-300">Quản lý và chuyển đổi giữa các cấu hình prompt đã lưu.</p>
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                             <InputField
-                                label="Cấu hình đang dùng:"
+                                label="Cấu hình đã nạp:"
                                 id="preset-selector"
                                 type="select"
                                 value={selectedPresetName}
@@ -386,7 +404,7 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                             </div>
                         </div>
                        <div className="flex gap-2 pt-2 border-t border-gray-700">
-                           <Button variant="secondary" size="sm" onClick={() => setIsSaveModalOpen(true)} disabled={!hasChanges}>
+                           <Button variant="secondary" size="sm" onClick={() => setIsSaveModalOpen(true)}>
                                {VIETNAMESE.savePresetButton}
                            </Button>
                            <Button variant="secondary" size="sm" onClick={() => setIsManageModalOpen(true)}>
@@ -479,13 +497,20 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                         </Button>
                     </div>
                 )}
-                 <div className="mt-6 pt-4 border-t border-gray-700 flex justify-between items-center">
-                    <Button variant="ghost" onClick={handlePreviewClick}>
-                        Xem Trước Prompt...
-                    </Button>
-                    <Button variant="primary" onClick={handleApplyAndClose} disabled={!hasChanges}>
-                        Lưu & Áp Dụng
-                    </Button>
+                <div className="mt-6 pt-4 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-2">
+                    <div className="flex gap-2">
+                        <Button variant="ghost" onClick={handlePreviewClick}>
+                            Xem Trước Prompt...
+                        </Button>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="secondary" onClick={handleCloseWithConfirmation}>
+                            {VIETNAMESE.cancelEditButton}
+                        </Button>
+                        <Button variant="primary" onClick={handleApplyAndClose} disabled={!hasChanges}>
+                            Lưu & Áp Dụng
+                        </Button>
+                    </div>
                 </div>
             </Modal>
             

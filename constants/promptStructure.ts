@@ -3,14 +3,6 @@
 import { PromptBlock } from '../types/config';
 
 export const DEFAULT_PROMPT_STRUCTURE: PromptBlock[] = [
-    // --- HEADERS AND CORE CONTEXT ---
-    {
-        id: 'header_context',
-        label: 'PHẦN 1: BỐI CẢNH (CONTEXT)',
-        description: 'Tiêu đề phân chia các khối bối cảnh.',
-        type: 'header',
-        enabled: true, isEditable: false, isMovable: false,
-    },
     {
         id: 'ragContext',
         label: "A. Bối Cảnh Truy Xuất (RAG Context - Trí nhớ dài hạn)",
@@ -42,15 +34,6 @@ export const DEFAULT_PROMPT_STRUCTURE: PromptBlock[] = [
         type: 'system',
         enabled: true, isEditable: true, isMovable: true,
         rulebookKey: 'stagedActionsContextWrapper',
-    },
-
-    // --- GUIDANCE SECTION ---
-    {
-        id: 'header_guidance',
-        label: 'PHẦN 2: HƯỚNG DẪN HÀNH ĐỘNG',
-        description: 'Tiêu đề phân chia các khối hướng dẫn cho AI.',
-        type: 'header',
-        enabled: true, isEditable: false, isMovable: false,
     },
     {
         id: 'rule_aiThinkingProcess',
@@ -124,14 +107,6 @@ export const DEFAULT_PROMPT_STRUCTURE: PromptBlock[] = [
         enabled: true, isEditable: true, isMovable: true,
         rulebookKey: 'responseLengthGuidanceTemplate',
     },
-     // --- NEW REFACTORED DIFFICULTY RULES ---
-    {
-        id: 'header_difficulty',
-        label: 'HƯỚNG DẪN VỀ ĐỘ KHÓ',
-        description: 'Các quy tắc về độ khó.',
-        type: 'header',
-        enabled: true, isEditable: false, isMovable: false,
-    },
     {
         id: 'difficultyEasy',
         label: "[Độ Khó] Dễ",
@@ -163,14 +138,6 @@ export const DEFAULT_PROMPT_STRUCTURE: PromptBlock[] = [
         type: 'system',
         enabled: false, isEditable: true, isMovable: true,
         rulebookKey: 'difficultyNightmare'
-    },
-    // --- NEW REFACTORED NSFW RULES ---
-    {
-        id: 'header_nsfw',
-        label: 'PHONG CÁCH MIÊU TẢ 18+',
-        description: 'Các quy tắc về phong cách miêu tả nội dung người lớn.',
-        type: 'header',
-        enabled: true, isEditable: false, isMovable: false,
     },
     {
         id: 'nsfwHoaMy',
@@ -211,15 +178,6 @@ export const DEFAULT_PROMPT_STRUCTURE: PromptBlock[] = [
         type: 'system',
         enabled: false, isEditable: true, isMovable: true,
         rulebookKey: 'nsfwTuyChinh'
-    },
-
-    // --- RULES SECTION ---
-    {
-        id: 'header_rules',
-        label: 'PHẦN 3: QUY TẮC VÀ HƯỚNG DẪN CHI TIẾT',
-        description: 'Tiêu đề phân chia các khối quy tắc hệ thống.',
-        type: 'header',
-        enabled: true, isEditable: false, isMovable: false,
     },
     {
         id: 'rule_narrationAndVividness',
@@ -373,16 +331,7 @@ export const DEFAULT_PROMPT_STRUCTURE: PromptBlock[] = [
         enabled: true, isEditable: true, isMovable: true,
         rulebookKey: 'specialEventRules'
     },
-
-    // --- FINAL SECTION ---
-     {
-        id: 'header_final',
-        label: 'PHẦN CUỐI: LỰA CHỌN VÀ KẾT THÚC',
-        description: 'Tiêu đề phân chia các khối cuối cùng.',
-        type: 'header',
-        enabled: true, isEditable: false, isMovable: false,
-    },
-     {
+    {
         id: 'rule_choiceRules',
         label: "Mệnh Lệnh Tạo Lựa Chọn Mới ([CHOICE])",
         description: "Hướng dẫn về việc tạo các lựa chọn hành động cốt lõi và sáng tạo.",

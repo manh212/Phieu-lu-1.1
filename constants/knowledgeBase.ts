@@ -59,8 +59,8 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   ragVectorStore: { vectors: [], metadata: [] }, // UPDATED: Use metadata instead of texts
   aiContextConfig: { ...DEFAULT_AI_CONTEXT_CONFIG }, // Kept for migration
   aiRulebook: { ...DEFAULT_AI_RULEBOOK }, 
-  // FIX: Add missing promptStructure property to match the KnowledgeBase type.
   promptStructure: JSON.parse(JSON.stringify(DEFAULT_PROMPT_STRUCTURE)), // NEW: Initialize with default structure
+  activeAiPresetName: null, // NEW
   stagedActions: {}, // NEW: Initialize with empty object
   aiCopilotConfigs: [], // NEW
   activeAICopilotConfigId: null, // NEW

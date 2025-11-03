@@ -152,7 +152,8 @@ export interface KnowledgeBase {
   ragVectorStore?: VectorStore;
   aiContextConfig: AIContextConfig;
   aiRulebook: AIRulebook;
-  promptStructure: PromptBlock[]; // NEW: The dynamic prompt structure.
+  promptStructure: PromptBlock[]; // The dynamic prompt structure.
+  activeAiPresetName?: string | null; // NEW: The name of the currently applied AI preset.
   aiCopilotConfigs: AICopilotConfig[];
   activeAICopilotConfigId: string | null;
   stagedActions: Record<string, StagedAction>;

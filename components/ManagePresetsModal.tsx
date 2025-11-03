@@ -1,7 +1,7 @@
+
 import React, { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { useGame } from '../hooks/useGame';
-// FIX: Corrected the import path for AIPreset to point to its definition file, resolving a module export error.
-import { AIPreset } from '../types/config';
+import { AIPreset, PromptBlock } from '../types/config';
 import { VIETNAMESE } from '../constants';
 import { exportPresetToJSON, importPresetFromJSON } from '../services/presetService';
 import Modal from './ui/Modal';
@@ -20,6 +20,7 @@ const ManagePresetsModal: React.FC<ManagePresetsModalProps> = ({ isOpen, onClose
   const [renamingPreset, setRenamingPreset] = useState<{ oldName: string; newName: string } | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [exportFilter, setExportFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
   
   const presetList = Object.values(aiPresets).sort((a, b) => a.metadata.name.localeCompare(b.metadata.name));
   const selectedPreset = selectedPresetName ? aiPresets[selectedPresetName] : null;
@@ -29,6 +30,7 @@ const ManagePresetsModal: React.FC<ManagePresetsModalProps> = ({ isOpen, onClose
       setSelectedPresetName(null);
       setRenamingPreset(null);
       setRenameError(null);
+      setExportFilter('all');
     } else if (presetList.length > 0 && !selectedPresetName) {
       setSelectedPresetName(presetList[0].metadata.name);
     }
@@ -64,8 +66,28 @@ const ManagePresetsModal: React.FC<ManagePresetsModalProps> = ({ isOpen, onClose
 
   const handleExport = () => {
     if (selectedPreset) {
-      exportPresetToJSON(selectedPreset);
-      showNotification(VIETNAMESE.presetExportedSuccess(selectedPreset.metadata.name), 'success');
+        // Deep copy to avoid mutating state
+        const presetToExport = JSON.parse(JSON.stringify(selectedPreset)) as AIPreset;
+        let fileNameSuffix = '';
+
+        if (exportFilter !== 'all') {
+            const filteredStructure = (presetToExport.configuration.promptStructure || []).filter((block: PromptBlock) => {
+                if (exportFilter === 'enabled') return block.enabled;
+                if (exportFilter === 'disabled') return !block.enabled;
+                return false; // Should not happen, but for type safety.
+            });
+            
+            presetToExport.configuration.promptStructure = filteredStructure;
+            fileNameSuffix = `-${exportFilter}`;
+
+            presetToExport.metadata.description = `(Chỉ chứa các mục đã ${exportFilter === 'enabled' ? 'bật' : 'tắt'}) ${presetToExport.metadata.description || ''}`.trim();
+        }
+        
+        // Update name for filename generation
+        presetToExport.metadata.name = `${selectedPreset.metadata.name}${fileNameSuffix}`;
+
+        exportPresetToJSON(presetToExport);
+        showNotification(VIETNAMESE.presetExportedSuccess(presetToExport.metadata.name), 'success');
     }
   };
 
@@ -139,6 +161,26 @@ const ManagePresetsModal: React.FC<ManagePresetsModalProps> = ({ isOpen, onClose
                         <Button variant="secondary" className="w-full" onClick={() => setRenamingPreset({ oldName: selectedPreset.metadata.name, newName: selectedPreset.metadata.name })}>{VIETNAMESE.presetRenameButton}</Button>
                    )}
                   <Button variant="danger" className="w-full" onClick={handleDelete}>{VIETNAMESE.presetDeleteButton}</Button>
+                  
+                  {/* NEW FILTER UI FOR EXPORT */}
+                  <div className="p-3 bg-gray-900/50 rounded-md border border-gray-600">
+                    <label className="text-sm font-medium text-gray-300 block mb-2">Tùy chọn xuất tệp</label>
+                    <div className="flex justify-around text-xs">
+                        <label className="flex items-center gap-1 cursor-pointer">
+                            <input type="radio" name="export-filter" value="all" checked={exportFilter === 'all'} onChange={() => setExportFilter('all')} className="h-4 w-4 text-indigo-600 border-gray-500 focus:ring-indigo-500" />
+                            Tất cả
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                            <input type="radio" name="export-filter" value="enabled" checked={exportFilter === 'enabled'} onChange={() => setExportFilter('enabled')} className="h-4 w-4 text-indigo-600 border-gray-500 focus:ring-indigo-500" />
+                            Đã bật
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                            <input type="radio" name="export-filter" value="disabled" checked={exportFilter === 'disabled'} onChange={() => setExportFilter('disabled')} className="h-4 w-4 text-indigo-600 border-gray-500 focus:ring-indigo-500" />
+                            Đã tắt
+                        </label>
+                    </div>
+                  </div>
+
                   <Button variant="primary" className="w-full bg-green-600 hover:bg-green-700" onClick={handleExport}>{VIETNAMESE.presetExportButton}</Button>
               </div>
             </>
@@ -151,7 +193,7 @@ const ManagePresetsModal: React.FC<ManagePresetsModalProps> = ({ isOpen, onClose
       </div>
        <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between">
             <Button variant="primary" className="bg-sky-600 hover:bg-sky-700" onClick={handleImportClick}>{VIETNAMESE.presetImportButton}</Button>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json,application/json" className="hidden" />
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json,application/json,.aipreset.json" className="hidden" />
             <Button variant="secondary" onClick={onClose}>{VIETNAMESE.closeButton}</Button>
         </div>
     </Modal>

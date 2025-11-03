@@ -1,3 +1,4 @@
+
 // services/presetService.ts
 import { AIPreset, AIPresetCollection } from '@/types/index';
 import { AI_PRESETS_STORAGE_KEY } from '@/constants/index';
@@ -39,12 +40,27 @@ export const saveAIPresets = (presets: AIPresetCollection): void => {
  */
 export const exportPresetToJSON = (preset: AIPreset): void => {
     try {
-        const settingsString = JSON.stringify(preset, null, 2);
+        // Create a copy for export to avoid modifying the original object, especially the name
+        const presetForExport = JSON.parse(JSON.stringify(preset));
+        
+        // The name in metadata might already be modified (e.g., 'My Preset-enabled')
+        const desiredFileName = presetForExport.metadata.name;
+        
+        // Restore the original name in the file content if it was modified for the filename
+        if (desiredFileName.endsWith('-enabled')) {
+            presetForExport.metadata.name = desiredFileName.replace('-enabled', '');
+        } else if (desiredFileName.endsWith('-disabled')) {
+            presetForExport.metadata.name = desiredFileName.replace('-disabled', '');
+        } else if (desiredFileName.endsWith('-all')) {
+            presetForExport.metadata.name = desiredFileName.replace('-all', '');
+        }
+
+        const settingsString = JSON.stringify(presetForExport, null, 2);
         const blob = new Blob([settingsString], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
 
-        const safeName = preset.metadata.name.replace(/[^a-z0-9_-\s]/gi, '').replace(/\s+/g, '-').toLowerCase();
+        const safeName = desiredFileName.replace(/[^a-z0-9_-\s]/gi, '').replace(/\s+/g, '-').toLowerCase();
         link.download = `${safeName || 'ai-preset'}.aipreset.json`;
 
         link.href = url;
@@ -77,7 +93,7 @@ export const importPresetFromJSON = (jsonString: string): Promise<AIPreset> => {
                 typeof parsed.metadata.name !== 'string' ||
                 typeof parsed.metadata.version !== 'string' ||
                 !parsed.configuration ||
-                !parsed.configuration.contextToggles ||
+                // !parsed.configuration.contextToggles || // Kept for backward compatibility
                 !parsed.configuration.rulebookContent ||
                 !parsed.configuration.parameters
             ) {
