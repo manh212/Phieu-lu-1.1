@@ -1,8 +1,6 @@
 // components/AIContextScreen.tsx
-// FIX: Import useState, useRef, and useEffect from React to resolve 'Cannot find name' errors.
 import React, { useState, useRef, useEffect, useMemo, ChangeEvent } from 'react';
-// FIX: Correct import path for types
-import { AIContextConfig, AIRulebook, AIPreset, PromptBlock, WorldSettings, PromptCondition, ConditionElement, PromptConditionGroup } from '../types/index';
+import { AIRulebook, AIPreset, PromptBlock, WorldSettings, PromptCondition, ConditionElement, PromptConditionGroup } from '../types/index';
 import Button from './ui/Button';
 import { useGame } from '../hooks/useGame';
 import { VIETNAMESE, APP_VERSION } from '../constants';
@@ -12,11 +10,10 @@ import Modal from './ui/Modal';
 import RuleEditModal from './RuleEditModal';
 import SavePresetModal from './SavePresetModal';
 import ManagePresetsModal from './ManagePresetsModal';
-import CustomBlockEditModal from './CustomBlockEditModal'; // NEW
+import CustomBlockEditModal from './CustomBlockEditModal';
 import InputField from './ui/InputField';
-// FIX: Import getApiSettings to correctly source AI parameters.
 import { getApiSettings } from '../services';
-import { getSeason, getTimeOfDayContext } from '../utils/gameLogicUtils';
+import { getSeason, getTimeOfDayContext, interpolate } from '../utils/gameLogicUtils';
 import VariableExplorer from './ai/VariableExplorer';
 import FunctionFilterLibrary from './ai/FunctionFilterLibrary';
 
@@ -40,7 +37,7 @@ const formatConditionsForTooltip = (conditions: ConditionElement[], isGroup: boo
             'quest_status': 'Trạng thái nhiệm vụ',
             'world_hour': 'Giờ trong ngày',
             'world_season': 'Mùa trong năm',
-            'npc_affinity': 'Thiện cảm NPC'
+            'npc_affinity': 'Thiện cảm với NPC'
         };
         const opMap: Record<PromptCondition['operator'], string> = {
             'IS': 'LÀ',
@@ -92,55 +89,6 @@ const formatConditionsForTooltip = (conditions: ConditionElement[], isGroup: boo
     return isGroup ? finalString : "Kích hoạt khi:\n" + finalString;
 };
 
-// Helper component for each row in the prompt structure list
-const PromptBlockRow: React.FC<{
-    block: PromptBlock;
-    index: number;
-    total: number;
-    onToggle: (id: string) => void;
-    onMove: (index: number, direction: 'up' | 'down') => void;
-    onEdit: (block: PromptBlock) => void;
-}> = ({ block, index, total, onToggle, onMove, onEdit }) => {
-    if (block.type === 'header') {
-        return null;
-    }
-    
-    const hasConditions = block.conditions && block.conditions.length > 0;
-
-    return (
-        <div className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg transition-colors hover:bg-gray-800/80 group">
-            <div className="flex items-center gap-2 flex-grow overflow-hidden">
-                <div className="flex flex-col gap-2">
-                    <Button variant="ghost" size="sm" className="!p-1 h-5" onClick={() => onMove(index, 'up')} disabled={!block.isMovable || index === 0} aria-label={`Di chuyển ${block.label} lên`}>↑</Button>
-                    <Button variant="ghost" size="sm" className="!p-1 h-5" onClick={() => onMove(index, 'down')} disabled={!block.isMovable || index === total - 1} aria-label={`Di chuyển ${block.label} xuống`}>↓</Button>
-                </div>
-                <div className="overflow-hidden flex items-center gap-2">
-                     {hasConditions && (
-                        <div title={formatConditionsForTooltip(block.conditions!)}>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-cyan-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V17a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4.586L3.293 6.707A1 1 0 013 6V3zm3.146 5.854l4-4 .708.708-4 4-.708-.708zm4.708-3.146l-4 4-.708-.708 4-4 .708.708z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                    )}
-                    <div>
-                        <label htmlFor={`toggle-${block.id}`} className="font-medium text-gray-200 cursor-pointer block truncate" title={block.label}>{block.label}</label>
-                        <p className="text-xs text-gray-400 truncate" title={block.description}>{block.description}</p>
-                    </div>
-                </div>
-            </div>
-            <div className="flex items-center flex-shrink-0 ml-2">
-                {block.isEditable && (
-                    <Button variant="ghost" size="sm" onClick={() => onEdit(block)} className="!py-1 !px-2 text-xs border border-gray-600 mr-2 opacity-50 group-hover:opacity-100 focus:opacity-100" title={`Chỉnh sửa ${block.label}`}>Sửa</Button>
-                )}
-                <div className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id={`toggle-${block.id}`} checked={block.enabled} onChange={() => onToggle(block.id)} className="sr-only peer"/>
-                    <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 interface AIContextScreenProps {
     onClose: () => void;
 }
@@ -161,29 +109,9 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
     const [previewPromptContent, setPreviewPromptContent] = useState('');
     const [isExplorerOpen, setIsExplorerOpen] = useState(false);
     const [isLibraryOpen, setIsLibraryOpen] = useState(false);
-    const mainContentRef = useRef<HTMLDivElement>(null);
 
-    const groupedStructure = useMemo(() => {
-        const groups: { header: PromptBlock, children: PromptBlock[] }[] = [];
-        let currentGroup: { header: PromptBlock, children: PromptBlock[] } | null = null;
-
-        promptStructure.forEach(block => {
-            if (block.type === 'header') {
-                if (currentGroup) {
-                    groups.push(currentGroup);
-                }
-                currentGroup = { header: block, children: [] };
-            } else if (currentGroup) {
-                currentGroup.children.push(block);
-            }
-        });
-
-        if (currentGroup) {
-            groups.push(currentGroup);
-        }
-        
-        return groups;
-    }, [promptStructure]);
+    // NEW: State for "move mode"
+    const [moveModeState, setMoveModeState] = useState<{ sourceIndex: number } | null>(null);
 
     useEffect(() => {
         const initialStructure = knowledgeBase.promptStructure || DEFAULT_PROMPT_STRUCTURE;
@@ -192,6 +120,17 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
         setHasChanges(false);
         setSelectedPresetName('load_current_game_config');
     }, [knowledgeBase.promptStructure, knowledgeBase.aiRulebook]);
+
+    // NEW: Effect to handle Escape key for canceling move mode
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && moveModeState) {
+                handleCancelMove();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [moveModeState]);
 
     const markChanges = () => {
         setHasChanges(true);
@@ -202,17 +141,33 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
         setPromptStructure(prev => prev.map(block => block.id === id ? { ...block, enabled: !block.enabled } : block));
         markChanges();
     };
+    
+    // NEW: "Move Mode" handlers
+    const handleInitiateMove = (index: number) => {
+        setMoveModeState({ sourceIndex: index });
+    };
 
-    const handleMove = (index: number, direction: 'up' | 'down') => {
+    const handleCancelMove = () => {
+        setMoveModeState(null);
+    };
+
+    const handleCompleteMove = (targetIndex: number) => {
+        if (moveModeState === null) return;
+        const { sourceIndex } = moveModeState;
+
+        if (sourceIndex === targetIndex) {
+            setMoveModeState(null); // Clicked on itself, cancel.
+            return;
+        }
+        
         setPromptStructure(prev => {
-            const newStructure = [...prev];
-            const targetIndex = direction === 'up' ? index - 1 : index + 1;
-            if (targetIndex < 0 || targetIndex >= newStructure.length || !newStructure[index].isMovable || !newStructure[targetIndex].isMovable) return newStructure;
-            if (newStructure[index].type !== 'header' && newStructure[targetIndex].type === 'header') return newStructure;
-            if (newStructure[index].type === 'header' && newStructure[targetIndex].type !== 'header') return newStructure;
-            [newStructure[index], newStructure[targetIndex]] = [newStructure[targetIndex], newStructure[index]];
-            return newStructure;
+            const items = [...prev];
+            const [reorderedItem] = items.splice(sourceIndex, 1);
+            items.splice(targetIndex, 0, reorderedItem);
+            return items;
         });
+
+        setMoveModeState(null);
         markChanges();
     };
 
@@ -238,13 +193,13 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
     const handleAddCustomBlock = () => {
         const newBlock: PromptBlock = {
             id: `custom-${Date.now()}`,
-            label: 'Khối Tùy Chỉnh Mới',
-            description: 'Nội dung do người dùng tự định nghĩa.',
+            label: "", // Start with empty label
+            description: "", // Start with empty description
             type: 'custom',
             enabled: true,
             isEditable: true,
             isMovable: true,
-            content: '{{PLAYER_NAME}} làm gì đó...',
+            content: '',
         };
         setEditingCustomBlock(newBlock);
     };
@@ -277,10 +232,13 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
             }
             return;
         };
+
         if (hasChanges && !window.confirm("Bạn có thay đổi chưa lưu. Bạn có chắc muốn tải cấu hình khác và hủy các thay đổi hiện tại không?")) {
             return;
         }
+
         setSelectedPresetName(presetName);
+
         if (presetName === 'load_current_game_config') {
             setPromptStructure(JSON.parse(JSON.stringify(knowledgeBase.promptStructure || DEFAULT_PROMPT_STRUCTURE)));
             setRulebook(knowledgeBase.aiRulebook || DEFAULT_AI_RULEBOOK);
@@ -304,12 +262,8 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                 contextToggles: knowledgeBase.aiContextConfig, 
                 rulebookContent: rulebook,
                 parameters: {
-                    temperature: apiSettings.temperature,
-                    topK: apiSettings.topK,
-                    topP: apiSettings.topP,
-                    thinkingBudget: apiSettings.thinkingBudget,
-                    maxOutputTokens: apiSettings.maxOutputTokens,
-                    seed: apiSettings.seed,
+                    temperature: apiSettings.temperature, topK: apiSettings.topK, topP: apiSettings.topP,
+                    thinkingBudget: apiSettings.thinkingBudget, maxOutputTokens: apiSettings.maxOutputTokens, seed: apiSettings.seed,
                 },
                 promptStructure: promptStructure
             }
@@ -326,9 +280,10 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
     };
 
     const buildPreviewPrompt = (structure: PromptBlock[], rules: AIRulebook, worldConfig: WorldSettings | null): string => {
+        // This function remains the same as before
         const finalPromptParts: string[] = [];
         if (!worldConfig) return "Lỗi: Không có cấu hình thế giới để tạo bản xem trước.";
-        const interpolate = (text: string): string => {
+        const interpolatePreview = (text: string): string => {
             const mockDate = { day: 15, month: 6, year: 1, hour: 14, minute: 30 };
             const playerRaceSystem = worldConfig.raceCultivationSystems.find(s => s.raceName === (worldConfig.playerRace || 'Nhân Tộc'));
             const mainRealms = (playerRaceSystem?.realmSystem || '').split(' - ').map(s => s.trim()).filter(Boolean);
@@ -344,14 +299,8 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
             if (!block.enabled) continue;
             let blockContent = '';
             switch (block.type) {
-                case 'header':
-                    blockContent = `\n---\n**${block.label}**`;
-                    break;
-                case 'custom':
-                    if (block.content) {
-                        blockContent = `**${block.label}:**\n${interpolate(block.content)}`;
-                    }
-                    break;
+                case 'header': blockContent = `\n---\n**${block.label}**`; break;
+                case 'custom': if (block.content) { blockContent = `**${block.label}:**\n${interpolatePreview(block.content)}`; } break;
                 case 'system':
                     switch (block.id) {
                         case 'ragContext': blockContent = `**${block.label}:**\n{{BỐI_CẢNH_TRUY_XUẤT_TỪ_TRÍ_NHỚ_DÀI_HẠN}}`; break;
@@ -365,15 +314,13 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                         case 'responseLengthGuidance': blockContent = `**${block.label}:** {{ĐỘ_DÀI_PHẢN_HỒI}}`; break;
                         default:
                             if (block.rulebookKey && rules[block.rulebookKey]) {
-                                blockContent = interpolate(rules[block.rulebookKey]);
+                                blockContent = interpolatePreview(rules[block.rulebookKey]);
                             }
                             break;
                     }
                     break;
             }
-            if (blockContent) {
-                finalPromptParts.push(blockContent);
-            }
+            if (blockContent) { finalPromptParts.push(blockContent); }
         }
         return finalPromptParts.join('\n\n');
     };
@@ -392,14 +339,7 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
         const savedPresets = Object.keys(aiPresets).sort().map(name => ({ value: name, label: name }));
         return [...options, ...savedPresets];
     }, [aiPresets, hasChanges]);
-    
-    const handleScrollLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
-        e.preventDefault();
-        const targetElement = document.getElementById(targetId);
-        if (targetElement) {
-            targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    };
+
 
     return (
         <>
@@ -425,62 +365,90 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                        </div>
                     </div>
 
-                    <div className="flex-grow flex gap-4 overflow-hidden">
-                        {/* Sidebar Navigation */}
-                        <nav className="w-1/3 lg:w-1/4 flex-shrink-0 overflow-y-auto custom-scrollbar border-r border-gray-700 pr-4">
-                            {groupedStructure.map(group => (
-                                <div key={`nav-${group.header.id}`} className="mb-4">
-                                    <h3 className="font-semibold text-gray-400 uppercase text-xs tracking-wider mb-2 px-1.5">{group.header.label}</h3>
-                                    <ul className="space-y-1">
-                                        {group.children.map(block => (
-                                            <li key={`link-${block.id}`}>
-                                                <a 
-                                                    href={`#${block.id}`} 
-                                                    onClick={(e) => handleScrollLinkClick(e, block.id)}
-                                                    className="block text-sm text-gray-300 hover:text-white hover:bg-gray-700 p-1.5 rounded"
-                                                    title={block.label}
-                                                >
-                                                    {block.label}
-                                                </a>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            ))}
-                        </nav>
+                    <div className="flex-grow overflow-y-auto custom-scrollbar -mx-6 px-6 pb-4 space-y-1">
+                        {promptStructure.map((block, index) => {
+                            if (block.type === 'header') {
+                                return <h3 key={block.id} className="text-lg font-semibold text-gray-400 mt-4 pt-2 border-t border-gray-700">{block.label}</h3>;
+                            }
 
-                        {/* Main Content Area */}
-                        <div ref={mainContentRef} id="ai-context-main-content" className="flex-grow overflow-y-auto custom-scrollbar pr-2">
-                            {groupedStructure.map(group => (
-                                <div key={`content-${group.header.id}`} className="mb-6">
-                                    <h2 id={group.header.id} className="text-xl font-bold text-indigo-300 mb-3 sticky top-0 bg-gray-900 py-2 -mx-4 px-4 border-b border-gray-700 z-10 scroll-mt-2">
-                                        {group.header.label}
-                                    </h2>
-                                    <div className="space-y-1">
-                                        {group.children.map(block => (
-                                            <div id={block.id} key={block.id} className="scroll-mt-16">
-                                                <PromptBlockRow
-                                                    block={block}
-                                                    index={promptStructure.findIndex(b => b.id === block.id)}
-                                                    total={promptStructure.length}
-                                                    onToggle={handleToggle}
-                                                    onMove={handleMove}
-                                                    onEdit={handleEdit}
-                                                />
+                            const hasConditions = block.conditions && block.conditions.length > 0;
+                            
+                            // Render based on moveModeState
+                            if (moveModeState) {
+                                const isSource = moveModeState.sourceIndex === index;
+                                return (
+                                    <div key={block.id} className={`p-2 rounded-lg transition-colors ${ isSource ? 'bg-indigo-700 ring-2 ring-indigo-400' : 'bg-gray-800' }`}>
+                                        {isSource ? (
+                                            <div className="flex items-center text-white p-2">
+                                                <span className="font-bold">Đang di chuyển:</span>
+                                                <span className="ml-2 italic truncate">{block.label}</span>
                                             </div>
-                                        ))}
+                                        ) : (
+                                            <div className="flex items-center justify-between p-1">
+                                                <span className="text-gray-400 truncate">{block.label}</span>
+                                                <Button size="sm" variant="secondary" onClick={() => handleCompleteMove(index)} disabled={!block.isMovable}>
+                                                    Di chuyển đến đây
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            }
+
+                            // Normal rendering when not in move mode
+                            return (
+                                <div key={block.id} className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg transition-colors hover:bg-gray-800/80 group">
+                                    <div className="flex items-center gap-3 flex-grow overflow-hidden">
+                                        <button
+                                            onClick={() => block.isMovable && handleInitiateMove(index)}
+                                            disabled={!block.isMovable}
+                                            className="p-1 text-gray-500 hover:text-white cursor-grab disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-indigo-400 rounded"
+                                            aria-label={`Di chuyển ${block.label}`}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+                                            </svg>
+                                        </button>
+                                        <div className="overflow-hidden flex items-center gap-2">
+                                            {hasConditions && (
+                                                <div title={formatConditionsForTooltip(block.conditions!)}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-cyan-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V17a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4.586L3.293 6.707A1 1 0 013 6V3zm3.146 5.854l4-4 .708.708-4 4-.708-.708zm4.708-3.146l-4 4-.708-.708 4-4 .708.708z" clipRule="evenodd" /></svg>
+                                                </div>
+                                            )}
+                                            <div>
+                                                <label htmlFor={`toggle-${block.id}`} className="font-medium text-gray-200 cursor-pointer block truncate" title={block.label}>{block.label}</label>
+                                                <p className="text-xs text-gray-400 truncate" title={block.description}>{block.description}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center flex-shrink-0 ml-2">
+                                        {block.isEditable && (
+                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(block)} className="!py-1 !px-2 text-xs border border-gray-600 mr-2 opacity-50 group-hover:opacity-100 focus:opacity-100" title={`Chỉnh sửa ${block.label}`}>Sửa</Button>
+                                        )}
+                                        <div className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id={`toggle-${block.id}`} checked={block.enabled} onChange={() => handleToggle(block.id)} className="sr-only peer"/>
+                                            <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })}
                     </div>
-
                      <div className="flex-shrink-0 pt-4 border-t border-gray-700">
                         <Button variant="ghost" className="w-full border-dashed" onClick={handleAddCustomBlock}>
                             + Thêm Khối Văn Bản Tùy Chỉnh
                         </Button>
                     </div>
                 </div>
+
+                {/* NEW: Cancel Move Button */}
+                {moveModeState !== null && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4">
+                        <Button variant="danger" onClick={handleCancelMove} className="w-full shadow-lg">
+                            Hủy Di Chuyển
+                        </Button>
+                    </div>
+                )}
                  <div className="mt-6 pt-4 border-t border-gray-700 flex justify-between items-center">
                     <Button variant="ghost" onClick={handlePreviewClick}>
                         Xem Trước Prompt...
@@ -491,81 +459,21 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                 </div>
             </Modal>
             
-            {editingRule && (
-                <RuleEditModal
-                    isOpen={!!editingRule}
-                    onClose={() => setEditingRule(null)}
-                    block={editingRule.block}
-                    knowledgeBase={knowledgeBase}
-                    currentContent={rulebook[editingRule.block.rulebookKey!] || ''}
-                    defaultContent={DEFAULT_AI_RULEBOOK[editingRule.block.rulebookKey!] || ''}
-                    onSave={handleSaveRule}
-                    onOpenExplorer={() => setIsExplorerOpen(true)}
-                    onOpenLibrary={() => setIsLibraryOpen(true)}
-                />
-            )}
-            
-             {editingCustomBlock && (
-                <CustomBlockEditModal
-                    isOpen={!!editingCustomBlock}
-                    onClose={() => setEditingCustomBlock(null)}
-                    block={editingCustomBlock}
-                    onSave={handleSaveCustomBlock}
-                    onDelete={handleDeleteCustomBlock}
-                    onOpenExplorer={() => setIsExplorerOpen(true)}
-                    knowledgeBase={knowledgeBase}
-                    onOpenLibrary={() => setIsLibraryOpen(true)}
-                />
-            )}
-
-            <ManagePresetsModal 
-                isOpen={isManageModalOpen} 
-                onClose={() => setIsManageModalOpen(false)} 
-            />
-
-            <SavePresetModal
-                isOpen={isSaveModalOpen}
-                onClose={() => setIsSaveModalOpen(false)}
-                onSave={handleSaveChangesAsPreset}
-                existingNames={Object.keys(aiPresets)}
-            />
-
+            {editingRule && ( <RuleEditModal isOpen={!!editingRule} onClose={() => setEditingRule(null)} block={editingRule.block} knowledgeBase={knowledgeBase} currentContent={rulebook[editingRule.block.rulebookKey!] || ''} defaultContent={DEFAULT_AI_RULEBOOK[editingRule.block.rulebookKey!] || ''} onSave={handleSaveRule} onOpenExplorer={() => setIsExplorerOpen(true)} onOpenLibrary={() => setIsLibraryOpen(true)}/> )}
+            {editingCustomBlock && ( <CustomBlockEditModal isOpen={!!editingCustomBlock} onClose={() => setEditingCustomBlock(null)} block={editingCustomBlock} onSave={handleSaveCustomBlock} onDelete={handleDeleteCustomBlock} onOpenExplorer={() => setIsExplorerOpen(true)} knowledgeBase={knowledgeBase} onOpenLibrary={() => setIsLibraryOpen(true)}/> )}
+            <ManagePresetsModal isOpen={isManageModalOpen} onClose={() => setIsManageModalOpen(false)} />
+            <SavePresetModal isOpen={isSaveModalOpen} onClose={() => setIsSaveModalOpen(false)} onSave={handleSaveChangesAsPreset} existingNames={Object.keys(aiPresets)}/>
             {isPreviewModalOpen && (
                 <Modal isOpen={isPreviewModalOpen} onClose={() => setIsPreviewModalOpen(false)} title="Xem Trước Prompt Đầy Đủ">
                     <div className="flex flex-col h-[70vh]">
-                        <p className="text-sm text-gray-400 mb-3 flex-shrink-0">
-                            Đây là bản xem trước cấu trúc prompt sẽ được gửi đến AI. Các biến trong dấu ngoặc kép <code>{"{{...}}"}</code> sẽ được thay thế bằng dữ liệu game thực tế khi chạy.
-                        </p>
-                        <textarea
-                            readOnly
-                            value={previewPromptContent}
-                            className="flex-grow w-full p-3 bg-gray-900 border border-gray-600 rounded-md shadow-sm text-gray-200 font-mono text-xs custom-scrollbar"
-                            aria-label="Nội dung prompt xem trước"
-                        />
-                         <div className="mt-4 flex-shrink-0">
-                            <Button
-                                variant="secondary"
-                                onClick={() => {
-                                    navigator.clipboard.writeText(previewPromptContent);
-                                    showNotification("Đã sao chép prompt vào clipboard!", 'success');
-                                }}
-                            >
-                                Sao chép vào Clipboard
-                            </Button>
-                        </div>
+                        <p className="text-sm text-gray-400 mb-3 flex-shrink-0">Đây là bản xem trước cấu trúc prompt sẽ được gửi đến AI. Các biến trong dấu ngoặc kép <code>{"{{...}}"}</code> sẽ được thay thế bằng dữ liệu game thực tế khi chạy.</p>
+                        <textarea readOnly value={previewPromptContent} className="flex-grow w-full p-3 bg-gray-900 border border-gray-600 rounded-md shadow-sm text-gray-200 font-mono text-xs custom-scrollbar" aria-label="Nội dung prompt xem trước"/>
+                         <div className="mt-4 flex-shrink-0"><Button variant="secondary" onClick={() => { navigator.clipboard.writeText(previewPromptContent); showNotification("Đã sao chép prompt vào clipboard!", 'success'); }}>Sao chép vào Clipboard</Button></div>
                     </div>
                 </Modal>
             )}
-            <VariableExplorer 
-                isOpen={isExplorerOpen}
-                onClose={() => setIsExplorerOpen(false)}
-                knowledgeBase={knowledgeBase}
-                showNotification={showNotification}
-            />
-            <FunctionFilterLibrary
-                isOpen={isLibraryOpen}
-                onClose={() => setIsLibraryOpen(false)}
-            />
+            <VariableExplorer isOpen={isExplorerOpen} onClose={() => setIsExplorerOpen(false)} knowledgeBase={knowledgeBase} showNotification={showNotification}/>
+            <FunctionFilterLibrary isOpen={isLibraryOpen} onClose={() => setIsLibraryOpen(false)}/>
         </>
     );
 };
