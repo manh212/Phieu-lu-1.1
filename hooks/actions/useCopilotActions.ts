@@ -13,11 +13,11 @@ export interface UseCopilotActionsProps {
     setIsLoadingApi: React.Dispatch<React.SetStateAction<boolean>>;
     resetApiError: () => void;
     setApiErrorWithTimeout: (message: string | null) => void;
-    aiCopilotMessages: GameMessage[];
-// FIX: Correctly type the setAiCopilotMessages parameter.
-    setAiCopilotMessages: React.Dispatch<React.SetStateAction<GameMessage[]>>;
+    // These are now passed directly to the handler
+    // aiCopilotMessages: GameMessage[];
+    // setAiCopilotMessages: React.Dispatch<React.SetStateAction<GameMessage[]>>;
     sentPromptsLog: string[];
-    sentCopilotPromptsLog: string[];
+    // sentCopilotPromptsLog: string[];
 // FIX: Correctly type the setSentCopilotPromptsLog parameter.
     setSentCopilotPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
 }
@@ -27,12 +27,17 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
         knowledgeBase, gameMessages,
         isLoadingApi, setIsLoadingApi,
         resetApiError, setApiErrorWithTimeout,
-        aiCopilotMessages, setAiCopilotMessages,
-        sentPromptsLog, sentCopilotPromptsLog, setSentCopilotPromptsLog,
+        // aiCopilotMessages, setAiCopilotMessages, // Removed from here
+        sentPromptsLog, 
+        // sentCopilotPromptsLog, // Will be passed to onPromptConstructed
+        setSentCopilotPromptsLog,
     } = props;
 
+    // FIX: Refactored handleCopilotQuery to accept message history and setter as arguments, making it reusable for different chat UIs.
     const handleCopilotQuery = useCallback(async (
         userQuestion: string, 
+        messageHistory: GameMessage[],
+        setMessageHistory: React.Dispatch<React.SetStateAction<GameMessage[]>>,
         context?: string, 
         isActionModus: boolean = true, 
         modelOverride?: string,
@@ -45,8 +50,8 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
             id: `copilot-user-${Date.now()}`, type: 'player_action', content: userMessageContent,
             timestamp: Date.now(), turnNumber: knowledgeBase.playerStats.turn, isPlayerInput: true,
         };
-        const newCopilotMessages = [...(aiCopilotMessages || []), userMessage];
-        setAiCopilotMessages(newCopilotMessages);
+        const newMessages = [...messageHistory, userMessage];
+        setMessageHistory(newMessages);
 
         try {
             // Destructure to remove large/unnecessary parts for the prompt
@@ -58,8 +63,8 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
                 return `[${msg.type.toUpperCase()}]: ${typeof msg.content === 'string' ? msg.content : '[Nội dung hệ thống]'}`;
             }).join('\n');
 
-            const copilotChatHistory = newCopilotMessages.slice(0, -1).map(msg => {
-                return msg.isPlayerInput ? `Người chơi: ${msg.content}` : `Trợ lý: ${msg.content}`;
+            const copilotChatHistory = newMessages.slice(0, -1).map(msg => {
+                return msg.isPlayerInput ? `Người chơi: ${msg.content}` : `Trợ lý: ${typeof msg.content === 'string' ? msg.content : ''}`;
             }).join('\n');
             
             const latestGameplayPrompt = sentPromptsLog[0] || "";
@@ -95,8 +100,9 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
                 id: `copilot-ai-${Date.now()}`, type: 'narration', content: narration,
                 timestamp: Date.now(), turnNumber: knowledgeBase.playerStats.turn,
                 actionTags: actionTags.length > 0 ? actionTags : undefined,
+                groundingMetadata: copilotResponse.groundingMetadata,
             };
-            setAiCopilotMessages(prev => [...prev, aiMessage]);
+            setMessageHistory(prev => [...prev, aiMessage]);
 
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : "Lỗi khi liên hệ Siêu Trợ Lý AI.";
@@ -105,11 +111,11 @@ export const useCopilotActions = (props: UseCopilotActionsProps) => {
                 id: `copilot-error-${Date.now()}`, type: 'error', content: `Lỗi: ${errorMsg}`,
                 timestamp: Date.now(), turnNumber: knowledgeBase.playerStats.turn,
             };
-            setAiCopilotMessages(prev => [...prev, errorMessage]);
+            setMessageHistory(prev => [...prev, errorMessage]);
         } finally {
             setIsLoadingApi(false);
         }
-    }, [knowledgeBase, gameMessages, aiCopilotMessages, setAiCopilotMessages, setIsLoadingApi, resetApiError, setApiErrorWithTimeout, setSentCopilotPromptsLog, sentPromptsLog]);
+    }, [knowledgeBase, gameMessages, setIsLoadingApi, resetApiError, setApiErrorWithTimeout, setSentCopilotPromptsLog, sentPromptsLog]);
     
     return {
         handleCopilotQuery,

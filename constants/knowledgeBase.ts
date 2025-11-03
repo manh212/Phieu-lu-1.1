@@ -4,6 +4,7 @@ import { DEFAULT_PLAYER_STATS } from './character';
 import { MAX_AUTO_SAVE_SLOTS } from './game';
 import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
 import { DEFAULT_AI_RULEBOOK } from './systemRulesNormal';
+import { DEFAULT_PROMPT_STRUCTURE } from './promptStructure'; // NEW IMPORT
 
 export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   playerStats: { ...DEFAULT_PLAYER_STATS },
@@ -56,14 +57,16 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   master: null,
   gameEvents: [], // NEW: For event system
   ragVectorStore: { vectors: [], metadata: [] }, // UPDATED: Use metadata instead of texts
-  aiContextConfig: { ...DEFAULT_AI_CONTEXT_CONFIG }, // NEW: Initialize with default values
-  // FIX: Added missing properties to match the KnowledgeBase type.
-  aiRulebook: { ...DEFAULT_AI_RULEBOOK }, // NEW: Initialize with default rule content
+  aiContextConfig: { ...DEFAULT_AI_CONTEXT_CONFIG }, // Kept for migration
+  aiRulebook: { ...DEFAULT_AI_RULEBOOK }, 
+  // FIX: Add missing promptStructure property to match the KnowledgeBase type.
+  promptStructure: JSON.parse(JSON.stringify(DEFAULT_PROMPT_STRUCTURE)), // NEW: Initialize with default structure
   stagedActions: {}, // NEW: Initialize with empty object
   aiCopilotConfigs: [], // NEW
   activeAICopilotConfigId: null, // NEW
   // NEW: Living World State
   isWorldTicking: false,
   lastWorldTickDate: { day: 1, month: 1, year: 1, hour: 0, minute: 0 },
+  previousConditionStates: {}, // NEW
   narrativeDirectiveForNextTurn: undefined,
 };

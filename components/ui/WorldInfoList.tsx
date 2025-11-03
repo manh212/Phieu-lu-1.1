@@ -43,7 +43,7 @@ function WorldInfoList<T extends {id: string, name: string} | {id: string, title
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="!p-1.5 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                    className="!py-1 !px-2 text-xs border border-gray-600 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                     onClick={(e) => {
                         e.stopPropagation();
                         onEditClick(item);
@@ -51,7 +51,7 @@ function WorldInfoList<T extends {id: string, name: string} | {id: string, title
                     title={`Chỉnh sửa ${titleString}`}
                     aria-label={`Chỉnh sửa ${titleString}`}
                 >
-                    ✏️
+                    Sửa
                 </Button>
             )}
           </li>

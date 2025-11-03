@@ -1,149 +1,154 @@
-import type { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, GenreType, ViolenceLevel, StoryTone, NsfwDescriptionStyle, TuChatTier, AIContextConfig, WorldSettings, StartingSkill, StartingItem, StartingNPC, StartingYeuThu, StartingLore, StartingLocation, StartingFaction } from '@/types/index';
-import { DIALOGUE_MARKER } from '@/types/index';
-import { SUB_REALM_NAMES, VIETNAMESE, CUSTOM_GENRE_VALUE, DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, NSFW_DESCRIPTION_STYLES, TU_CHAT_TIERS, SPECIAL_EVENT_INTERVAL_TURNS, WEAPON_TYPES_FOR_VO_Y } from '../constants';
-import * as GameTemplates from '@/types/index';
-import { buildRulesSection, DEFAULT_AI_RULEBOOK } from '../constants/systemRulesNormal';
-import { getWorldDateDifferenceString } from '../utils/dateUtils';
-import { DEFAULT_AI_CONTEXT_CONFIG } from '../utils/gameLogicUtils';
-import { getNsfwGuidance, getDifficultyGuidance } from './promptUtils';
-import { formatItemForEmbedding, formatSkillForEmbedding, formatPersonForEmbedding, formatLocationForEmbedding, formatLoreForEmbedding, formatFactionForEmbedding, formatYeuThuForEmbedding, formatQuestForEmbedding } from '../utils/ragUtils';
 
 
-const STRICT_MODE_GUIDANCE = `
-CHÚ Ý:
-CHẾ ĐỘ NGHIÊM NGẶT ĐANG BẬT. CÁC QUY TẮC DƯỚI ĐÂY SẼ GHI ĐÈ LÊN MỌI HƯỚNG DẪN KỂ CHUYỆN THÔNG THƯỜNG KHÁC.
+import type { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, AIContextConfig, WorldSettings, PromptBlock, PromptCondition, ConditionElement, PromptConditionGroup } from '@/types/index';
+import { VIETNAMESE, CUSTOM_GENRE_VALUE, SPECIAL_EVENT_INTERVAL_TURNS } from '../constants';
+import { getWorldDateDifferenceString, getTimeOfDayContext, getSeason } from '../utils/dateUtils';
+import { interpolate } from '../utils/gameLogicUtils';
 
-1. PHÂN BIỆT HÀNH ĐỘNG LỚN VÀ HÀNH ĐỘNG NHỎ
 
-Hành động lớn (Chính):
-Là những quyết định quan trọng, thay đổi cục diện hoặc hướng đi của câu chuyện.
-(Ví dụ: mở một cánh cửa, bắt đầu một cuộc trò chuyện, chọn rời đi, đọc một bức thư…)
+// --- NEW: Recursive Condition Evaluation Logic ---
+const evaluateSingleCondition = (condition: PromptCondition, knowledgeBase: KnowledgeBase, previousStates: Record<string, boolean>, newStates: Record<string, boolean>): boolean => {
+    const { discoveredLocations, playerStats, inventory, allQuests, worldDate, discoveredNPCs, wives, slaves, prisoners } = knowledgeBase;
+    const currentLocation = discoveredLocations.find(l => l.id === knowledgeBase.currentLocationId);
+    
+    let actualValue: any;
+    let conditionValue: any = condition.value;
+    let evaluationResult = false;
 
-QUY TẮC:
-
-TUYỆT ĐỐI KHÔNG được tự ý thực hiện hay thêm bất kỳ hành động lớn nào.
-
-Chỉ được phép xảy ra khi có lệnh trực tiếp từ người chơi.
-
-Hành động nhỏ (Phụ):
-Là những phản ứng, động tác hoặc chi tiết phụ xoay quanh hành động lớn.
-Chúng có thể:
-
-Mở rộng, nhấn mạnh hoặc kéo dài hành động lớn.
-
-Thêm phản xạ, thói quen, cảm giác, chi tiết môi trường.
-
-Tạo gợi ý tinh tế (người chơi có thể chú ý hoặc bỏ qua).
-
-QUY TẮC:
-
-ĐƯỢC PHÉP thoải mái sáng tạo.
-
-Có thể chuỗi nhiều hành động nhỏ liên tiếp.
-
-Miễn là không tự biến thành một hành động lớn mới.
-
-Nguyên tắc an toàn: hành động nhỏ không bao giờ tự ý thay đổi cốt truyện.
-
-2. NỘI TÂM & CẢM XÚC
-
-KHÔNG bắt buộc phải mô tả trong mọi lượt.
-
-ĐƯỢỢC PHÉP dùng để nhấn mạnh hoặc làm rõ bối cảnh bên trong.
-
-ƯU TIÊN thay thế bằng hành động nhỏ + phản ứng NPC/môi trường để tạo nhịp tự nhiên.
-
-3. NPC & MÔI TRƯỜDNG
-
-NPC và môi trường phản ứng tự nhiên, thoải mái, không hạn chế.
-
-Có thể thêm hành động nhỏ, biểu cảm, chi tiết phụ.
-
-Chỉ cần đảm bảo: không làm thay người chơi quyết định hành động lớn.
-
-4. LỰA CHỌN
-
-Các lựa chọn được đưa ra theo cú pháp [CHOICE: "..."].
-
-Chúng PHẢI là những hành động vật lý cụ thể mà nhân vật chính có thể thực hiện tiếp theo.
-
-Không được đưa ra lựa chọn trừu tượng (ví dụ: “cảm thấy thế nào”, “suy nghĩ gì”), mà phải gắn liền với hành động thực tế.
-
-VÍ DỤ CỤ THỂ
-
-Ví dụ 1: TƯƠNG TÁC VẬT THỂ
-
-Bối cảnh: Người chơi đứng trước một cánh cửa gỗ cũ.
-
-Hành động người chơi: "Tôi mở cánh cửa."
-
-❌ PHẢN HỒI SAI (VI PHẠM QUY TẮC):
-Bạn đẩy cánh cửa rồi bước hẳn vào trong phòng.
-
-✅ PHẢN HỒI ĐÚNG (TUÂN THỦ QUY TẮC):
-Bạn đẩy cánh cửa gỗ nặng nề, nó kêu lên kẽo kẹt và hé ra một khoảng tối mờ. Luồng gió ẩm lạnh phả ra khiến bạn hơi rùng mình. Ngón tay bạn vô thức siết chặt mép cửa, rồi khẽ giữ lại để nó không bật ngược. Bụi mịn bay lơ lửng trong khe sáng hẹp.
-
-Ví dụ 2: GIAO TIẾP
-
-Bối cảnh: NPC vừa nói một tin bất ngờ.
-
-Hành động người chơi: "Tôi hỏi hắn điều đó có thật không?"
-
-❌ PHẢN HỒI SAI (VI PHẠM QUY TẮC):
-Bạn hỏi xong rồi lập tức bắt đầu thuyết phục hắn đi theo mình.
-
-✅ PHẢN HỒI ĐÚNG (TUÂN THỦ QUY TẮC):
-Bạn hỏi hắn điều đó có thật không. Giọng bạn hơi khàn, nhưng ánh mắt không rời khuôn mặt đối phương. Một thoáng im lặng trôi qua, bạn lặp lại câu hỏi, lần này chắc giọng hơn. Ngay sau đó, bạn khẽ nghiêng đầu, chờ phản ứng. Hắn nhướn mày, rồi cười nhẹ đầy ẩn ý.
-`;
-
-export const buildPinnedContext = (knowledgeBase: KnowledgeBase): { pinnedContext: string; pinnedIds: string[] } => {
-    const pinnedItems: string[] = [];
-    const pinnedIds: string[] = [];
-    const kb = knowledgeBase;
-
-    const processList = (list: any[], type: string) => {
-        if (!list) return;
-        list.forEach(e => {
-            if (e.isPinned) {
-                let text = '';
-                switch(type) {
-                    case 'item': text = formatItemForEmbedding(e, kb); break;
-                    case 'skill': text = formatSkillForEmbedding(e, kb); break;
-                    case 'quest': text = formatQuestForEmbedding(e, kb); break;
-                    case 'npc': case 'wife': case 'slave': case 'prisoner': text = formatPersonForEmbedding(e, kb); break;
-                    case 'location': text = formatLocationForEmbedding(e, kb); break;
-                    case 'lore': text = formatLoreForEmbedding(e, kb); break;
-                    case 'faction': text = formatFactionForEmbedding(e, kb); break;
-                    case 'yeuThu': text = formatYeuThuForEmbedding(e, kb); break;
-                }
-                if (text) {
-                    pinnedItems.push(text);
-                    pinnedIds.push(e.id);
-                }
-            }
-        });
-    };
-
-    processList(kb.inventory, 'item');
-    processList(kb.playerSkills, 'skill');
-    processList(kb.allQuests, 'quest');
-    processList(kb.discoveredNPCs, 'npc');
-    processList(kb.discoveredYeuThu, 'yeuThu');
-    processList(kb.wives, 'wife');
-    processList(kb.slaves, 'slave');
-    processList(kb.prisoners, 'prisoner');
-    processList(kb.discoveredLocations, 'location');
-    processList(kb.worldLore, 'lore');
-    processList(kb.discoveredFactions, 'faction');
-
-    if (pinnedItems.length === 0) {
-        return { pinnedContext: "", pinnedIds: [] };
+    // 1. Get the actual value from the game state (knowledgeBase)
+    switch (condition.field) {
+        case 'location_type': actualValue = currentLocation?.locationType || 'Unknown'; break;
+        case 'location_name': actualValue = currentLocation?.name || 'Unknown'; break;
+        case 'player_status': actualValue = playerStats.playerSpecialStatus?.type || 'free'; break;
+        case 'player_hp_percent': actualValue = playerStats.maxSinhLuc > 0 ? (playerStats.sinhLuc / playerStats.maxSinhLuc) * 100 : 0; break;
+        case 'player_mp_percent': actualValue = playerStats.maxLinhLuc > 0 ? (playerStats.linhLuc / playerStats.maxLinhLuc) * 100 : 0; break;
+        case 'player_currency': actualValue = playerStats.currency; break;
+        case 'player_has_item':
+            actualValue = inventory.some(item => item.name.toLowerCase().includes(String(conditionValue || '').toLowerCase()));
+            conditionValue = true;
+            break;
+        case 'quest_status':
+            const quest = allQuests.find(q => q.title.toLowerCase() === String(conditionValue?.title || '').toLowerCase());
+            actualValue = quest?.status || 'not_found';
+            conditionValue = conditionValue?.status;
+            break;
+        case 'world_hour': actualValue = worldDate.hour; break;
+        case 'world_season': actualValue = getSeason(worldDate); break;
+        case 'npc_affinity':
+            const allPeople = [...discoveredNPCs, ...wives, ...slaves, ...prisoners];
+            const person = allPeople.find(n => n.name.toLowerCase() === String(conditionValue?.name || '').toLowerCase());
+            actualValue = person?.affinity ?? -101;
+            conditionValue = conditionValue?.value;
+            break;
+        case 'player_in_combat':
+            actualValue = playerStats.isInCombat;
+            conditionValue = String(condition.value).toLowerCase() === 'true';
+            break;
+        case 'location_is_safe':
+            actualValue = currentLocation?.isSafeZone ?? false;
+            conditionValue = String(condition.value).toLowerCase() === 'true';
+            break;
+        default:
+            newStates[condition.id] = false;
+            return false;
     }
 
-    return { pinnedContext: pinnedItems.join('\n\n'), pinnedIds };
+    // 2. Perform the comparison based on the operator
+    const numericOperators: PromptCondition['operator'][] = ['GREATER_THAN', 'LESS_THAN', 'EQUALS'];
+    if (numericOperators.includes(condition.operator)) {
+        const numActual = parseFloat(actualValue);
+        const numCondition = parseFloat(conditionValue);
+        if (!isNaN(numActual) && !isNaN(numCondition)) {
+            switch (condition.operator) {
+                case 'GREATER_THAN': evaluationResult = numActual > numCondition; break;
+                case 'LESS_THAN': evaluationResult = numActual < numCondition; break;
+                case 'EQUALS': evaluationResult = numActual === numCondition; break;
+            }
+        }
+    } else {
+        const strActual = String(actualValue).toLowerCase();
+        const strCondition = String(conditionValue || '').toLowerCase();
+        switch (condition.operator) {
+            case 'IS': evaluationResult = strActual === strCondition; break;
+            case 'IS_NOT': evaluationResult = strActual !== strCondition; break;
+            case 'CONTAINS':
+                if (condition.field === 'player_has_item') {
+                    evaluationResult = actualValue === (String(conditionValue).toLowerCase() === 'true');
+                } else {
+                    evaluationResult = strActual.includes(strCondition);
+                }
+                break;
+        }
+    }
+
+    // ALWAYS store the raw result for the next turn's `previousStates`
+    newStates[condition.id] = evaluationResult;
+    
+    // Now, determine the trigger-based result to decide if the block is active THIS turn
+    if (condition.trigger === 'on_true') {
+        return evaluationResult && (previousStates[condition.id] === false || previousStates[condition.id] === undefined);
+    }
+    if (condition.trigger === 'on_false') {
+        return !evaluationResult && previousStates[condition.id] === true;
+    }
+    
+    return evaluationResult;
+};
+
+const evaluateConditionGroup = (group: PromptConditionGroup, knowledgeBase: KnowledgeBase, previousStates: Record<string, boolean>, newStates: Record<string, boolean>): boolean => {
+    const childrenTriggeredResults = group.children.map(child =>
+        child.type === 'group'
+            ? evaluateConditionGroup(child, knowledgeBase, previousStates, newStates)
+            : evaluateSingleCondition(child, knowledgeBase, previousStates, newStates)
+    );
+
+    let rawGroupResult: boolean;
+    if (group.logic === 'AND') {
+        rawGroupResult = group.children.every(child => newStates[child.id] === true);
+    } else { // OR logic
+        rawGroupResult = group.children.some(child => newStates[child.id] === true);
+    }
+    newStates[group.id] = rawGroupResult;
+    
+    if (group.trigger === 'on_true') {
+        return rawGroupResult && (previousStates[group.id] === false || previousStates[group.id] === undefined);
+    }
+    if (group.trigger === 'on_false') {
+        return !rawGroupResult && previousStates[group.id] === true;
+    }
+
+    // If no trigger on group, its activation depends on its children's triggered results.
+    return group.logic === 'AND'
+        ? childrenTriggeredResults.every(r => r)
+        : childrenTriggeredResults.some(r => r);
+};
+
+const evaluateConditions = (conditions: ConditionElement[], knowledgeBase: KnowledgeBase, previousStates: Record<string, boolean>, newStates: Record<string, boolean>): boolean => {
+    // Top-level is always OR logic.
+    return conditions.some(condition => {
+        const conditionType = (condition as any).type || 'condition';
+        return conditionType === 'group'
+            ? evaluateConditionGroup(condition as PromptConditionGroup, knowledgeBase, previousStates, newStates)
+            : evaluateSingleCondition(condition as PromptCondition, knowledgeBase, previousStates, newStates);
+    });
 };
 
 
+/**
+ * NEW: Dynamic Prompt Generation Function
+ * Constructs the entire prompt string by iterating through a user-defined structure.
+ * @param knowledgeBase The full game state.
+ * @param playerActionText The player's input for the current turn.
+ * @param inputType The type of player input ('action' or 'story').
+ * @param responseLength The desired length of the AI's response.
+ * @param currentPageMessagesLog A string log of messages on the current page.
+ * @param previousPageSummaries An array of summaries from previous pages.
+ * @param isStrictMode A boolean indicating if strict mode is enabled.
+ * @param lastNarrationFromPreviousPage The last narration from the previous page, if applicable.
+ * @param retrievedContext The context retrieved from the RAG system.
+ * @param narrativeDirective A specific instruction for the AI for this turn.
+ * @returns The final, dynamically constructed prompt string.
+ */
 export const generateContinuePrompt = (
   knowledgeBase: KnowledgeBase,
   playerActionText: string,
@@ -151,236 +156,127 @@ export const generateContinuePrompt = (
   responseLength: ResponseLength,
   currentPageMessagesLog: string,
   previousPageSummaries: string[],
-  isStrictMode: boolean, // NEW
+  isStrictMode: boolean,
   lastNarrationFromPreviousPage?: string,
   retrievedContext?: string,
-  narrativeDirective?: string // NEW
-): string => {
-  // STEP 2.2: The "Safety Shield". If aiContextConfig doesn't exist (e.g., from an old save),
-  // use the default configuration to prevent the game from crashing.
-  const baseAiContextConfig = knowledgeBase.aiContextConfig || DEFAULT_AI_CONTEXT_CONFIG;
-  const rulebook = knowledgeBase.aiRulebook || DEFAULT_AI_RULEBOOK;
-  const { worldConfig, worldDate, playerStats, userPrompts, stagedActions } = knowledgeBase;
-  const genre = worldConfig?.genre || "Tu Tiên (Mặc định)";
-  const customGenreName = worldConfig?.customGenreName;
-  const effectiveGenre = (genre === CUSTOM_GENRE_VALUE && customGenreName) ? customGenreName : genre;
-  
-  const currentDifficultyName = worldConfig?.difficulty || 'Thường';
-
-  // --- START: Dynamic Rule Configuration ---
-  const dynamicAiContextConfig = { ...baseAiContextConfig };
-  dynamicAiContextConfig.sendCultivationRules = worldConfig?.isCultivationEnabled || false;
-  // --- END: Dynamic Rule Configuration ---
-
-  // --- START: CONSTRUCT CORE CONTEXT ---
-  const coreContext = {
-      playerInfo: {
-          name: worldConfig?.playerName,
-          gender: worldConfig?.playerGender,
-          race: worldConfig?.playerRace,
-          personality: worldConfig?.playerPersonality,
-          backstory: worldConfig?.playerBackstory,
-          goal: worldConfig?.playerGoal,
-          status: playerStats
-      },
-      playerAssets: {
-          inventory: knowledgeBase.inventory.slice(0, 20), // Pass the full item objects
-          skills: knowledgeBase.playerSkills, // Pass the full skill objects
-      },
-      worldState: {
-          theme: worldConfig?.theme,
-          worldDate: worldDate,
-          currentLocation: knowledgeBase.discoveredLocations.find(l => l.id === knowledgeBase.currentLocationId) || null,
-          isCultivationEnabled: worldConfig?.isCultivationEnabled,
-          realmProgressionSystemForPlayerRace: worldConfig?.raceCultivationSystems.find(s => s.raceName === (worldConfig.playerRace || 'Nhân Tộc'))?.realmSystem,
-      }
-  };
-  // --- END: CONSTRUCT CORE CONTEXT ---
-  
-  const { pinnedContext } = buildPinnedContext(knowledgeBase);
-  const combinedRagContext = [pinnedContext, retrievedContext].filter(Boolean).join('\n\n---\n\n');
-
-
-  const mainRealms = (knowledgeBase.realmProgressionList || []);
-  
-  // --- START: Build prompt sections conditionally based on dynamicAiContextConfig ---
-  
-  const writingStyleGuideSection = (dynamicAiContextConfig.sendWritingStyle && worldConfig?.writingStyleGuide) ? `
-**HƯỚNG DẪN BẮT CHƯỚC VĂN PHONG NGƯỜI DÙNG (CỰC KỲ QUAN TRỌNG):**
-Mục tiêu hàng đầu của bạn là tái hiện một cách trung thực nhất văn phong của người dùng dựa vào đoạn văn mẫu sau. Đừng chỉ sao chép từ ngữ, mà hãy nắm bắt và áp dụng đúng **nhịp điệu**, **cách lựa chọn từ vựng**, và **thái độ/cảm xúc** đặc trưng của họ. Lời kể của bạn phải khiến người đọc tin rằng nó do chính người dùng viết ra. TUYỆT ĐỐI không pha trộn giọng văn AI hoặc làm "mềm hóa" văn phong gốc.
-
-**VĂN BẢN MẪU CỦA NGƯỜI DÙNG ĐỂ BẠN BẮT CHƯỚC:**
-"""
-${worldConfig.writingStyleGuide}
-"""
-` : '';
-
-  let finalPrompt = `
-**YÊU CẦU CỐT LÕI:** Tiếp tục câu chuyện game nhập vai thể loại "${effectiveGenre}" bằng tiếng Việt.
-**QUY TẮC QUAN TRỌNG NHẤT:** Bắt đầu phản hồi của bạn bằng cách đi thẳng vào lời kể về những gì xảy ra do hành động của người chơi. **TUYỆT ĐỐI KHÔNG** bình luận về lựa chọn của người chơi. Hãy kể trực tiếp kết quả.
-${writingStyleGuideSection}
----
-**PHẦN 1: BỐI CẢNH (CONTEXT)**`;
-
-  if (dynamicAiContextConfig.sendRagContext) {
-      finalPrompt += `
-**A. BỐI CẢNH TRUY XUẤT (RAG CONTEXT - LONG-TERM MEMORY):**
-Dưới đây là một số thông tin liên quan từ các sự kiện trong quá khứ có thể hữu ích cho lượt này. Hãy sử dụng nó để đảm bảo tính nhất quán của câu chuyện.
-${combinedRagContext ? `\`\`\`
-${combinedRagContext}
-\`\`\`` : "Không có bối cảnh truy xuất nào."}`;
-  }
-
-  if (dynamicAiContextConfig.sendCoreContext) {
-      finalPrompt += `
-**B. BỐI CẢNH CỐT LÕI (CORE CONTEXT - PLAYER'S CURRENT STATE):**
-Đây là trạng thái hiện tại của người chơi và những yếu tố trực tiếp liên quan đến họ. Thông tin này LUÔN ĐÚNG và phải được ưu tiên hàng đầu.
-\`\`\`json
-${JSON.stringify(coreContext, null, 2)}
-\`\`\``;
-  }
-  
-  if (dynamicAiContextConfig.sendConversationalContext) {
-      finalPrompt += `
-**D. BỐI CẢNH HỘI THOẠI (CONVERSATIONAL CONTEXT - SHORT-TERM MEMORY):**
-- **Tóm tắt các diễn biến trang trước:**
-${previousPageSummaries.length > 0 ? previousPageSummaries.join("\n\n") : "Không có tóm tắt từ các trang trước."}
-- **Diễn biến gần nhất (lượt trước - Lượt ${playerStats.turn}):**
-${lastNarrationFromPreviousPage || "Chưa có."}
-- **Diễn biến chi tiết trang hiện tại (từ lượt đầu trang đến lượt ${playerStats.turn}):**
-${currentPageMessagesLog || "Chưa có diễn biến nào trong trang này."}`;
-  }
-  
-  // Staged actions are a core mechanic, not controlled by a flag.
-  if (stagedActions && Object.keys(stagedActions).length > 0) {
-      finalPrompt += `
-**HÀNH ĐỘNG CHỜ (STAGED ACTIONS):**
-Đây là những sự kiện đã được Siêu Trợ Lý sắp đặt và đang chờ điều kiện để kích hoạt.
-\`\`\`json
-${JSON.stringify(stagedActions, null, 2)}
-\`\`\`
-`;
-  }
-  
-  finalPrompt += `
----
-**PHẦN 2: HƯỚNG DẪN HÀNH ĐỘNG**`;
-
-  if (isStrictMode) {
-    finalPrompt += `
----
-**HƯỚNG DẪN CHẾ ĐỘ NGHIÊM NGẶT (ƯU TIÊN TUYỆT ĐỐI)**
-${STRICT_MODE_GUIDANCE}
----
-`;
-  }
-
-  if (dynamicAiContextConfig.sendUserPrompts && userPrompts && userPrompts.length > 0) {
-      finalPrompt += `
-**LỜI NHẮC TỪ NGƯỜI CHƠI (QUY TẮC BẮT BUỘC TUÂN THỦ):**
-${userPrompts.map(p => `- ${p}`).join('\n')}
-`;
-  }
+  narrativeDirective?: string
+): { prompt: string, newConditionStates: Record<string, boolean> } => {
+    const { worldConfig, worldDate, playerStats, userPrompts, stagedActions, aiRulebook, promptStructure, discoveredLocations, previousConditionStates } = knowledgeBase;
     
-  // Narrative directives are a core mechanic, not controlled by a flag.
-  if (narrativeDirective) {
-      finalPrompt += `
-**CHỈ DẪN TƯỜNG THUẬT BẮT BUỘC CHO LƯỢT NÀY (NARRATIVE DIRECTIVE - QUAN TRỌNG):**
-${narrativeDirective}
+    if (!promptStructure || !worldConfig || !aiRulebook) {
+        console.error("Critical Error: promptStructure, worldConfig, or aiRulebook is missing from KnowledgeBase.");
+        return { prompt: "Lỗi hệ thống: Cấu trúc prompt hoặc sổ tay quy tắc không tồn tại.", newConditionStates: {} };
+    }
 
-**NHIỆM VỤ CỦA BẠN (AI KỂ CHUYỆN):**
-Hãy tiếp tục câu chuyện. Bạn **BẮT BUỘC** phải lồng ghép sự kiện trong "Chỉ Dẫn Tường Thuật" vào lời kể của mình một cách **tự nhiên và hợp lý nhất**. Nó có thể xảy ra ở đầu, giữa, hoặc cuối lượt kể, tùy vào cách nào khiến câu chuyện mượt mà nhất sau khi xử lý hành động của người chơi.
-`;
-  }
+    const finalPromptParts: string[] = [];
+    const newConditionStates: Record<string, boolean> = {};
+    const prevStates = previousConditionStates || {};
 
-  finalPrompt += `
-**HƯỚNG DẪN TỪ NGƯỜI CHƠI (CHO LƯỢT TIẾP THEO - LƯỢT ${playerStats.turn + 1}):**
-- Loại hướng dẫn: ${inputType === 'action' ? 'Hành động trực tiếp' : 'Gợi ý câu chuyện'}
-- Nội dung hướng dẫn: "${playerActionText}"`;
-  
-  if (dynamicAiContextConfig.sendSpecialEventRules && (playerStats.turn % SPECIAL_EVENT_INTERVAL_TURNS === 0 && playerStats.turn > 0)) {
-      finalPrompt += `
-**HƯỚNG DẪN SỰ KIỆN ĐẶC BIỆT (QUAN TRỌNG):**
-Đã đến lúc cho một sự kiện lớn! Hãy tạo ra một diễn biến bất ngờ, có thể thay đổi cục diện hoặc mở ra một nhánh truyện mới. Ví dụ: một cuộc gặp gỡ định mệnh, một tai họa bất ngờ, một cơ duyên hiếm có, hoặc một kẻ thù mạnh xuất hiện. Hãy làm cho nó thật đáng nhớ!`;
-  }
-  
-  if (dynamicAiContextConfig.sendEventGuidance) {
-      const currentLocationId = knowledgeBase.currentLocationId;
-      const relevantEvents = knowledgeBase.gameEvents.filter(event =>
-          event.locationId === currentLocationId && (event.status === 'Sắp diễn ra' || event.status === 'Đang diễn ra' || event.status === 'Đã kết thúc')
-      );
+    // --- Iterate through the Prompt Structure ---
+    for (const block of promptStructure) {
+        if (!block.enabled) continue;
+        
+        // --- NEW: Conditional Activation Logic (Recursive) ---
+        if (block.conditions && block.conditions.length > 0) {
+            const conditionsMet = evaluateConditions(block.conditions, knowledgeBase, prevStates, newConditionStates);
+            if (!conditionsMet) {
+                continue;
+            }
+        }
+        // --- END: Conditional Activation Logic ---
 
-      if (relevantEvents.length > 0) {
-          finalPrompt += `
-**HƯỚNG DẪN VỀ SỰ KIỆN THẾ GIỚI (CỰC KỲ QUAN TRỌNG):**
-`;
-          relevantEvents.forEach(event => {
-              const timeDiff = getWorldDateDifferenceString(event.startDate, event.endDate, knowledgeBase.worldDate);
-              if (event.status === 'Sắp diễn ra') {
-                  finalPrompt += `
-    - **Sự kiện "${event.title}" SẮP DIỄN RA (${timeDiff}).**
-      - **QUY TẮC:** **TUYỆT ĐỐI KHÔNG** bắt đầu sự kiện này.
-      - **NHIỆM VỤ:** Hãy mô tả không khí chuẩn bị.
-    `;
-              } else if (event.status === 'Đang diễn ra') {
-                  finalPrompt += `
-    - **Sự kiện "${event.title}" ĐANG DIỄN RA (${timeDiff}).**
-      - **QUY TẮC:** **BẮT BUỘC** phải mô tả sự kiện đang diễn ra.
-      - **NHIỆM VỤ:** Cung cấp lựa chọn để tham gia.
-    `;
-              } else if (event.status === 'Đã kết thúc') {
-                  finalPrompt += `
-    - **Sự kiện "${event.title}" ĐÃ KẾT THÚC (${timeDiff}).**
-      - **QUY TẮC:** **TUYỆT ĐỐI KHÔNG** mô tả sự kiện đang diễn ra.
-      - **NHIỆM VỤ:** Hãy mô tả hậu quả của sự kiện.
-    `;
-              }
-          });
-      }
-  }
 
-  finalPrompt += `
-**HƯỚNG DẪN XỬ LÝ DÀNH CHO AI:**
-Xử lý nội dung trên như một hành động mà nhân vật chính (${worldConfig?.playerName}) đang thực hiện. Mô tả kết quả của hành động này và các diễn biến tiếp theo một cách chi tiết và hấp dẫn, dựa trên TOÀN BỘ BỐI CẢNH.
-*   **VIẾT LỜI KỂ:** Phản ứng của các NPC và môi trường xung quanh phải logic. Tuân thủ nghiêm ngặt CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH đã chọn.
-*   **SỬ DỤNG TAGS HỆ THỐNG:** Tạo ra các tag để cập nhật trạng thái game.
-`;
+        let blockContent = '';
 
-  // --- NEW: CREATIVE RULES SECTION ---
-  if (dynamicAiContextConfig.sendDifficultyGuidance) {
-    finalPrompt += `
----
-${getDifficultyGuidance(worldConfig)}
-`;
-  }
-  
-  if (dynamicAiContextConfig.sendNsfwGuidance) {
-    finalPrompt += `
----
-**CHẾ ĐỘ NỘI DUNG VÀ PHONG CÁCH:**
-${getNsfwGuidance(worldConfig)}
-`;
-  }
-  // --- END: CREATIVE RULES SECTION ---
-  
-  finalPrompt += `
----
-**PHẦN 3: QUY TẮC VÀ HƯỚNG DẪN CHI TIẾT**
-`;
+        switch (block.type) {
+            case 'header':
+                blockContent = `\n---\n**${block.label}**`;
+                break;
+            
+            case 'custom':
+                if (block.content) {
+                    blockContent = `**${block.label}:**\n${interpolate(block.content, knowledgeBase)}`;
+                }
+                break;
 
-  // DYNAMIC TECHNICAL RULE GENERATION
-  finalPrompt += buildRulesSection(dynamicAiContextConfig, rulebook, worldConfig, mainRealms, worldDate);
-  
-  const responseLengthText = responseLength === 'short' ? 'Ngắn (khoảng 2-3 đoạn văn súc tích)' :
-    responseLength === 'medium' ? 'Trung bình (khoảng 3-6 đoạn văn vừa phải)' :
-    responseLength === 'long' ? 'Dài (khoảng 8+ đoạn văn chi tiết)' :
-    'Mặc định (linh hoạt theo diễn biến)';
+            case 'system':
+                if (block.rulebookKey && aiRulebook[block.rulebookKey]) {
+                    let ruleText = aiRulebook[block.rulebookKey];
+                    const playerRaceSystem = worldConfig.raceCultivationSystems.find(s => s.raceName === (worldConfig.playerRace || 'Nhân Tộc'));
+                    const realmProgressionList = (playerRaceSystem?.realmSystem || '').split(' - ').map(s => s.trim()).filter(Boolean);
 
-  finalPrompt += `
----
-**ĐỘ DÀI PHẢN HỒI MONG MUỐN:**
-- Người chơi yêu cầu độ dài phản hồi: ${responseLengthText}. Hãy cố gắng điều chỉnh độ dài của lời kể và mô tả cho phù hợp với yêu cầu này của người chơi, nhưng vẫn đảm bảo tính tự nhiên và logic của câu chuyện.
-`;
+                    // A single, powerful replacement function for all simple placeholders
+                    const replaceAllPlaceholders = (text: string) => {
+                        return text
+                            .replace(/\{\{\s*BLOCK_LABEL\s*\}\}/g, block.label)
+                            .replace(/\{\{\s*RAG_CONTENT\s*\}\}/g, retrievedContext || "Không có.")
+                            .replace(/\{\{\s*CORE_CONTEXT_JSON\s*\}\}/g, JSON.stringify({
+                                playerInfo: { name: worldConfig.playerName, status: playerStats },
+                                worldState: { theme: worldConfig.theme, worldDate: worldDate, currentLocation: discoveredLocations.find(l => l.id === knowledgeBase.currentLocationId) }
+                            }, null, 2))
+                            .replace(/\{\{\s*PREVIOUS_PAGE_SUMMARIES\s*\}\}/g, previousPageSummaries.length > 0 ? previousPageSummaries.join("\n\n") : "Không có.")
+                            .replace(/\{\{\s*LAST_NARRATION\s*\}\}/g, lastNarrationFromPreviousPage || "Chưa có.")
+                            .replace(/\{\{\s*CURRENT_PAGE_LOG\s*\}\}/g, currentPageMessagesLog || "Chưa có.")
+                            .replace(/\{\{\s*STAGED_ACTIONS_JSON\s*\}\}/g, (stagedActions && Object.keys(stagedActions).length > 0) ? JSON.stringify(stagedActions, null, 2) : "{}")
+                            .replace(/\{\{\s*USER_PROMPTS_LIST\s*\}\}/g, (userPrompts && userPrompts.length > 0) ? userPrompts.map(p => `- ${p}`).join('\n') : "Không có.")
+                            .replace(/\{\{\s*NARRATIVE_DIRECTIVE_CONTENT\s*\}\}/g, narrativeDirective || "Không có.")
+                            .replace(/\{\{\s*PLAYER_ACTION_TYPE\s*\}\}/g, inputType === 'action' ? 'Hành động trực tiếp' : 'Gợi ý câu chuyện')
+                            .replace(/\{\{\s*PLAYER_ACTION_CONTENT\s*\}\}/g, playerActionText)
+                            .replace(/\{\{\s*RESPONSE_LENGTH_TEXT\s*\}\}/g, responseLength === 'short' ? 'Ngắn' : responseLength === 'medium' ? 'Trung bình' : responseLength === 'long' ? 'Dài' : 'Mặc định')
+                            .replace(/\{\{\s*WRITING_STYLE_GUIDE\s*\}\}/g, worldConfig.writingStyleGuide || 'Không có hướng dẫn văn phong.')
+                            .replace(/\{\{\s*PLAYER_NAME\s*\}\}/g, worldConfig.playerName || 'Người chơi')
+                            .replace(/\{\{\s*CURRENCY_NAME\s*\}\}/g, worldConfig.currencyName || 'Tiền tệ')
+                            .replace(/\{\{\s*MAIN_REALMS\s*\}\}/g, realmProgressionList.join(' | '))
+                            .replace(/\{\{\s*SEASON_CONTEXT\s*\}\}/g, getSeason(worldDate))
+                            .replace(/\{\{\s*TIME_OF_DAY_CONTEXT\s*\}\}/g, getTimeOfDayContext(worldDate));
+                    };
 
-  return finalPrompt;
+                    blockContent = replaceAllPlaceholders(ruleText);
+
+                    // Special handling for worldEventGuidance as it has sub-templates
+                    if (block.id === 'worldEventGuidance') {
+                        const currentLocationId = knowledgeBase.currentLocationId;
+                        const relevantEvents = (knowledgeBase.gameEvents || []).filter(event =>
+                            event.locationId === currentLocationId && 
+                            (event.status === 'Sắp diễn ra' || event.status === 'Đang diễn ra' || event.status === 'Đã kết thúc') &&
+                            !event.isCancelled
+                        );
+                
+                        if (relevantEvents.length > 0) {
+                            const eventDetails = relevantEvents.map(event => {
+                                const timeDiff = getWorldDateDifferenceString(event.startDate, event.endDate, knowledgeBase.worldDate);
+                                let template = '';
+                                if (event.status === 'Sắp diễn ra' && aiRulebook.worldEventGuidanceUpcoming) {
+                                    template = aiRulebook.worldEventGuidanceUpcoming;
+                                } else if (event.status === 'Đang diễn ra' && aiRulebook.worldEventGuidanceOngoing) {
+                                    template = aiRulebook.worldEventGuidanceOngoing;
+                                } else if (event.status === 'Đã kết thúc' && aiRulebook.worldEventGuidanceFinished) {
+                                    template = aiRulebook.worldEventGuidanceFinished;
+                                }
+                                return template
+                                    .replace(/\{\{\s*EVENT_TITLE\s*\}\}/g, event.title)
+                                    .replace(/\{\{\s*TIME_DIFFERENCE\s*\}\}/g, timeDiff);
+                            }).join('\n');
+                            
+                            if (eventDetails) {
+                                blockContent = blockContent.replace('{{EVENT_DETAILS}}', eventDetails);
+                            } else {
+                                blockContent = '';
+                            }
+                        } else {
+                           blockContent = ''; // No relevant events, so don't include the block.
+                        }
+                    }
+                }
+                break;
+        }
+        
+        if (blockContent) {
+            finalPromptParts.push(blockContent);
+        }
+    }
+
+    const separator = aiRulebook.blockSeparator || '\n\n';
+    const prompt = finalPromptParts.join(separator);
+    return { prompt, newConditionStates };
 };

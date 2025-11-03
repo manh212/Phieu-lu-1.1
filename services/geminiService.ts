@@ -2,7 +2,7 @@
 // FIX: Use getAiClient instead of new GoogleGenAI
 import { getAiClient } from './api/geminiClient';
 // FIX: Corrected import path for getApiSettings.
-import { getApiSettings } from './api/geminiClient';
+import { getApiSettings } from '@/services/api/geminiClient';
 import { WorldSettings, GeneratedWorldElements, GenreType, NsfwDescriptionStyle, ViolenceLevel, StoryTone } from '@/types/index';
 import { PROMPT_FUNCTIONS } from '../prompts';
 import { parseGeneratedWorldDetails } from '../utils/responseParser';
@@ -105,4 +105,38 @@ export async function countTokens(text: string): Promise<number> {
         contents: [{ parts: [{ text }] }],
     });
     return totalTokens;
+}
+
+// FIX: Add generateArchitectResponse function to be exported
+export async function generateArchitectResponse(
+    settingsJSON: string,
+    chatHistory: string,
+    userRequest: string,
+    isActionModus: boolean,
+    model: string,
+    useGoogleSearch: boolean
+): Promise<{ text: string, groundingMetadata?: any }> {
+    const prompt = PROMPT_FUNCTIONS.architect(
+        settingsJSON,
+        chatHistory,
+        userRequest,
+        isActionModus
+    );
+    incrementApiCallCount('WORLD_GENERATION');
+    
+    const config: any = {};
+    if (useGoogleSearch) {
+        config.tools = [{ googleSearch: {} }];
+    }
+    
+    const response = await generateContentAndCheck({
+        model: model,
+        contents: [{ parts: [{ text: prompt }] }],
+        config: config
+    });
+
+    return {
+        text: response.text,
+        groundingMetadata: response.candidates?.[0]?.groundingMetadata?.groundingChunks
+    };
 }

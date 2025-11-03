@@ -4,6 +4,8 @@ import { DEFAULT_PLAYER_STATS } from './constants';
 import { MAX_AUTO_SAVE_SLOTS } from './constants';
 import { DEFAULT_AI_CONTEXT_CONFIG } from './utils/gameLogicUtils';
 import { DEFAULT_AI_RULEBOOK } from './constants/systemRulesNormal';
+// FIX: Import the default prompt structure to initialize the missing property.
+import { DEFAULT_PROMPT_STRUCTURE } from './constants/promptStructure';
 
 export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   playerStats: { ...DEFAULT_PLAYER_STATS },
@@ -59,6 +61,8 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBase = {
   aiContextConfig: { ...DEFAULT_AI_CONTEXT_CONFIG }, // NEW: Initialize with default values
   // FIX: Added missing properties to match the KnowledgeBase type.
   aiRulebook: { ...DEFAULT_AI_RULEBOOK }, // NEW: Initialize with default rule content
+  // FIX: Added missing 'promptStructure' property to satisfy the KnowledgeBase type.
+  promptStructure: JSON.parse(JSON.stringify(DEFAULT_PROMPT_STRUCTURE)),
   stagedActions: {}, // NEW: Initialize with empty object
   aiCopilotConfigs: [], // NEW
   activeAICopilotConfigId: null, // NEW

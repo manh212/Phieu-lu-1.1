@@ -72,6 +72,22 @@ export const parseAiResponseText = (responseText: string | undefined): ParsedAiR
   const choices: AiChoice[] = [];
   const gameStateTags: string[] = [];
   let systemMessage: string | undefined;
+  let thinking: string | undefined;
+
+  // FIX: Extract <thinking> and <response> blocks to separate AI's chain-of-thought from the final narration.
+  const thinkingRegex = /<thinking>([\s\S]*?)<\/thinking>/is;
+  const thinkingMatch = narration.match(thinkingRegex);
+  if (thinkingMatch && thinkingMatch[1]) {
+    thinking = thinkingMatch[1].trim();
+    narration = narration.replace(thinkingRegex, '').trim();
+  }
+  
+  const responseRegex = /<response>([\s\S]*)<\/response>/is;
+  const responseMatch = narration.match(responseRegex);
+  if (responseMatch && responseMatch[1]) {
+      narration = responseMatch[1].trim();
+  }
+
 
   narration = narration
     .split('\n')
@@ -161,7 +177,7 @@ export const parseAiResponseText = (responseText: string | undefined): ParsedAiR
     .join('\n');
   narration = narration.replace(/\n\s*\n/g, '\n').trim();
 
-  return { narration, choices, tags: gameStateTags, systemMessage };
+  return { narration, choices, tags: gameStateTags, systemMessage, thinking };
 };
 
 export const parseGeneratedWorldDetails = (responseText: string | undefined): GeneratedWorldElements => {

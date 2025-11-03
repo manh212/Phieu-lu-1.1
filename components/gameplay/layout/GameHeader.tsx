@@ -76,14 +76,14 @@ const GameHeader: React.FC<GameHeaderProps> = ({
             onClick={onToggleCopilot}
             variant="secondary"
             size="sm"
-            title="Mở Siêu Trợ Lý AI"
-            aria-label="Mở Siêu Trợ Lý AI"
-            className="border-sky-500 text-sky-300 hover:bg-sky-700 hover:text-white px-2 sm:px-3"
+            title="Mở Trợ Lý AI"
+            aria-label="Mở Trợ Lý AI"
+            className="border-purple-500 text-purple-300 hover:bg-purple-700 hover:text-white px-2 sm:px-3"
           >
-            <span role="img" aria-label="brain" className="sm:hidden">🧠</span>
+            <span role="img" aria-label="brain with sparkles" className="sm:hidden">🧠✨</span>
             <span className="hidden sm:inline flex items-center gap-1">
-                <span role="img" aria-label="brain">🧠</span>
-                Trợ Lý
+                <span role="img" aria-label="brain with sparkles">🧠✨</span>
+                Trợ lý
             </span>
           </Button>
           

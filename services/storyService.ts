@@ -1,3 +1,4 @@
+
 // FIX: Correct import path for types
 import { KnowledgeBase, ParsedAiResponse, PlayerActionInputType, ResponseLength, GameMessage, GenreType, CombatEndPayload, AiChoice, AIContextConfig } from '@/types/index';
 import { PROMPT_FUNCTIONS } from '../prompts';
@@ -29,9 +30,10 @@ export async function generateNextTurn(
     retrievedContext: string | undefined,
     onPromptConstructed?: (prompt: string) => void,
     narrativeDirective?: string // NEW
-): Promise<{response: ParsedAiResponse, rawText: string}> {
+): Promise<{response: ParsedAiResponse, rawText: string, newConditionStates: Record<string, boolean>}> {
     const { model } = getApiSettings();
-    const prompt = PROMPT_FUNCTIONS.continue(
+    // FIX: Correctly call and destructure the object returned by the refactored `generateContinuePrompt`.
+    const { prompt, newConditionStates } = PROMPT_FUNCTIONS.continue(
         knowledgeBase,
         playerActionText,
         inputType,
@@ -45,7 +47,7 @@ export async function generateNextTurn(
     );
     incrementApiCallCount('STORY_GENERATION');
     const { response, rawText } = await generateContentWithRateLimit(prompt, model, onPromptConstructed);
-    return { response, rawText };
+    return { response, rawText, newConditionStates };
 }
 
 export async function summarizeTurnHistory(messagesToSummarize: GameMessage[], worldTheme: string, playerName: string, genre: GenreType | undefined, customGenreName: string | undefined, onPromptConstructed?: (prompt: string) => void, onResponseReceived?: (response: string) => void): Promise<{ rawSummary: string, processedSummary: string }> {
@@ -90,3 +92,6 @@ export async function generateRefreshedChoices(
     incrementApiCallCount('STORY_GENERATION');
     return generateContentWithRateLimit(prompt, model, onPromptConstructed);
 }
+
+// FIX: Remove duplicate generateCopilotResponse function to resolve re-export ambiguity.
+// The primary implementation is in `copilotService.ts`.

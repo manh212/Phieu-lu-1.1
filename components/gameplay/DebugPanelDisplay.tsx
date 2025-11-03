@@ -7,6 +7,7 @@ interface DebugPanelDisplayProps {
   kb: KnowledgeBase;
   sentPromptsLog: string[];
   rawAiResponsesLog: string[];
+  aiThinkingLog: string[];
   sentEconomyPromptsLog: string[];
   receivedEconomyResponsesLog: string[];
   sentGeneralSubLocationPromptsLog: string[];
@@ -65,6 +66,7 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
     kb,
     sentPromptsLog,
     rawAiResponsesLog,
+    aiThinkingLog,
     sentEconomyPromptsLog,
     receivedEconomyResponsesLog,
     sentGeneralSubLocationPromptsLog,
@@ -350,6 +352,11 @@ const DebugPanelDisplay: React.FC<DebugPanelDisplayProps> = ({
         <div className="mb-4 text-orange-300">
           <h5 className="text-md font-semibold mb-1">Nhật Ký Truy Xuất RAG ({retrievedRagContextLog.length} gần nhất)</h5>
           <LogSection title="Context Truy Xuất" logs={retrievedRagContextLog} />
+        </div>
+
+        <div className="mb-4 text-yellow-300">
+            <h5 className="text-md font-semibold mb-1">Nhật Ký Suy Nghĩ Của AI ({aiThinkingLog.length} gần nhất)</h5>
+            <LogSection title="Suy nghĩ của AI" logs={aiThinkingLog} />
         </div>
 
         <div className="mb-4">

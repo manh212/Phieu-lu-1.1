@@ -1,4 +1,4 @@
-export * from './worldGenService';
+export * from './geminiService';
 export * from './api/geminiClient';
 export * from './copilotService';
 export * from './imageService';

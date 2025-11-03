@@ -42,7 +42,7 @@ const SkillList: React.FC<{ title: string; skills: Skill[]; onSkillClick: (skill
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="!p-1.5 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                            className="!py-1 !px-2 text-xs border border-gray-600 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onSkillEditClick(skill);
@@ -50,7 +50,7 @@ const SkillList: React.FC<{ title: string; skills: Skill[]; onSkillClick: (skill
                             title={`Chỉnh sửa ${skill.name}`}
                             aria-label={`Chỉnh sửa ${skill.name}`}
                         >
-                            ✏️
+                            Sửa
                         </Button>
                     </li>
                 ))}

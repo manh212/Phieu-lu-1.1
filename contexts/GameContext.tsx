@@ -1,8 +1,9 @@
 import React, { createContext, ReactNode, useRef, useState, useCallback, useEffect } from 'react';
 import * as jsonpatch from 'fast-json-patch';
-import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction, CombatLogContent, YeuThu, Companion, Faction, WorldLoreEntry, VectorMetadata, Quest } from '@/types/index';
+import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction, CombatLogContent, YeuThu, Companion, Faction, WorldLoreEntry, VectorMetadata, Quest, AIPresetCollection, AIPreset } from '@/types/index';
 import { INITIAL_KNOWLEDGE_BASE, VIETNAMESE, APP_VERSION, MAX_AUTO_SAVE_SLOTS, TURNS_PER_PAGE, DEFAULT_TIERED_STATS, KEYFRAME_INTERVAL, EQUIPMENT_SLOTS_CONFIG, DEFAULT_WORLD_SETTINGS, DEFAULT_PLAYER_STATS } from '@/constants/index';
 import { saveGameToIndexedDB, loadGamesFromIndexedDB, loadSpecificGameFromIndexedDB, deleteGameFromIndexedDB, importGameToIndexedDB, resetDBConnection as resetIndexedDBConnection } from '../services/indexedDBService';
+import { getAIPresets, saveAIPresets } from '../services/presetService';
 import * as GameTemplates from '@/types/index';
 import { useAppInitialization } from '../hooks/useAppInitialization';
 import { useGameNotifications, NotificationState } from '../hooks/useGameNotifications';
@@ -21,13 +22,15 @@ import {
     generateImageUnified,
     generateCopilotResponse,
     getApiSettings as getGeminiApiSettings,
-    generateEmbeddings // NEW: Import embedding service
+    generateEmbeddings, // NEW: Import embedding service
+    connectToCopilotLiveSession
 } from '../services';
 import { uploadImageToCloudinary } from '../services/cloudinaryService';
 import { isValidImageUrl } from '../utils/imageValidationUtils';
-import { performTagProcessing, handleLevelUps, calculateEffectiveStats, addTurnHistoryEntryRaw, updateGameEventsStatus, handleLocationEntryEvents, calculateRealmBaseStats } from '../utils/gameLogicUtils';
+import { performTagProcessing, handleLevelUps, calculateEffectiveStats, addTurnHistoryEntryRaw, updateGameEventsStatus, handleLocationEntryEvents, calculateRealmBaseStats, createPcmBlob, decodeAudioData, decode } from '../utils/gameLogicUtils';
 // NEW: Import RAG formatters
 import { formatItemForEmbedding, formatSkillForEmbedding, formatQuestForEmbedding, formatPersonForEmbedding, formatLocationForEmbedding, formatLoreForEmbedding, formatFactionForEmbedding, formatYeuThuForEmbedding } from '../utils/ragUtils';
+import type { LiveServerMessage, LiveSession } from "@google/genai";
 
 
 // Import action hooks
@@ -49,6 +52,7 @@ export interface GameContextType {
     knowledgeBase: KnowledgeBase;
     gameMessages: GameMessage[];
     aiCopilotMessages: GameMessage[];
+    aiArchitectMessages: GameMessage[]; // NEW
     sentCopilotPromptsLog: string[];
     styleSettings: StyleSettings;
     storageSettings: StorageSettings;
@@ -67,6 +71,7 @@ export interface GameContextType {
     isUploadingAvatar: boolean;
     isCultivating: boolean;
     rawAiResponsesLog: string[];
+    aiThinkingLog: string[]; // NEW
     sentPromptsLog: string[];
     sentEconomyPromptsLog: string[];
     receivedEconomyResponsesLog: string[];
@@ -96,6 +101,7 @@ export interface GameContextType {
     currentPageDisplay: number;
     totalPages: number;
     messageIdBeingEdited: string | null;
+    aiPresets: AIPresetCollection; // NEW
 
     currentPageMessagesLog: string;
     previousPageSummaries: string[];
@@ -107,12 +113,27 @@ export interface GameContextType {
     isAiContextModalOpen: boolean;
     activeEconomyModal: {type: 'marketplace' | 'shopping_center', locationId: string} | null;
     activeSlaveMarketModal: {locationId: string} | null;
+    
+    // NEW Copilot State & Actions
+    copilotSessionState: 'disconnected' | 'connecting' | 'connected' | 'error';
+    startCopilotSession: () => void;
+    endCopilotSession: () => void;
+
+    // NEW Architect (Text Chat) Actions
+    handleArchitectQuery: (userQuestion: string, modelOverride: string, isActionModus: boolean, useGoogleSearch: boolean) => Promise<void>;
+    applyArchitectChanges: (tags: string[], messageId: string) => void;
+    resetArchitectConversation: () => void; // NEW
+
 
     // Actions (will be populated by allActions)
     startQuickPlay: () => void;
     handleUpdateEntity: (entityType: GameEntityType, entityData: GameEntity) => Promise<void>; // NOW ASYNC
     handlePinEntity: (entityType: GameEntityType, entityId: string) => void; // NEW
     resetCopilotConversation: () => void;
+    saveNewAIPreset: (presetName: string, newPreset: AIPreset) => void; // NEW
+    deleteAIPreset: (presetName: string) => void; // NEW
+    renameAIPreset: (oldName: string, newName: string) => boolean; // NEW
+    importAIPresets: (importedPresets: AIPreset[]) => void; // NEW
     [key: string]: any; // Index signature to allow dynamic action properties
 }
 
@@ -123,6 +144,16 @@ const clamp = (num: number, min: number, max: number) => Math.min(Math.max(num, 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const gameplayScrollPosition = useRef(0);
     const justLoadedGame = useRef(false);
+
+    // --- NEW REFS FOR AUDIO ---
+    const copilotSessionRef = useRef<LiveSession | null>(null);
+    const inputAudioContextRef = useRef<AudioContext | null>(null);
+    const outputAudioContextRef = useRef<AudioContext | null>(null);
+    const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+    const mediaStreamRef = useRef<MediaStream | null>(null);
+    const audioSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+    const nextAudioStartTimeRef = useRef<number>(0);
+    // --- END NEW REFS ---
     
     const { storageSettings, styleSettings, setStorageSettings, setStyleSettings, isInitialLoading, storageInitError } = useAppInitialization();
     const { notification, showNotification } = useGameNotifications();
@@ -144,9 +175,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [isCultivating, setIsCultivating] = useState<boolean>(false);
     const [isLoadingApi, setIsLoadingApi] = useState<boolean>(false);
     const [isSummarizingNextPageTransition, setIsSummarizingNextPageTransition] = useState<boolean>(false);
-    
+    const [copilotSessionState, setCopilotSessionState] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected'); // NEW
+
     const apiErrorTimer = useRef<number | undefined>(undefined);
     const [apiError, setApiError] = useState<string | null>(null);
+
+    // NEW: Load AI Presets on initial app load
+    useEffect(() => {
+        const loadedPresets = getAIPresets();
+        gameData.setAiPresets(loadedPresets);
+    }, []); // Empty dependency array ensures this runs only once
 
     const resetApiError = useCallback(() => {
         if (apiErrorTimer.current) clearTimeout(apiErrorTimer.current);
@@ -170,8 +208,173 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const resetCopilotConversation = useCallback(() => {
         gameData.setAiCopilotMessages([]);
         gameData.setSentCopilotPromptsLog([]);
-        showNotification("Cuộc trò chuyện với Siêu Trợ Lý đã được làm mới.", "info");
+        showNotification("Cuộc trò chuyện với Đạo Diễn AI đã được làm mới.", "info");
     }, [gameData.setAiCopilotMessages, gameData.setSentCopilotPromptsLog, showNotification]);
+
+    const resetArchitectConversation = useCallback(() => {
+        gameData.setAiArchitectMessages([]);
+        showNotification("Cuộc trò chuyện với Kiến Trúc Sư AI đã được làm mới.", "info");
+    }, [gameData.setAiArchitectMessages, showNotification]);
+    
+    const endCopilotSession = useCallback(() => {
+        if (copilotSessionRef.current) {
+            console.log("Closing copilot session...");
+            copilotSessionRef.current.close(); // This will trigger the onclose callback
+        }
+    
+        // Cleanup audio resources
+        if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach(track => track.stop());
+            mediaStreamRef.current = null;
+        }
+        if (scriptProcessorRef.current) {
+            scriptProcessorRef.current.disconnect();
+            scriptProcessorRef.current = null;
+        }
+        if (inputAudioContextRef.current && inputAudioContextRef.current.state !== 'closed') {
+            inputAudioContextRef.current.close();
+            inputAudioContextRef.current = null;
+        }
+        if (outputAudioContextRef.current && outputAudioContextRef.current.state !== 'closed') {
+            outputAudioContextRef.current.close();
+            outputAudioContextRef.current = null;
+        }
+        audioSourcesRef.current.forEach(source => source.stop());
+        audioSourcesRef.current.clear();
+        nextAudioStartTimeRef.current = 0;
+    
+        // Even if there was no session, ensure the state is disconnected.
+        if (copilotSessionState !== 'disconnected') {
+            setCopilotSessionState('disconnected');
+        }
+    }, [copilotSessionState]);
+
+    const startCopilotSession = useCallback(async () => {
+        if (copilotSessionState === 'connected' || copilotSessionState === 'connecting') {
+            return;
+        }
+
+        console.log("Attempting to start copilot session...");
+        setCopilotSessionState('connecting');
+        showNotification("Đang kết nối cuộc gọi...", 'info');
+        
+        try {
+            const sessionPromise = connectToCopilotLiveSession(
+                gameData.knowledgeBase, gameData.gameMessages, gameData.sentPromptsLog,
+                {
+                    onopen: async () => {
+                        console.log("Copilot session opened. Initializing audio stream...");
+                        setCopilotSessionState('connected');
+                        showNotification("Đã kết nối! Bắt đầu nói chuyện.", 'success');
+                        
+                        // Initialize audio contexts
+                        inputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+                        outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+                        nextAudioStartTimeRef.current = 0;
+
+                        // Start microphone input
+                        mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        const source = inputAudioContextRef.current.createMediaStreamSource(mediaStreamRef.current);
+                        const scriptProcessor = inputAudioContextRef.current.createScriptProcessor(4096, 1, 1);
+
+                        scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
+                            const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                            const pcmBlob = createPcmBlob(inputData);
+                            if (copilotSessionRef.current) {
+                                copilotSessionRef.current.sendRealtimeInput({ media: pcmBlob });
+                            }
+                        };
+                        
+                        source.connect(scriptProcessor);
+                        scriptProcessor.connect(inputAudioContextRef.current.destination);
+                        scriptProcessorRef.current = scriptProcessor;
+                    },
+                    onmessage: async (message: LiveServerMessage) => {
+                        // --- START: TRANSCRIPT PROCESSING ---
+                        gameData.setAiCopilotMessages(prevMessages => {
+                            let newMessages = [...prevMessages];
+                            let lastMessage = newMessages.length > 0 ? newMessages[newMessages.length - 1] : null;
+                        
+                            if (message.serverContent?.inputTranscription) {
+                                const text = message.serverContent.inputTranscription.text;
+                                if (lastMessage && lastMessage.isPlayerInput && !lastMessage.isFinal) {
+                                    lastMessage.content = (lastMessage.content as string) + text;
+                                } else {
+                                    newMessages.push({
+                                        id: `copilot-user-${Date.now()}`, type: 'player_action', content: text,
+                                        timestamp: Date.now(), turnNumber: gameData.knowledgeBase.playerStats.turn,
+                                        isPlayerInput: true, isFinal: false,
+                                    });
+                                }
+                            }
+                        
+                            if (message.serverContent?.outputTranscription) {
+                                const text = message.serverContent.outputTranscription.text;
+                                if (lastMessage && !lastMessage.isPlayerInput && !lastMessage.isFinal) {
+                                    lastMessage.content = (lastMessage.content as string) + text;
+                                } else {
+                                    newMessages.push({
+                                        id: `copilot-ai-${Date.now()}`, type: 'narration', content: text,
+                                        timestamp: Date.now(), turnNumber: gameData.knowledgeBase.playerStats.turn,
+                                        isPlayerInput: false, isFinal: false,
+                                    });
+                                }
+                            }
+                        
+                            if (message.serverContent?.turnComplete) {
+                                newMessages = newMessages.map(msg => ({ ...msg, isFinal: true }));
+                            }
+                        
+                            return newMessages;
+                        });
+                        // --- END: TRANSCRIPT PROCESSING ---
+
+                        // Handle audio output
+                        const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+                        if (base64Audio && outputAudioContextRef.current) {
+                            nextAudioStartTimeRef.current = Math.max(nextAudioStartTimeRef.current, outputAudioContextRef.current.currentTime);
+                            const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContextRef.current, 24000, 1);
+                            const source = outputAudioContextRef.current.createBufferSource();
+                            source.buffer = audioBuffer;
+                            source.connect(outputAudioContextRef.current.destination);
+                            
+                            source.addEventListener('ended', () => {
+                                audioSourcesRef.current.delete(source);
+                            });
+
+                            source.start(nextAudioStartTimeRef.current);
+                            nextAudioStartTimeRef.current += audioBuffer.duration;
+                            audioSourcesRef.current.add(source);
+                        }
+
+                        // Handle interruptions
+                        if (message.serverContent?.interrupted) {
+                            audioSourcesRef.current.forEach(source => source.stop());
+                            audioSourcesRef.current.clear();
+                            nextAudioStartTimeRef.current = 0;
+                        }
+                    },
+                    onerror: (event: ErrorEvent) => {
+                        console.error("Copilot session error:", event);
+                        setApiErrorWithTimeout(`Lỗi kết nối giọng nói: ${event.message}`);
+                        endCopilotSession(); // Full cleanup on error
+                    },
+                    onclose: (event: CloseEvent) => {
+                        console.log("Copilot session closed.", event);
+                        endCopilotSession(); // Full cleanup on close
+                    },
+                }
+            );
+
+            copilotSessionRef.current = await sessionPromise;
+
+        } catch (error) {
+            console.error("Failed to initiate copilot connection:", error);
+            const errorMsg = `Không thể bắt đầu cuộc gọi: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`;
+            setApiErrorWithTimeout(errorMsg);
+            endCopilotSession(); // Full cleanup on failure
+        }
+    }, [copilotSessionState, gameData.knowledgeBase, gameData.gameMessages, gameData.sentPromptsLog, showNotification, setApiErrorWithTimeout, endCopilotSession, gameData.aiCopilotMessages, gameData.setAiCopilotMessages]);
 
     const handlePinEntity = useCallback((entityType: GameEntityType, entityId: string) => {
         gameData.setKnowledgeBase(prevKb => {
@@ -336,6 +539,75 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
         closeModal();
     }, [gameData.setKnowledgeBase, showNotification, closeModal]);
+
+    // --- NEW: AI Preset Management Actions ---
+    const saveNewAIPreset = useCallback((presetName: string, newPreset: AIPreset) => {
+        gameData.setAiPresets(prevPresets => {
+            const newPresets = { ...prevPresets, [presetName]: newPreset };
+            saveAIPresets(newPresets);
+            return newPresets;
+        });
+        showNotification(`Đã lưu preset "${presetName}"!`, 'success');
+    }, [gameData.setAiPresets, showNotification]);
+
+    const deleteAIPreset = useCallback((presetName: string) => {
+        gameData.setAiPresets(prevPresets => {
+            const newPresets = { ...prevPresets };
+            delete newPresets[presetName];
+            saveAIPresets(newPresets);
+            return newPresets;
+        });
+        showNotification(`Đã xóa preset "${presetName}".`, 'info');
+    }, [gameData.setAiPresets, showNotification]);
+
+    const renameAIPreset = useCallback((oldName: string, newName: string): boolean => {
+        if (!newName.trim() || newName === oldName) return false;
+        let success = false;
+        gameData.setAiPresets(prevPresets => {
+            if (prevPresets[newName]) {
+                showNotification(`Tên preset "${newName}" đã tồn tại.`, 'error');
+                success = false;
+                return prevPresets;
+            }
+            const newPresets = { ...prevPresets };
+            const presetToRename = newPresets[oldName];
+            if (presetToRename) {
+                delete newPresets[oldName];
+                presetToRename.metadata.name = newName;
+                newPresets[newName] = presetToRename;
+                saveAIPresets(newPresets);
+                showNotification(`Đã đổi tên preset thành "${newName}".`, 'success');
+                success = true;
+                return newPresets;
+            }
+            success = false;
+            return prevPresets;
+        });
+        return success;
+    }, [gameData.setAiPresets, showNotification]);
+
+    const importAIPresets = useCallback((importedPresets: AIPreset[]) => {
+        gameData.setAiPresets(prevPresets => {
+            const newPresets = { ...prevPresets };
+            let importedCount = 0;
+            
+            importedPresets.forEach(preset => {
+                let finalName = preset.metadata.name;
+                let counter = 1;
+                while (newPresets[finalName]) {
+                    finalName = `${preset.metadata.name} (${counter})`;
+                    counter++;
+                }
+                newPresets[finalName] = { ...preset, metadata: { ...preset.metadata, name: finalName } };
+                importedCount++;
+            });
+    
+            saveAIPresets(newPresets);
+            showNotification(`Đã nhập thành công ${importedCount} preset.`, 'success');
+            return newPresets;
+        });
+    }, [gameData.setAiPresets, showNotification]);
+    // --- END: AI Preset Management Actions ---
 
     const startQuickPlay = useCallback(() => {
         gameData.resetGameData(); 
@@ -565,43 +837,73 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [gameData, isSummarizingNextPageTransition]);
     
 
-    const gameActions = useGameActions({ ...gameData, showNotification, setCurrentScreen, justLoadedGame, setIsSummarizingOnLoad });
-
+    const gameActions = useGameActions({
+        ...gameData,
+        showNotification,
+        setCurrentScreen,
+        justLoadedGame,
+        setIsSummarizingOnLoad
+    });
+    
     const postCombatActions = usePostCombatActions({
-        ...gameData, showNotification, setCurrentScreen, onQuit, isLoadingApi, setIsLoadingApi,
-        resetApiError, setApiErrorWithTimeout, logNpcAvatarPromptCallback,
-        setRawAiResponsesLog: gameData.setRawAiResponsesLog, setSentPromptsLog: gameData.setSentPromptsLog,
+        ...gameData,
+        showNotification,
+        setCurrentScreen,
+        onQuit,
+        isLoadingApi,
+        setIsLoadingApi,
+        resetApiError,
+        setApiErrorWithTimeout,
+        logNpcAvatarPromptCallback,
+        setRawAiResponsesLog: gameData.setRawAiResponsesLog,
+        setSentPromptsLog: gameData.setSentPromptsLog,
         setSentCombatSummaryPromptsLog: gameData.setSentCombatSummaryPromptsLog,
         setReceivedCombatSummaryResponsesLog: gameData.setReceivedCombatSummaryResponsesLog,
         setSentVictoryConsequencePromptsLog: gameData.setSentVictoryConsequencePromptsLog,
         setReceivedVictoryConsequenceResponsesLog: gameData.setReceivedVictoryConsequenceResponsesLog,
-        currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
+        currentPageMessagesLog,
+        previousPageSummaries: previousPageSummariesContent,
+        lastNarrationFromPreviousPage,
     });
-
+    
     const livingWorldActions = useLivingWorldActions({
-        ...gameData, showNotification, logNpcAvatarPromptCallback,
+        ...gameData,
+        showNotification,
+        logNpcAvatarPromptCallback,
         setSentLivingWorldPromptsLog: gameData.setSentLivingWorldPromptsLog,
         setRawLivingWorldResponsesLog: gameData.setRawLivingWorldResponsesLog,
         setLastScoredNpcsForTick: gameData.setLastScoredNpcsForTick,
     });
-
+    
     const mainGameLoopActions = useMainGameLoopActions({
-        ...gameData, showNotification, setCurrentPageDisplay: gameData.setCurrentPageDisplay, onQuit, isLoadingApi, setIsLoadingApi,
-        resetApiError, setApiErrorWithTimeout, isAutoPlaying, setIsAutoPlaying,
+        ...gameData,
+        showNotification,
+        setCurrentPageDisplay: gameData.setCurrentPageDisplay,
+        onQuit,
+        isLoadingApi,
+        setIsLoadingApi,
+        resetApiError,
+        setApiErrorWithTimeout,
+        isAutoPlaying,
+        setIsAutoPlaying,
         executeSaveGame: gameActions.onSaveGame as any,
         logNpcAvatarPromptCallback,
         handleNonCombatDefeat: postCombatActions.handleNonCombatDefeat,
         executeWorldTick: livingWorldActions.executeWorldTick,
-        currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
+        currentPageMessagesLog,
+        previousPageSummaries: previousPageSummariesContent,
+        lastNarrationFromPreviousPage,
         setRawAiResponsesLog: gameData.setRawAiResponsesLog,
         sentPromptsLog: gameData.sentPromptsLog,
         setSentPromptsLog: gameData.setSentPromptsLog,
         setLatestPromptTokenCount: gameData.setLatestPromptTokenCount,
         setSummarizationResponsesLog: gameData.setSummarizationResponsesLog,
-        isSummarizingNextPageTransition, setIsSummarizingNextPageTransition,
+        isSummarizingNextPageTransition,
+        setIsSummarizingNextPageTransition,
         setRetrievedRagContextLog: gameData.setRetrievedRagContextLog,
         setSentGeneralSubLocationPromptsLog: gameData.setSentGeneralSubLocationPromptsLog,
         setReceivedGeneralSubLocationResponsesLog: gameData.setReceivedGeneralSubLocationResponsesLog,
+        setAiThinkingLog: gameData.setAiThinkingLog,
     });
 
     const handleProcessDebugTags = useCallback(async (narration: string, tags: string) => {
@@ -621,7 +923,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // NEW: Handle Rewrite Turn directive from Copilot
             if (rewriteTurnDirective) {
-                // FIX: Pass 'rewriteTurnDirective' instead of undefined 'directive'.
                 await mainGameLoopActions.handleRewriteTurn(rewriteTurnDirective);
                 return; // Stop further processing for this call
             }
@@ -653,50 +954,117 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsLoadingApi(false);
         }
     }, [gameData, setIsLoadingApi, showNotification, logNpcAvatarPromptCallback, postCombatActions.handleNonCombatDefeat, mainGameLoopActions.handleRewriteTurn]);
-    
+
     const setupActions = useSetupActions({
-        setIsLoadingApi, resetApiError, setKnowledgeBase: gameData.setKnowledgeBase,
-        setCurrentPageDisplay: gameData.setCurrentPageDisplay, setCurrentScreen,
+        setIsLoadingApi,
+        resetApiError,
+        setKnowledgeBase: gameData.setKnowledgeBase,
+        setCurrentPageDisplay: gameData.setCurrentPageDisplay,
+        setCurrentScreen,
         addMessageAndUpdateState: gameData.addMessageAndUpdateState,
         logSentPromptCallback: mainGameLoopActions.logSentPromptCallback,
         setRawAiResponsesLog: gameData.setRawAiResponsesLog,
-        setApiErrorWithTimeout, logNpcAvatarPromptCallback,
+        setApiErrorWithTimeout,
+        logNpcAvatarPromptCallback,
     });
     
     const auctionActions = useAuctionActions({
-        ...gameData, showNotification, setCurrentScreen, isLoadingApi, setIsLoadingApi,
-        resetApiError, setApiErrorWithTimeout, logNpcAvatarPromptCallback,
+        ...gameData,
+        showNotification,
+        setCurrentScreen,
+        isLoadingApi,
+        setIsLoadingApi,
+        resetApiError,
+        setApiErrorWithTimeout,
+        logNpcAvatarPromptCallback,
         setSentEconomyPromptsLog: gameData.setSentEconomyPromptsLog,
         setReceivedEconomyResponsesLog: gameData.setReceivedEconomyResponsesLog,
     });
     
     const cultivationActions = useCultivationActions({
-        ...gameData, showNotification, setCurrentScreen, setIsCultivating,
-        resetApiError, setApiErrorWithTimeout, logNpcAvatarPromptCallback,
+        ...gameData,
+        showNotification,
+        setCurrentScreen,
+        setIsCultivating,
+        resetApiError,
+        setApiErrorWithTimeout,
+        logNpcAvatarPromptCallback,
         setSentCultivationPromptsLog: gameData.setSentCultivationPromptsLog,
         setReceivedCultivationResponsesLog: gameData.setReceivedCultivationResponsesLog,
-        currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
+        currentPageMessagesLog,
+        previousPageSummaries: previousPageSummariesContent,
+        lastNarrationFromPreviousPage,
     });
 
     const characterActions = useCharacterActions({
-        ...gameData, showNotification, setCurrentScreen, isLoadingApi, setIsLoadingApi,
-        resetApiError, setApiErrorWithTimeout, logNpcAvatarPromptCallback,
-        handleProcessDebugTags, currentPageMessagesLog, previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
-        prisonerInteractionLog: gameData.prisonerInteractionLog, setPrisonerInteractionLog: gameData.setPrisonerInteractionLog,
-        sentPrisonerPromptsLog: gameData.sentPrisonerPromptsLog, setSentPrisonerPromptsLog: gameData.setSentPrisonerPromptsLog,
-        receivedPrisonerResponsesLog: gameData.receivedPrisonerResponsesLog, setReceivedPrisonerResponsesLog: gameData.setReceivedPrisonerResponsesLog,
-        companionInteractionLog: gameData.companionInteractionLog, setCompanionInteractionLog: gameData.setCompanionInteractionLog,
-        sentCompanionPromptsLog: gameData.sentCompanionPromptsLog, setSentCompanionPromptsLog: gameData.setSentCompanionPromptsLog,
-        receivedCompanionResponsesLog: gameData.receivedCompanionResponsesLog, setReceivedCompanionResponsesLog: gameData.setReceivedCompanionResponsesLog,
+        ...gameData,
+        showNotification,
+        setCurrentScreen,
+        isLoadingApi,
+        setIsLoadingApi,
+        resetApiError,
+        setApiErrorWithTimeout,
+        logNpcAvatarPromptCallback,
+        handleProcessDebugTags,
+        currentPageMessagesLog,
+        previousPageSummaries: previousPageSummariesContent,
+        lastNarrationFromPreviousPage,
+        prisonerInteractionLog: gameData.prisonerInteractionLog,
+        setPrisonerInteractionLog: gameData.setPrisonerInteractionLog,
+        sentPrisonerPromptsLog: gameData.sentPrisonerPromptsLog,
+        setSentPrisonerPromptsLog: gameData.setSentPrisonerPromptsLog,
+        receivedPrisonerResponsesLog: gameData.receivedPrisonerResponsesLog,
+        setReceivedPrisonerResponsesLog: gameData.setReceivedPrisonerResponsesLog,
+        companionInteractionLog: gameData.companionInteractionLog,
+        setCompanionInteractionLog: gameData.setCompanionInteractionLog,
+        sentCompanionPromptsLog: gameData.sentCompanionPromptsLog,
+        setSentCompanionPromptsLog: gameData.setSentCompanionPromptsLog,
+        receivedCompanionResponsesLog: gameData.receivedCompanionResponsesLog,
+        setReceivedCompanionResponsesLog: gameData.setReceivedCompanionResponsesLog,
     });
     
     const copilotActions = useCopilotActions({
-        ...gameData, isLoadingApi, setIsLoadingApi,
-        resetApiError, setApiErrorWithTimeout,
+        ...gameData,
+        isLoadingApi,
+        setIsLoadingApi,
+        resetApiError,
+        setApiErrorWithTimeout,
         sentPromptsLog: gameData.sentPromptsLog,
+// FIX: The property 'sentCopilotPromptsLog' does not exist on type 'UseCopilotActionsProps'. Removed the incorrect property.
+        setSentCopilotPromptsLog: gameData.setSentCopilotPromptsLog,
     });
 
     const allActions = { ...setupActions, ...mainGameLoopActions, ...auctionActions, ...cultivationActions, ...characterActions, ...postCombatActions, ...livingWorldActions, ...copilotActions, ...gameActions, handleProcessDebugTags };
+    
+    // FIX: Moved handleArchitectQuery and applyArchitectChanges to after `allActions` is defined.
+    // This resolves the "used before declaration" error.
+    const handleArchitectQuery = useCallback(async (userQuestion: string, modelOverride: string, isActionModus: boolean, useGoogleSearch: boolean) => {
+        // This function now uses the generic copilot query handler but provides the architect-specific state.
+        // It's designed to be used by the text-based architect chat.
+        await copilotActions.handleCopilotQuery(
+            userQuestion,
+            gameData.aiArchitectMessages, // Pass architect history
+            gameData.setAiArchitectMessages, // Pass architect state setter
+            undefined, // no extra context
+            isActionModus,
+            modelOverride,
+            useGoogleSearch
+        );
+    }, [copilotActions, gameData.aiArchitectMessages, gameData.setAiArchitectMessages]);
+
+    const applyArchitectChanges = useCallback((tags: string[], messageId: string) => {
+        // Use the debug tag processor, now correctly referenced via allActions.
+        allActions.handleProcessDebugTags('', tags.join('\n'));
+    
+        // Mark the message as applied in the architect chat history
+        gameData.setAiArchitectMessages(prev =>
+            prev.map(msg =>
+                msg.id === messageId ? { ...msg, applied: true } : msg
+            )
+        );
+    }, [allActions, gameData.setAiArchitectMessages]);
+
+
     const isCurrentlyActivePage = gameData.currentPageDisplay === gameData.totalPages;
     
     const contextValue: GameContextType = {
@@ -706,10 +1074,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isUploadingAvatar, isCultivating, sentNpcAvatarPromptsLog, currentPageMessagesLog,
         previousPageSummaries: previousPageSummariesContent, lastNarrationFromPreviousPage,
         selectedEntity, isStyleSettingsModalOpen, isAiContextModalOpen, activeEconomyModal, activeSlaveMarketModal,
+        copilotSessionState, startCopilotSession, endCopilotSession, // NEW
+        handleArchitectQuery, applyArchitectChanges, resetArchitectConversation, // NEW
         setCurrentScreen, setKnowledgeBase: gameData.setKnowledgeBase, setGameMessages: gameData.setGameMessages,
         setStyleSettings, openEntityModal, closeModal, closeEconomyModal, closeSlaveMarketModal,
         setIsStyleSettingsModalOpen, setIsAiContextModalOpen, setActiveEconomyModal, setActiveSlaveMarketModal,
         handleUpdateEntity, handlePinEntity,
+        // NEW: Expose preset actions
+        saveNewAIPreset,
+        deleteAIPreset,
+        renameAIPreset,
+        importAIPresets,
         ...allActions, onQuit, startQuickPlay, resetCopilotConversation, isCurrentlyActivePage, gameplayScrollPosition, justLoadedGame,
         onGoToPrevPage, onGoToNextPage, onJumpToPage,
     };

@@ -1,95 +1,139 @@
 // FIX: Corrected import paths for types.
-import { WorldSettings } from '../types/index';
+import { WorldSettings, KnowledgeBase } from '../types/index';
 import { VIETNAMESE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE, DEFAULT_NSFW_DESCRIPTION_STYLE, nsfwGuidanceCustomDefault } from '../constants';
+import { 
+    formatItemForEmbedding, 
+    formatSkillForEmbedding, 
+    formatQuestForEmbedding, 
+    formatPersonForEmbedding, 
+    formatLocationForEmbedding, 
+    formatLoreForEmbedding, 
+    formatFactionForEmbedding, 
+    formatYeuThuForEmbedding 
+} from '../utils/ragUtils';
 
-/**
- * Lấy chuỗi hướng dẫn về độ khó để chèn vào prompt.
- * @param worldConfig - Cấu hình thế giới hiện tại.
- * @returns Chuỗi văn bản hướng dẫn về độ khó cho AI.
- */
-export function getDifficultyGuidance(worldConfig: WorldSettings | null): string {
-  if (!worldConfig) return '';
-  const difficulty = worldConfig.difficulty || 'Thường';
-  
-  // The guidance text is now a single block containing all levels for context,
-  // with the current level highlighted.
-  return `**HƯỚNG DẪN VỀ ĐỘ KHÓ (Rất quan trọng để AI tuân theo):**
-- **Dễ:** ${VIETNAMESE.difficultyGuidanceEasy}
-- **Thường:** ${VIETNAMESE.difficultyGuidanceNormal}
-- **Khó:** ${VIETNAMESE.difficultyGuidanceHard}
-- **Ác Mộng:** ${VIETNAMESE.difficultyGuidanceNightmare}
-Hiện tại người chơi đã chọn độ khó: **${difficulty}**. Hãy điều chỉnh tỉ lệ thành công, lợi ích và rủi ro trong các lựa chọn [CHOICE: "..."] của bạn cho phù hợp với hướng dẫn độ khó này.`;
-}
+export const buildPinnedContext = (kb: KnowledgeBase): { pinnedContext: string; pinnedIds: string[] } => {
+    const pinnedItems: any[] = [];
+    const pinnedIds: string[] = [];
 
-
-/**
- * Lấy chuỗi hướng dẫn NSFW cuối cùng để chèn vào prompt.
- * Hàm này chứa toàn bộ logic ghi đè của "Phòng Tối AI".
- * @param worldConfig - Cấu hình thế giới hiện tại.
- * @returns Chuỗi văn bản hướng dẫn NSFW cho AI.
- */
-export function getNsfwGuidance(worldConfig: WorldSettings | null): string {
-  if (!worldConfig?.nsfwMode) {
-    return "";
-  }
-
-  // Logic Ghi Đè của "Phòng Tối AI"
-  if (worldConfig.nsfwDescriptionStyle === 'Tùy Chỉnh (Phòng Tối AI)') {
-    if (worldConfig.customNsfwPrompt && worldConfig.customNsfwPrompt.trim()) {
-      // Nếu người dùng đã nhập prompt tùy chỉnh
-      return `
-HƯỚNG DẪN 18+ TÙY CHỈNH TỪ NGƯỜI CHƠI (PHÒNG TỐI AI - ƯU TIÊN TUYỆT ĐỐI):
-${worldConfig.customNsfwPrompt}
-`.trim();
+    const checkAndPush = (list: any[] | undefined) => {
+        if (list) {
+            list.forEach(item => {
+                if (item.isPinned) {
+                    pinnedItems.push(item);
+                    pinnedIds.push(item.id);
+                }
+            });
+        }
+    };
+    
+    // Check all lists that can have pinned items
+    checkAndPush(kb.inventory);
+    checkAndPush(kb.playerSkills);
+    checkAndPush(kb.allQuests?.filter(q => q.status === 'active'));
+    checkAndPush(kb.discoveredNPCs);
+    checkAndPush(kb.discoveredYeuThu);
+    checkAndPush(kb.wives);
+    checkAndPush(kb.slaves);
+    checkAndPush(kb.prisoners);
+    checkAndPush(kb.discoveredLocations);
+    checkAndPush(kb.worldLore);
+    checkAndPush(kb.discoveredFactions);
+    if (kb.master && kb.master.isPinned) {
+        pinnedItems.push(kb.master);
+        pinnedIds.push(kb.master.id);
     }
-    // Nếu người dùng chọn "Tùy Chỉnh" nhưng để trống -> Dùng prompt mặc định đã được thiết kế sẵn
-    return nsfwGuidanceCustomDefault;
-  }
+    
+    if (pinnedItems.length === 0) {
+        return { pinnedContext: '', pinnedIds: [] };
+    }
 
-  const currentNsfwStyle = worldConfig.nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE;
-  const currentViolenceLevel = worldConfig.violenceLevel || DEFAULT_VIOLENCE_LEVEL;
-  const currentStoryTone = worldConfig.storyTone || DEFAULT_STORY_TONE;
+    const contextChunks = pinnedItems.map(entity => {
+        if ('category' in entity) return formatItemForEmbedding(entity, kb);
+        if ('skillType' in entity) return formatSkillForEmbedding(entity, kb);
+        if ('objectives' in entity) return formatQuestForEmbedding(entity, kb);
+        if ('species' in entity) return formatYeuThuForEmbedding(entity, kb);
+        if ('alignment' in entity) return formatFactionForEmbedding(entity, kb);
+        if ('content' in entity) return formatLoreForEmbedding(entity, kb);
+        if ('locationType' in entity) return formatLocationForEmbedding(entity, kb);
+        // This should cover NPC, Wife, Slave, Prisoner, Master
+        if ('personalityTraits' in entity || 'entityType' in entity || 'mood' in entity) return formatPersonForEmbedding(entity, kb);
+        return ''; // Fallback for unknown pinned items
+    }).filter(Boolean);
 
-  // Logic cho các style mặc định
-  let nsfwStyleGuidance = "";
-  switch (currentNsfwStyle) {
-    case 'Hoa Mỹ': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy; break;
-    // FIX: Access correct keys from VIETNAMESE object
-    case 'Trần Tục': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceTranTuc; break;
-    case 'Gợi Cảm': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceGoiCam; break;
-    case 'Mạnh Bạo (BDSM)': nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceManhBaoBDSM; break;
-    default: nsfwStyleGuidance = VIETNAMESE.nsfwGuidanceHoaMy;
-  }
+    const pinnedContext = `**THÔNG TIN ĐÃ GHIM (PINNED CONTEXT - ƯU TIÊN CAO):**\nĐây là những thông tin quan trọng mà người chơi đã ghim lại. Hãy ưu tiên sử dụng chúng để đảm bảo tính nhất quán.\n\n${contextChunks.join('\n---\n')}`;
 
-  let violenceGuidance = "";
-  switch (currentViolenceLevel) {
-    // FIX: Access correct keys from VIETNAMESE object
-    case 'Nhẹ Nhàng': violenceGuidance = VIETNAMESE.violenceLevelGuidanceNheNhang; break;
-    case 'Thực Tế': violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe; break;
-    case 'Cực Đoan': violenceGuidance = VIETNAMESE.violenceLevelGuidanceCucDoan; break;
-    default: violenceGuidance = VIETNAMESE.violenceLevelGuidanceThucTe;
-  }
+    return { pinnedContext, pinnedIds };
+};
 
-  let toneGuidance = "";
-  switch (currentStoryTone) {
-    // FIX: Access correct keys from VIETNAMESE object
-    case 'Tích Cực': toneGuidance = VIETNAMESE.storyToneGuidanceTichCuc; break;
-    case 'Trung Tính': toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh; break;
-    case 'Đen Tối': toneGuidance = VIETNAMESE.storyToneGuidanceDenToi; break;
-    case 'Dâm Dục': toneGuidance = VIETNAMESE.storyToneGuidanceDamDuc; break;
-    case 'Hoang Dâm': toneGuidance = VIETNAMESE.storyToneGuidanceHoangDam; break;
-    case 'Dâm Loạn': toneGuidance = VIETNAMESE.storyToneGuidanceDamLoan; break;
-    default: toneGuidance = VIETNAMESE.storyToneGuidanceTrungTinh;
-  }
+// FIX: Add missing 'getNsfwGuidance' function to resolve import errors.
+export const getNsfwGuidance = (worldConfig: WorldSettings | null): string => {
+    if (!worldConfig) return '';
 
-  return `
-Hướng Dẫn Nội Dung Người Lớn (18+ ĐANG BẬT):
-• Phong Cách Miêu Tả Tình Dục: ${currentNsfwStyle}.
-  ${nsfwStyleGuidance}
-• Mức Độ Miêu Tả Bạo Lực: ${currentViolenceLevel}.
-  ${violenceGuidance}
-• Tông Màu Câu Chuyện: ${currentStoryTone}.
-  ${toneGuidance}
-LƯU Ý CHUNG KHI 18+ BẬT: Hãy kết hợp các yếu tố trên để tạo ra trải nghiệm phù hợp.
-`.trim();
-}
+    const { nsfwMode, nsfwDescriptionStyle, violenceLevel, storyTone, customNsfwPrompt } = worldConfig;
+
+    if (!nsfwMode) {
+        return "Chế độ Người Lớn (18+): TẮT. Mọi nội dung khiêu dâm, bạo lực cực đoan đều bị cấm.";
+    }
+
+    let guidance = "Chế độ Người Lớn (18+): BẬT.";
+    let nsfwStyleText = '';
+
+    switch (nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE) {
+        case 'Hoa Mỹ':
+            nsfwStyleText = VIETNAMESE.nsfwGuidanceHoaMy;
+            break;
+        case 'Trần Tục':
+            nsfwStyleText = VIETNAMESE.nsfwGuidanceTranTuc;
+            break;
+        case 'Gợi Cảm':
+            nsfwStyleText = VIETNAMESE.nsfwGuidanceGoiCam;
+            break;
+        case 'Mạnh Bạo (BDSM)':
+            nsfwStyleText = VIETNAMESE.nsfwGuidanceManhBaoBDSM;
+            break;
+        case 'Tùy Chỉnh (Phòng Tối AI)':
+            nsfwStyleText = customNsfwPrompt || nsfwGuidanceCustomDefault;
+            break;
+    }
+    guidance += `\n- **Phong cách miêu tả Tình dục:** ${nsfwDescriptionStyle || DEFAULT_NSFW_DESCRIPTION_STYLE}\n${nsfwStyleText}`;
+
+    let violenceText = '';
+    switch (violenceLevel || DEFAULT_VIOLENCE_LEVEL) {
+        case 'Nhẹ Nhàng':
+            violenceText = VIETNAMESE.violenceLevelGuidanceNheNhang;
+            break;
+        case 'Thực Tế':
+            violenceText = VIETNAMESE.violenceLevelGuidanceThucTe;
+            break;
+        case 'Cực Đoan':
+            violenceText = VIETNAMESE.violenceLevelGuidanceCucDoan;
+            break;
+    }
+    guidance += `\n- **Mức độ Bạo lực:** ${violenceLevel || DEFAULT_VIOLENCE_LEVEL}\n${violenceText}`;
+
+    let toneText = '';
+    switch (storyTone || DEFAULT_STORY_TONE) {
+        case 'Tích Cực':
+            toneText = VIETNAMESE.storyToneGuidanceTichCuc;
+            break;
+        case 'Trung Tính':
+            toneText = VIETNAMESE.storyToneGuidanceTrungTinh;
+            break;
+        case 'Đen Tối':
+            toneText = VIETNAMESE.storyToneGuidanceDenToi;
+            break;
+        case 'Dâm Dục':
+            toneText = VIETNAMESE.storyToneGuidanceDamDuc;
+            break;
+        case 'Hoang Dâm':
+            toneText = VIETNAMESE.storyToneGuidanceHoangDam;
+            break;
+        case 'Dâm Loạn':
+            toneText = VIETNAMESE.storyToneGuidanceDamLoan;
+            break;
+    }
+    guidance += `\n- **Tông màu Câu chuyện:** ${storyTone || DEFAULT_STORY_TONE}\n${toneText}`;
+
+    return guidance;
+};

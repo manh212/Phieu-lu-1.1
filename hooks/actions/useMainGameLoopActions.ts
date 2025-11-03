@@ -6,7 +6,7 @@ import { countTokens, generateRefreshedChoices, generateNextTurn, summarizeTurnH
 import { generateEmbeddings } from '../../services/embeddingService';
 import { performTagProcessing, addTurnHistoryEntryRaw, getMessagesForPage, calculateEffectiveStats, handleLevelUps, progressNpcCultivation, updateGameEventsStatus, handleLocationEntryEvents, searchVectors, extractEntityContextsFromString, worldDateToTotalMinutes } from '../../utils/gameLogicUtils';
 import { VIETNAMESE, TURNS_PER_PAGE, AUTO_SAVE_INTERVAL_TURNS, MAX_AUTO_SAVE_SLOTS, LIVING_WORLD_TICK_INTERVAL_HOURS } from '../../constants';
-import { buildPinnedContext } from '../../prompts/continuePrompt';
+import { buildPinnedContext } from '../../prompts/promptUtils';
 
 export interface UseMainGameLoopActionsProps {
   knowledgeBase: KnowledgeBase;
@@ -55,6 +55,8 @@ export interface UseMainGameLoopActionsProps {
   setSentGeneralSubLocationPromptsLog: React.Dispatch<React.SetStateAction<string[]>>;
 // FIX: Correctly type the setReceivedGeneralSubLocationResponsesLog parameter.
   setReceivedGeneralSubLocationResponsesLog: React.Dispatch<React.SetStateAction<string[]>>;
+  // FIX: Add setAiThinkingLog to the props interface to fix the error in GameContext.tsx.
+  setAiThinkingLog: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 
@@ -77,6 +79,10 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
       setKnowledgeBase,
       executeSaveGame,
       isSummarizingNextPageTransition, setIsSummarizingNextPageTransition,
+      // FIX: Destructure newly added props for use within the hook.
+      setSentGeneralSubLocationPromptsLog,
+      setReceivedGeneralSubLocationResponsesLog,
+      setAiThinkingLog,
     } = props;
     
     const logSentPromptCallback = useCallback((prompt: string) => {
@@ -145,7 +151,7 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
 
 
         try {
-            const { response, rawText } = await generateNextTurn(
+            const { response, rawText, newConditionStates } = await generateNextTurn(
                 knowledgeBase, action, inputType, responseLength,
                 currentPageMessagesLog, previousPageSummaries, isStrictMode,
                 lastNarrationFromPreviousPage, retrievedContext, logSentPromptCallback,
@@ -153,6 +159,11 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
             );
             setRawAiResponsesLog(prev => [rawText, ...prev].slice(0, 50));
             
+            // FIX: If a 'thinking' block was parsed from the response, log it.
+            if (response.thinking && response.thinking.trim()) {
+                setAiThinkingLog(prev => [response.thinking!, ...prev].slice(0, 10));
+            }
+
             let currentTurnKb = JSON.parse(JSON.stringify(knowledgeBaseAtActionStart));
 
             if (narrativeDirective) {
@@ -202,6 +213,9 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
             finalKbForThisTurn.turnHistory = addTurnHistoryEntryRaw(
                 knowledgeBaseAtActionStart.turnHistory || [], knowledgeBaseAtActionStart, gameMessagesAtActionStart
             );
+
+            // CRITICAL STEP for Upgrade 4: Persist the new condition states for the *next* turn.
+            finalKbForThisTurn.previousConditionStates = newConditionStates;
 
             if (finalKbForThisTurn.playerStats.sinhLuc <= 0) {
                 const defeatMessages: GameMessage[] = [playerActionMessage, { id: 'defeat-narration-' + Date.now(), type: 'narration', content: response.narration, timestamp: Date.now(), choices: [], turnNumber: finalKbForThisTurn.playerStats.turn }, ...combinedSystemMessages];
@@ -295,7 +309,9 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         setApiErrorWithTimeout, logNpcAvatarPromptCallback, handleNonCombatDefeat,
         setRetrievedRagContextLog, currentPageMessagesLog, previousPageSummaries,
         lastNarrationFromPreviousPage, setSummarizationResponsesLog,
-        executeWorldTick, isAutoPlaying, setIsAutoPlaying, setKnowledgeBase, logSummarizationResponseCallback
+        executeWorldTick, isAutoPlaying, setIsAutoPlaying, setKnowledgeBase, logSummarizationResponseCallback,
+        isSummarizingNextPageTransition, setIsSummarizingNextPageTransition, setLatestPromptTokenCount,
+        setAiThinkingLog
     ]);
     
     const handleRewriteTurn = useCallback(async (directive: string) => {
@@ -468,9 +484,9 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
             const { response: { narration, tags } } = await findLocationWithAI(
                 knowledgeBase, params, currentPageMessagesLog, previousPageSummaries,
                 lastNarrationFromPreviousPage,
-                (prompt) => props.setSentGeneralSubLocationPromptsLog(prev => [prompt, ...prev].slice(0, 10))
+                (prompt) => setSentGeneralSubLocationPromptsLog(prev => [prompt, ...prev].slice(0, 10))
             );
-            props.setReceivedGeneralSubLocationResponsesLog(prev => [narration, ...prev].slice(0, 10)); // Assuming narration is the raw text for this service
+            setReceivedGeneralSubLocationResponsesLog(prev => [narration, ...prev].slice(0, 10)); // Assuming narration is the raw text for this service
             const { newKb: kbAfterTags, systemMessagesFromTags } = await performTagProcessing(
                 knowledgeBase, tags, knowledgeBase.playerStats.turn, setKnowledgeBase, logNpcAvatarPromptCallback
             );
@@ -491,8 +507,7 @@ export const useMainGameLoopActions = (props: UseMainGameLoopActionsProps) => {
         addMessageAndUpdateState, setKnowledgeBase, logNpcAvatarPromptCallback,
         setApiErrorWithTimeout,
         currentPageMessagesLog, previousPageSummaries, lastNarrationFromPreviousPage,
-        // Dependencies were using props. but should not
-        props.setSentGeneralSubLocationPromptsLog, props.setReceivedGeneralSubLocationResponsesLog
+        setSentGeneralSubLocationPromptsLog, setReceivedGeneralSubLocationResponsesLog
     ]);
 
     return {

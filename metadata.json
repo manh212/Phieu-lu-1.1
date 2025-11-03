@@ -1,6 +1,8 @@
 {
-  "name": "Phiêu lưu cùng AI 2.1",
+  "name": "Copy of Phiêu lưu cùng AI 2.1",
   "description": "",
-  "requestFramePermissions": [],
+  "requestFramePermissions": [
+    "microphone"
+  ],
   "prompt": ""
 }

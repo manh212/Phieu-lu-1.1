@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { KnowledgeBase, GameMessage, CombatEndPayload, NPC } from '@/types/index';
+import { KnowledgeBase, GameMessage, CombatEndPayload, NPC, AIPresetCollection } from '@/types/index';
 import { INITIAL_KNOWLEDGE_BASE } from '../constants';
 import { calculateTotalPages, getMessagesForPage } from '../utils/gameLogicUtils';
 
@@ -9,9 +9,11 @@ export const useGameData = () => {
     JSON.parse(JSON.stringify(INITIAL_KNOWLEDGE_BASE))
   );
   const [gameMessages, setGameMessages] = useState<GameMessage[]>([]);
-  const [aiCopilotMessages, setAiCopilotMessages] = useState<GameMessage[]>([]); // NEW
-  const [sentCopilotPromptsLog, setSentCopilotPromptsLog] = useState<string[]>([]); // NEW
+  const [aiCopilotMessages, setAiCopilotMessages] = useState<GameMessage[]>([]); // For voice chat
+  const [aiArchitectMessages, setAiArchitectMessages] = useState<GameMessage[]>([]); // NEW: For text chat
+  const [sentCopilotPromptsLog, setSentCopilotPromptsLog] = useState<string[]>([]);
   const [rawAiResponsesLog, setRawAiResponsesLog] = useState<string[]>([]);
+  const [aiThinkingLog, setAiThinkingLog] = useState<string[]>([]); // NEW: For AI thinking process
   const [sentPromptsLog, setSentPromptsLog] = useState<string[]>([]);
   const [sentEconomyPromptsLog, setSentEconomyPromptsLog] = useState<string[]>([]);
   const [receivedEconomyResponsesLog, setReceivedEconomyResponsesLog] = useState<string[]>([]);
@@ -30,6 +32,7 @@ export const useGameData = () => {
   const [sentCompanionPromptsLog, setSentCompanionPromptsLog] = useState<string[]>([]);
   const [receivedCompanionResponsesLog, setReceivedCompanionResponsesLog] = useState<string[]>([]);
   const [retrievedRagContextLog, setRetrievedRagContextLog] = useState<string[]>([]); // NEW
+  const [aiPresets, setAiPresets] = useState<AIPresetCollection>({}); // NEW: State for AI Presets
   
   // New logs for post-combat AI interactions
   const [sentCombatSummaryPromptsLog, setSentCombatSummaryPromptsLog] = useState<string[]>([]);
@@ -64,9 +67,11 @@ export const useGameData = () => {
   const resetGameData = useCallback(() => {
     setKnowledgeBase(JSON.parse(JSON.stringify(INITIAL_KNOWLEDGE_BASE)));
     setGameMessages([]);
-    setAiCopilotMessages([]); // NEW
-    setSentCopilotPromptsLog([]); // NEW
+    setAiCopilotMessages([]);
+    setAiArchitectMessages([]); // NEW
+    setSentCopilotPromptsLog([]);
     setRawAiResponsesLog([]);
+    setAiThinkingLog([]); // NEW
     setSentPromptsLog([]);
     setSentEconomyPromptsLog([]);
     setReceivedEconomyResponsesLog([]);
@@ -104,12 +109,16 @@ export const useGameData = () => {
     setKnowledgeBase,
     gameMessages,
     setGameMessages,
-    aiCopilotMessages, // NEW
-    setAiCopilotMessages, // NEW
-    sentCopilotPromptsLog, // NEW
-    setSentCopilotPromptsLog, // NEW
+    aiCopilotMessages, 
+    setAiCopilotMessages, 
+    aiArchitectMessages, // NEW
+    setAiArchitectMessages, // NEW
+    sentCopilotPromptsLog, 
+    setSentCopilotPromptsLog, 
     rawAiResponsesLog,
     setRawAiResponsesLog,
+    aiThinkingLog, // NEW
+    setAiThinkingLog, // NEW
     sentPromptsLog,
     setSentPromptsLog,
     sentEconomyPromptsLog,
@@ -146,6 +155,8 @@ export const useGameData = () => {
     setReceivedCompanionResponsesLog,
     retrievedRagContextLog, // NEW
     setRetrievedRagContextLog, // NEW
+    aiPresets, // NEW
+    setAiPresets, // NEW
     // New states for post-combat logs
     sentCombatSummaryPromptsLog,
     setSentCombatSummaryPromptsLog,

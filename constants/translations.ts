@@ -156,10 +156,10 @@ export const VIETNAMESE_TRANSLATIONS = {
   responseLength_long: "Dài",
   responseLengthButtonText: (length: ResponseLength): string => {
     switch (length) {
-      case 'short': return `${VIETNAMESE_TRANSLATIONS.responseLengthLabel}: ${VIETNAMESE_TRANSLATIONS.responseLength_short}`;
-      case 'medium': return `${VIETNAMESE_TRANSLATIONS.responseLengthLabel}: ${VIETNAMESE_TRANSLATIONS.responseLength_medium}`;
-      case 'long': return `${VIETNAMESE_TRANSLATIONS.responseLengthLabel}: ${VIETNAMESE_TRANSLATIONS.responseLength_long}`;
-      default: return `${VIETNAMESE_TRANSLATIONS.responseLengthLabel}: ${VIETNAMESE_TRANSLATIONS.responseLength_default}`;
+      case 'short': return `${VIETNAMESE.responseLengthLabel}: ${VIETNAMESE.responseLength_short}`;
+      case 'medium': return `${VIETNAMESE.responseLengthLabel}: ${VIETNAMESE.responseLength_medium}`;
+      case 'long': return `${VIETNAMESE.responseLengthLabel}: ${VIETNAMESE.responseLength_long}`;
+      default: return `${VIETNAMESE.responseLengthLabel}: ${VIETNAMESE.responseLength_default}`;
     }
   },
   startingSkillsSection: "Kỹ Năng Khởi Đầu",
@@ -381,7 +381,7 @@ export const VIETNAMESE_TRANSLATIONS = {
   slotHead: "Giáp Đầu",
   slotBody: "Giáp Thân",
   slotHands: "Giáp Tay",
-  slotLegs: "Giáp Chân",
+  slotLegs: "Giáp Chan",
   slotArtifact: "Pháp Bảo",
   slotPet: "Thú Cưng",
   slotAccessory1: "Trang Sức 1",
@@ -603,4 +603,36 @@ export const VIETNAMESE_TRANSLATIONS = {
   noSkillsAvailable: "Không có kỹ năng.",
   noItemsAvailable: "Không có vật phẩm.",
   noOpponents: "Không có đối thủ.",
+  // AI PRESET STRINGS
+  savePresetButton: "Lưu Preset Hiện Tại...",
+  managePresetsButton: "Quản Lý Presets",
+  customPresetName: "-- Tùy Chỉnh (Chưa lưu) --",
+  loadCurrentConfigPresetName: "Nạp Cấu hình Hiện tại của Game",
+  savePresetModalTitle: "Lưu Cấu Hình AI Hiện Tại",
+  presetNameLabel: "Tên Preset (Bắt buộc)",
+  presetDescriptionLabel: "Mô tả (Tùy chọn)",
+  presetNamePlaceholder: "Vd: Kể chuyện Sáng tạo, Logic Thực tế",
+  presetDescriptionPlaceholder: "Vd: Preset này tập trung vào mô tả chi tiết, ít hành động...",
+  presetSavedSuccess: (name: string) => `Đã lưu thành công preset "${name}"!`,
+  presetNameRequiredError: "Tên preset không được để trống.",
+  presetNameExistsError: (name: string) => `Tên preset "${name}" đã tồn tại. Vui lòng chọn tên khác.`,
+  managePresetsModalTitle: "Quản Lý Preset AI",
+  presetListTitle: "Danh Sách Preset",
+  presetDetailsTitle: "Chi Tiết Preset",
+  presetActionsTitle: "Hành Động",
+  presetRenameButton: "Đổi tên",
+  presetDeleteButton: "Xóa",
+  presetExportButton: "Xuất (.json)",
+  presetImportButton: "Nhập Preset (.json)",
+  confirmPresetDelete: (presetName: string) => `Bạn có chắc chắn muốn xóa preset "${presetName}" không? Hành động này không thể hoàn tác.`,
+  presetDeletedSuccess: (presetName: string) => `Đã xóa thành công preset "${presetName}".`,
+  presetExportedSuccess: (presetName: string) => `Đã xuất thành công preset "${presetName}".`,
+  presetImportedSuccess: (count: number) => `Đã nhập thành công ${count} preset.`,
+  presetImportError: (error: string) => `Lỗi khi nhập preset: ${error}`,
+  noPresetsAvailable: "Chưa có preset nào được lưu.",
+  selectPresetToManage: "Chọn một preset từ danh sách để quản lý.",
+  renamePresetModalTitle: "Đổi tên Preset",
+  newPresetNameLabel: "Tên mới cho Preset",
 };
+
+export const VIETNAMESE = VIETNAMESE_TRANSLATIONS;

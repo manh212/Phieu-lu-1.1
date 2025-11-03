@@ -4,10 +4,25 @@ import * as GameTemplates from '../types/index';
 import { WEAPON_TYPES_FOR_VO_Y } from './character';
 import { CONG_PHAP_GRADES, LINH_KI_CATEGORIES, LINH_KI_ACTIVATION_TYPES, PROFESSION_GRADES } from '../types/index';
 import { getTimeOfDayContext, getSeason } from '../utils/dateUtils';
+// FIX: Import both translation objects to create a complete VIETNAMESE constant, avoiding a circular dependency on the main index.
+import { VIETNAMESE_TRANSLATIONS } from './translations';
+import { NSFW_TRANSLATIONS, nsfwGuidanceCustomDefault } from './nsfw';
+
+// FIX: Merge translations locally to ensure all keys are available.
+const VIETNAMESE = { ...VIETNAMESE_TRANSLATIONS, ...NSFW_TRANSLATIONS };
 
 
 // NEW: The official source of truth for default AI rule content.
 export const DEFAULT_AI_RULEBOOK: AIRulebook = {
+    aiThinkingProcessGuidance: `**QUY TẮC VỀ QUY TRÌNH SUY NGHĨ (CHAIN OF THOUGHT - CỰC KỲ QUAN TRỌNG):**
+Trước khi viết lời kể chính, bạn PHẢI suy nghĩ từng bước để đảm bảo câu chuyện logic và nhất quán. Phản hồi của bạn BẮT BUỘC phải có cấu trúc hai phần như sau:
+<thinking>
+(Trong thẻ này, hãy viết ra toàn bộ dòng suy nghĩ của bạn bằng tiếng Việt. Phân tích hành động của người chơi, cân nhắc các yếu tố bối cảnh, trạng thái nhân vật, mục tiêu NPC, các sự kiện đang diễn ra, và quyết định kết quả hợp lý nhất cho lượt chơi này.)
+</thinking>
+<response>
+(Trong thẻ này, hãy viết lời kể cuối cùng (narration) và TẤT CẢ các tag hệ thống cần thiết như [CHOICE], [STATS_UPDATE], [ITEM_ACQUIRED], v.v. Phần này sẽ được hiển thị cho người chơi.)
+</response>
+**LƯU Ý:** Cả hai thẻ <thinking> và <response> đều BẮT BUỘC phải có trong mọi phản hồi. Nếu bạn không có gì để suy nghĩ, hãy để trống thẻ <thinking></thinking> nhưng vẫn phải có nó.`,
     narrationAndVividness: `*   **A.1. MỆNH LỆNH TỐI THƯỢỢNG: PHONG CÁCH KỂ CHUYỆN ("Tả, đừng kể")**
     *   **Sử dụng Ngũ quan:** Mô tả những gì nhân vật chính **nhìn thấy**, **nghe thấy**, **ngửi thấy**, **cảm nhận**, và **nếm**.
     *   **"Tả", không "Kể":** Thay vì dùng những từ ngữ chung chung, hãy mô tả chi tiết để người chơi tự cảm nhận.
@@ -254,6 +269,36 @@ Nhiệm vụ của bạn là cung cấp tổng cộng 5-6 lựa chọn hành đ�
 *   **VÍ DỤ:** Nếu người chơi sắp bị đánh bại và có hành động chờ "onNextDanger", bạn phải kể về việc sư phụ xuất hiện, đồng thời chèn tag \`[NPC: ...]\` và \`[STAGED_ACTION_CLEAR: trigger="onNextDanger"]\` vào phản hồi.`,
     cultivationRules: `**15. Tag \\\`[REMOVE_BINH_CANH_EFFECT: kinhNghiemGain=X]\` (Chỉ khi \`isCultivationEnabled=true\`):** Dùng khi nhân vật có cơ duyên đột phá khỏi bình cảnh. \`X\` là lượng kinh nghiệm nhỏ (ví dụ 1 hoặc 10) được cộng thêm để vượt qua giới hạn cũ. Tag này sẽ tự động đặt \`hieuUngBinhCanh=false\`.
     *   **VÍ DỤ (Allowed):** \\\`[REMOVE_BINH_CANH_EFFECT: kinhNghiemGain=10]\``,
+    // NEWLY ADDED RULES
+    difficultyEasy: VIETNAMESE.difficultyGuidanceEasy,
+    difficultyNormal: VIETNAMESE.difficultyGuidanceNormal,
+    difficultyHard: VIETNAMESE.difficultyGuidanceHard,
+    difficultyNightmare: VIETNAMESE.difficultyGuidanceNightmare,
+    nsfwHoaMy: VIETNAMESE.nsfwGuidanceHoaMy,
+    nsfwTranTuc: VIETNAMESE.nsfwGuidanceTranTuc,
+    nsfwGoiCam: VIETNAMESE.nsfwGuidanceGoiCam,
+    nsfwManhBao: VIETNAMESE.nsfwGuidanceManhBaoBDSM,
+    nsfwTuyChinh: nsfwGuidanceCustomDefault,
+    // NEWLY MOVED FROM HARDCODE
+    strictModeGuidance: `**Hướng Dẫn Chế Độ Nghiêm Ngặt (ƯU TIÊN TUYỆT ĐỐI):**\nChế độ Nghiêm ngặt: Bạn là một AI kể chuyện vật lý. Khi người chơi đưa ra một hành động, bạn CHỈ được mô tả kết quả vật lý trực tiếp của hành động đó. TUYỆT ĐỐI KHÔNG được tự ý thêm vào các hành động phụ, các đoạn hội thoại, hoặc suy nghĩ nội tâm của nhân vật chính mà không được yêu cầu. Ví dụ: nếu người chơi nhập 'Mở cửa', bạn chỉ mô tả hành động mở cửa và những gì họ thấy sau đó, không được tự ý cho họ 'bước vào phòng'.`,
+    aiProcessingGuidance: `**Hướng Dẫn Xử Lý Dành Cho AI:**\nXử lý nội dung trên như một hành động mà nhân vật chính ({{PLAYER_NAME}}) đang thực hiện. Mô tả kết quả của hành động này và các diễn biến tiếp theo một cách chi tiết và hấp dẫn, dựa trên TOÀN BỘ BỐI CẢNH.`,
+    writingStyleGuidance: `**HƯỚNG DẪN BẮT CHƯỚC VĂN PHONG (CỰC KỲ QUAN TRỌNG):**\n"""\n{{WRITING_STYLE_GUIDE}}\n"""`,
+
+    // NEW: Templates for previously hardcoded sections
+    coreContextTemplate: `**BỐI CẢNH CỐT LÕI (CORE CONTEXT):**\n\`\`\`json\n{{CORE_CONTEXT_JSON}}\n\`\`\``,
+    conversationalContextTemplate: `**BỐI CẢNH HỘI THOẠI (CONVERSATIONAL CONTEXT):**\n- **Tóm tắt trang trước:**\n{{PREVIOUS_PAGE_SUMMARIES}}\n- **Diễn biến gần nhất:**\n{{LAST_NARRATION}}\n- **Diễn biến trang này:**\n{{CURRENT_PAGE_LOG}}`,
+    playerActionGuidanceTemplate: `**HƯỚNG DẪN TỪ NGƯỜI CHƠI (CHO LƯỢT TIẾP THEO):**\n- Loại: {{PLAYER_ACTION_TYPE}}\n- Nội dung: "{{PLAYER_ACTION_CONTENT}}"`,
+    worldEventGuidanceWrapper: `**{{BLOCK_LABEL}} (CỰC KỲ QUAN TRỌNG):**\nBạn đang ở một địa điểm có sự kiện. Hãy tuân thủ nghiêm ngặt các quy tắc sau:\n{{EVENT_DETAILS}}`,
+    worldEventGuidanceUpcoming: `- **Sự kiện "{{EVENT_TITLE}}" SẮP DIỄN RA ({{TIME_DIFFERENCE}}).**\n  - **QUY TẮC:** **TUYỆT ĐỐI KHÔNG** bắt đầu sự kiện này.\n  - **NHIỆM VỤ:** Hãy mô tả không khí chuẩn bị cho sự kiện. Cung cấp các lựa chọn cho người chơi để chuẩn bị hoặc chờ đợi.`,
+    worldEventGuidanceOngoing: `- **Sự kiện "{{EVENT_TITLE}}" ĐANG DIỄN RA ({{TIME_DIFFERENCE}}).**\n  - **QUY TẮC:** **BẮT BUỘC** phải mô tả sự kiện đang diễn ra.\n  - **NHIỆM VỤ:** Cung cấp các lựa chọn để người chơi có thể tham gia hoặc tương tác trực tiếp với sự kiện.`,
+    worldEventGuidanceFinished: `- **Sự kiện "{{EVENT_TITLE}}" ĐÃ KẾT THÚC ({{TIME_DIFFERENCE}}).**\n  - **QUY TẮC:** **TUYỆT ĐỐI KHÔNG** mô tả sự kiện này đang diễn ra. **KHÔNG** cung cấp lựa chọn để tham gia.\n  - **NHIỆM VỤ:** Hãy mô tả tàn dư hoặc hậu quả của sự kiện. Ví dụ: "khu vực quảng trường vẫn còn bừa bộn sau đại hội", "dân chúng vẫn đang bàn tán về kết quả trận chiến".`,
+    responseLengthGuidanceTemplate: `**ĐỘ DÀI PHẢN HỒI MONG MUỐN:** {{RESPONSE_LENGTH_TEXT}}.`,
+    // NEW WRAPPERS AND SEPARATOR
+    blockSeparator: '\n\n',
+    ragContextWrapper: `**{{BLOCK_LABEL}}:**\n\`\`\`\n{{RAG_CONTENT}}\n\`\`\``,
+    stagedActionsContextWrapper: `**{{BLOCK_LABEL}}:**\n\`\`\`json\n{{STAGED_ACTIONS_JSON}}\n\`\`\``,
+    userPromptsWrapper: `**{{BLOCK_LABEL}} (QUY TẮC BẮT BUỘC):**\n{{USER_PROMPTS_LIST}}`,
+    narrativeDirectiveWrapper: `**{{BLOCK_LABEL}} (BẮT BUỘC CHO LƯỢT NÀY):**\n{{NARRATIVE_DIRECTIVE_CONTENT}}`,
 };
 
 /**

@@ -1,5 +1,6 @@
 // FIX: Removed 'RequestOptions' as it is not an exported member of '@google/genai'.
-import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, CountTokensResponse, Type } from "@google/genai";
+// FIX: Removed unused 'CountTokensResponse' from import.
+import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, Type } from "@google/genai";
 import { ApiConfig, SafetySetting, ParsedAiResponse, AiChoice } from '../../types/index'; 
 // FIX: Corrected constant name from API_SETTINGS_STORAGE_KEY to STORAGE_SETTINGS_STORAGE_KEY.
 import { VIETNAMESE, STORAGE_SETTINGS_STORAGE_KEY, HARM_CATEGORIES, DEFAULT_API_CONFIG, AVAILABLE_MODELS, AVAILABLE_AVATAR_ENGINES, DEFAULT_AVATAR_GENERATION_ENGINE } from '../../constants';
@@ -154,15 +155,8 @@ export async function generateContentAndCheck(
     return response;
 }
 
-export async function countTokens(text: string): Promise<number> {
-    const ai = getAiClient();
-    const { model } = getApiSettings();
-    const response: CountTokensResponse = await ai.models.countTokens({
-        model,
-        contents: [{ parts: [{ text }] }],
-    });
-    return response.totalTokens;
-}
+// FIX: Remove duplicate countTokens function to resolve re-export ambiguity.
+// The primary implementation is now in `geminiService.ts`.
 
 export async function generateContentWithRateLimit(
     prompt: string, 

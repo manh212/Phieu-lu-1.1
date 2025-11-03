@@ -10,9 +10,8 @@ import {
   importGameToIndexedDB,
 } from '@/services/indexedDBService';
 import { VIETNAMESE } from '@/constants';
-// FIX: Moved DEFAULT_AI_CONTEXT_CONFIG import from '@//constants' to the correct module '@//utils/gameLogicUtils' where it is defined.
-// FIX: Changed import for DEFAULT_AI_RULEBOOK to its correct source module to resolve export error.
 import { DEFAULT_AI_RULEBOOK } from '@/constants/systemRulesNormal';
+import { DEFAULT_PROMPT_STRUCTURE } from '@/constants/promptStructure';
 import { calculateTotalPages, getMessagesForPage, DEFAULT_AI_CONTEXT_CONFIG } from '@/utils/gameLogicUtils';
 import { summarizeTurnHistory } from '@/services/storyService';
 import * as jsonpatch from "fast-json-patch"; 
@@ -65,23 +64,45 @@ export const useGameActions = (props: UseGameActionsProps) => {
       const loadedData = await loadSpecificGameFromIndexedDB(saveId);
       if (loadedData) {
         
-        // --- START: DATA MIGRATION (STEP 1 & 2) ---
-        // Automatically update older save files by adding new data structures if they don't exist.
-        // This prevents the "Cannot read properties of undefined" error.
+        // --- START: DATA MIGRATION ---
         if (loadedData.knowledgeBase) {
-            if (!loadedData.knowledgeBase.aiContextConfig) {
-                loadedData.knowledgeBase.aiContextConfig = { ...DEFAULT_AI_CONTEXT_CONFIG };
+            // Migrate old aiContextConfig toggles to the new promptStructure
+            if (!loadedData.knowledgeBase.promptStructure) {
+                console.log("Migrating old save file: Generating new promptStructure.");
+                const oldConfig = loadedData.knowledgeBase.aiContextConfig || DEFAULT_AI_CONTEXT_CONFIG;
+                const newStructure = DEFAULT_PROMPT_STRUCTURE.map(block => {
+                    let isEnabled = block.enabled;
+                    switch(block.id) {
+                        case 'ragContext': isEnabled = oldConfig.sendRagContext; break;
+                        case 'coreContext': isEnabled = oldConfig.sendCoreContext; break;
+                        case 'conversationalContext': isEnabled = oldConfig.sendConversationalContext; break;
+                        case 'writingStyleGuidance': isEnabled = oldConfig.sendWritingStyle; break;
+                        case 'userPrompts': isEnabled = oldConfig.sendUserPrompts; break;
+                        case 'worldEventGuidance': isEnabled = oldConfig.sendEventGuidance; break;
+                        case 'difficultyGuidance': isEnabled = oldConfig.sendDifficultyGuidance; break;
+                        case 'nsfwGuidance': isEnabled = oldConfig.sendNsfwGuidance; break;
+                        case 'rule_narrationAndVividness': isEnabled = oldConfig.sendShowDontTellRule; break;
+                        case 'rule_proactiveNpc': isEnabled = oldConfig.sendProactiveNpcRule; break;
+                        // ... map all other old config keys to the new block IDs
+                    }
+                    return { ...block, enabled: isEnabled };
+                });
+                loadedData.knowledgeBase.promptStructure = newStructure;
             }
+
             if (!loadedData.knowledgeBase.aiRulebook) {
                 loadedData.knowledgeBase.aiRulebook = { ...DEFAULT_AI_RULEBOOK };
+            }
+
+            // NEW: Add previousConditionStates if it's missing for trigger logic
+            if (!loadedData.knowledgeBase.previousConditionStates) {
+                loadedData.knowledgeBase.previousConditionStates = {};
             }
         }
         // --- END: DATA MIGRATION ---
 
 
         // --- START: RECONSTRUCT TURN HISTORY SNAPSHOTS ---
-        // Delta entries in the DB don't have full snapshots to save space.
-        // We must reconstruct them here so the rollback function has the data it needs.
         if (loadedData.knowledgeBase && loadedData.knowledgeBase.turnHistory) {
             let lastKeyframeKb: KnowledgeBase | null = null;
             let lastKeyframeMessages: GameMessage[] | null = null;
@@ -89,14 +110,12 @@ export const useGameActions = (props: UseGameActionsProps) => {
 
             for (const entry of loadedData.knowledgeBase.turnHistory) {
                 if (entry.type === 'keyframe' && entry.knowledgeBaseSnapshot && entry.gameMessagesSnapshot) {
-                    // This is a full snapshot, use it as the new base
                     lastKeyframeKb = JSON.parse(JSON.stringify(entry.knowledgeBaseSnapshot));
                     lastKeyframeMessages = JSON.parse(JSON.stringify(entry.gameMessagesSnapshot));
                     reconstructedHistory.push(entry);
                 } else if (entry.type === 'delta') {
                     if (lastKeyframeKb && lastKeyframeMessages && entry.knowledgeBaseDelta && entry.gameMessagesDelta) {
                         try {
-                            // Apply patch to the LAST known full state to reconstruct this turn's state
                             const newKbSnapshot = jsonpatch.applyPatch(JSON.parse(JSON.stringify(lastKeyframeKb)), entry.knowledgeBaseDelta as readonly Operation[]).newDocument as KnowledgeBase;
                             const newMessagesSnapshot = jsonpatch.applyPatch(JSON.parse(JSON.stringify(lastKeyframeMessages)), entry.gameMessagesDelta as readonly Operation[]).newDocument as GameMessage[];
                             
@@ -107,23 +126,22 @@ export const useGameActions = (props: UseGameActionsProps) => {
                             };
                             reconstructedHistory.push(reconstructedEntry);
 
-                            // This newly reconstructed snapshot becomes the base for the next delta
                             lastKeyframeKb = newKbSnapshot;
                             lastKeyframeMessages = newMessagesSnapshot;
                         } catch (patchError) {
                             console.error("Failed to reconstruct delta frame on load, history might be incomplete.", patchError, entry);
-                            reconstructedHistory.push(entry); // Push the entry without a valid snapshot
-                            lastKeyframeKb = null; // Break the chain to prevent further errors
+                            reconstructedHistory.push(entry);
+                            lastKeyframeKb = null;
                             lastKeyframeMessages = null;
                         }
                     } else {
                         console.warn("Could not reconstruct delta frame on load due to missing base or delta. History might be incomplete.", entry);
-                        reconstructedHistory.push(entry); // Push as-is
-                        lastKeyframeKb = null; // Break the chain
+                        reconstructedHistory.push(entry);
+                        lastKeyframeKb = null;
                         lastKeyframeMessages = null;
                     }
                 } else {
-                     reconstructedHistory.push(entry); // Push keyframes or other types as-is
+                     reconstructedHistory.push(entry);
                 }
             }
             loadedData.knowledgeBase.turnHistory = reconstructedHistory;
@@ -139,16 +157,13 @@ export const useGameActions = (props: UseGameActionsProps) => {
         setCurrentScreen(GameScreen.Gameplay);
         showNotification(VIETNAMESE.gameLoadedSuccess, 'success');
 
-        // The problematic auto-summary block has been removed.
-        // Summarization will now only occur naturally when a page ends during gameplay.
-
       } else {
         throw new Error("Không tìm thấy dữ liệu lưu hoặc dữ liệu không hợp lệ.");
       }
     } catch (e) {
       const errorMsg = VIETNAMESE.errorLoadingGame + (e instanceof Error ? `: ${e.message}` : '');
       showNotification(errorMsg, 'error');
-      throw e; // re-throw for the caller if needed
+      throw e;
     }
   }, [setKnowledgeBase, setGameMessages, setCurrentPageDisplay, setCurrentScreen, showNotification, justLoadedGame, setIsSummarizingOnLoad]);
 
@@ -179,7 +194,6 @@ export const useGameActions = (props: UseGameActionsProps) => {
   return {
     onSaveGame,
     onLoadGame,
-    // onQuit is handled in GameContext to also manage isAutoPlaying state
     fetchSaveGamesForImportExport,
     loadSpecificGameDataForExport,
     handleImportGameData,

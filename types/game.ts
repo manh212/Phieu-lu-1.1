@@ -1,4 +1,10 @@
 // types/game.ts
+// FIX: Add Blob interface for Gemini Live API
+export interface Blob {
+    data: string;
+    mimeType: string;
+}
+
 import { Operation as JsonPatchOperation } from 'fast-json-patch';
 // FIX: Changed barrel file imports to direct file imports to break circular dependencies.
 // FIX: Removed 'ActivityLogEntry' from this import as it will be moved to 'character.ts'.
@@ -10,7 +16,7 @@ import type { Quest, GameLocation, Faction, WorldLoreEntry, Region, GameEvent, W
 import type { CombatEndPayload, StagedAction } from './features';
 import type { AuctionState, SlaveAuctionState } from './features';
 import type { WorldSettings } from './setup';
-import type { AIContextConfig, AICopilotConfig, AIRulebook } from './config';
+import type { AIContextConfig, AICopilotConfig, AIRulebook, PromptBlock } from './config';
 
 export interface TurnHistoryEntry {
   turnNumber: number;
@@ -32,6 +38,8 @@ export interface ParsedAiResponse {
   tags: string[];
   systemMessage?: string;
   groundingMetadata?: any;
+  // FIX: Add optional 'thinking' property to hold AI's chain-of-thought.
+  thinking?: string;
 }
 
 export interface CombatLogContent {
@@ -66,6 +74,8 @@ export interface GameMessage {
   turnNumber: number; 
   actionTags?: string[];
   groundingMetadata?: { web?: { uri: string; title: string; } }[];
+  isFinal?: boolean;
+  applied?: boolean;
 }
 
 export interface SaveGameMeta {
@@ -141,12 +151,14 @@ export interface KnowledgeBase {
   gameEvents: GameEvent[];
   ragVectorStore?: VectorStore;
   aiContextConfig: AIContextConfig;
-  aiRulebook: AIRulebook; // NEW: The rulebook for editable rules
+  aiRulebook: AIRulebook;
+  promptStructure: PromptBlock[]; // NEW: The dynamic prompt structure.
   aiCopilotConfigs: AICopilotConfig[];
   activeAICopilotConfigId: string | null;
   stagedActions: Record<string, StagedAction>;
   isWorldTicking: boolean;
   lastWorldTickDate: WorldDate;
+  previousConditionStates?: Record<string, boolean>; // NEW: Stores the boolean result of a condition/group from the previous turn.
   narrativeDirectiveForNextTurn?: string; // NEW: For Narrative Directive & Rewrite Turn feature
 }
 

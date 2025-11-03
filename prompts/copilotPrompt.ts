@@ -2,7 +2,7 @@
 import { KnowledgeBase, GameMessage } from '@/types/index';
 
 export const generateAICopilotPrompt = (
-    knowledgeBaseSnapshot: Omit<KnowledgeBase, 'turnHistory' | 'ragVectorStore'>,
+    knowledgeBaseSnapshot: Omit<KnowledgeBase, 'turnHistory' | 'ragVectorStore' | 'userPrompts'>,
     last20Messages: string,
     copilotChatHistory: string,
     userQuestionAndTask: string,

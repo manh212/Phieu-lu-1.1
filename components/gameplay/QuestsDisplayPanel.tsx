@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Quest } from '@/types/index';
 import { VIETNAMESE } from '@/constants';
@@ -44,7 +43,7 @@ const QuestsDisplayPanel: React.FC<QuestsDisplayPanelProps> = React.memo(({ ques
              <Button
                 variant="ghost"
                 size="sm"
-                className="!p-1.5 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                className="!py-1 !px-2 text-xs border border-gray-600 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                 onClick={(e) => {
                     e.stopPropagation();
                     onQuestEditClick(quest);
@@ -52,7 +51,7 @@ const QuestsDisplayPanel: React.FC<QuestsDisplayPanelProps> = React.memo(({ ques
                 title={`Chỉnh sửa ${quest.title}`}
                 aria-label={`Chỉnh sửa ${quest.title}`}
             >
-                ✏️
+                Sửa
             </Button>
           </li>
         ))}

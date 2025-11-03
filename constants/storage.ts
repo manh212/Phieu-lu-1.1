@@ -2,6 +2,7 @@
 import type { StorageType, StorageSettings } from '@/types/index';
 
 export const STORAGE_SETTINGS_STORAGE_KEY = 'daoDoAiStorageSettings_v2';
+export const AI_PRESETS_STORAGE_KEY = 'daoDoAiPresets_v1'; // NEW
 export const DEFAULT_STORAGE_TYPE: StorageType = 'local';
 export const DEFAULT_STORAGE_SETTINGS: StorageSettings = {
   storageType: DEFAULT_STORAGE_TYPE,

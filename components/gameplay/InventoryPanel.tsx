@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Item } from '@/types/index';
 import { VIETNAMESE } from '@/constants';
@@ -37,7 +36,7 @@ const InventoryPanel: React.FC<InventoryPanelProps> = React.memo(({items, onItem
                <Button
                     variant="ghost"
                     size="sm"
-                    className="!p-1.5 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                    className="!py-1 !px-2 text-xs border border-gray-600 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                     onClick={(e) => {
                         e.stopPropagation();
                         onItemEditClick(item);
@@ -45,7 +44,7 @@ const InventoryPanel: React.FC<InventoryPanelProps> = React.memo(({items, onItem
                     title={`Chỉnh sửa ${item.name}`}
                     aria-label={`Chỉnh sửa ${item.name}`}
                 >
-                    ✏️
+                    Sửa
                 </Button>
             </li>
           ))}

@@ -18,6 +18,7 @@ export * from './economy';
 export * from './auction'; // NEW
 export * from './combat'; // NEW
 export * from './user_manual'; // NEW
+export * from './conditionTemplates'; // NEW
 
 // Re-export prompt templates
 // Assuming 'prompts' directory is directly under 'src', so './prompts/index' from 'src/constants.ts'

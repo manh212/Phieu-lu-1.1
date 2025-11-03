@@ -14,6 +14,8 @@
 
 
 
+
+
 import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect, useState } from 'react';
 import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase, AiChoice, PlayerActionInputType, ResponseLength } from './../types/index';
 import { VIETNAMESE } from './../constants';
@@ -376,6 +378,7 @@ export const GameplayScreen: React.FC = () => {
                 kb={game.knowledgeBase} 
                 sentPromptsLog={game.sentPromptsLog} 
                 rawAiResponsesLog={game.rawAiResponsesLog} 
+                aiThinkingLog={game.aiThinkingLog}
                 sentEconomyPromptsLog={game.sentEconomyPromptsLog} 
                 receivedEconomyResponsesLog={game.receivedEconomyResponsesLog} 
                 sentGeneralSubLocationPromptsLog={game.sentGeneralSubLocationPromptsLog} 
