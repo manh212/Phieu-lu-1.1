@@ -9,7 +9,7 @@ import {
   loadSpecificGameFromIndexedDB,
   importGameToIndexedDB,
 } from '@/services/indexedDBService';
-import { VIETNAMESE } from '@/constants';
+import { VIETNAMESE, DEFAULT_LIVING_WORLD_SETTINGS } from '@/constants';
 import { DEFAULT_AI_RULEBOOK } from '@/constants/systemRulesNormal';
 import { DEFAULT_PROMPT_STRUCTURE } from '@/constants/promptStructure';
 import { calculateTotalPages, getMessagesForPage, DEFAULT_AI_CONTEXT_CONFIG } from '@/utils/gameLogicUtils';
@@ -97,6 +97,11 @@ export const useGameActions = (props: UseGameActionsProps) => {
             // NEW: Add previousConditionStates if it's missing for trigger logic
             if (!loadedData.knowledgeBase.previousConditionStates) {
                 loadedData.knowledgeBase.previousConditionStates = {};
+            }
+
+            // NEW MIGRATION: Add livingWorldSettings if missing
+            if (loadedData.knowledgeBase.worldConfig && !loadedData.knowledgeBase.worldConfig.livingWorldSettings) {
+                loadedData.knowledgeBase.worldConfig.livingWorldSettings = { ...DEFAULT_LIVING_WORLD_SETTINGS };
             }
         }
         // --- END: DATA MIGRATION ---

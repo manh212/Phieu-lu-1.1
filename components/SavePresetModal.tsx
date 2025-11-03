@@ -58,6 +58,7 @@ const SavePresetModal: React.FC<SavePresetModalProps> = ({ isOpen, onClose, onSa
           id="preset-description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          // FIX: Used the correct translation key 'presetDescriptionPlaceholder' for the placeholder text.
           placeholder={VIETNAMESE.presetDescriptionPlaceholder}
           textarea
           rows={3}

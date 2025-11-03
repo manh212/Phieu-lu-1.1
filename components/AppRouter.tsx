@@ -26,6 +26,7 @@ import { VIETNAMESE } from '../constants';
 import ApiUsageScreen from './ApiUsageScreen';
 import ParameterSettingsScreen from './ParameterSettingsScreen';
 import RAGMemoryViewerScreen from './RAGMemoryViewerScreen'; // NEW IMPORT
+import LivingWorldSettingsScreen from './LivingWorldSettingsScreen';
 
 const AppRouter: React.FC = () => {
     const game = useGame();
@@ -46,6 +47,8 @@ const AppRouter: React.FC = () => {
             return <EventsScreen />;
         case GameScreen.RAGMemoryViewer: // NEW
             return <RAGMemoryViewerScreen />; // NEW
+        case GameScreen.LivingWorldSettings:
+            return <LivingWorldSettingsScreen />;
         case GameScreen.Equipment: 
             return <EquipmentScreen
                 knowledgeBase={game.knowledgeBase}

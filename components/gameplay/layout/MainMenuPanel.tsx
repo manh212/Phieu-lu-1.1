@@ -77,6 +77,7 @@ export const MainMenuPanel: React.FC<MainMenuPanelProps> = ({ onClose, setIsChar
                 <MenuButton label={VIETNAMESE.questsButton} icon="📜" onClick={() => handlePanelNavigation(setIsQuestsPanelOpen)} />
                 <MenuButton label={VIETNAMESE.eventsButton} icon="🗓️" onClick={() => handleScreenNavigation(GameScreen.Events)} />
                 <MenuButton label={VIETNAMESE.mapButton} icon="🗺️" onClick={() => handleScreenNavigation(GameScreen.Map)} />
+                <MenuButton label={VIETNAMESE.livingWorldSettings} icon="🍃" onClick={() => handleScreenNavigation(GameScreen.LivingWorldSettings)} />
             </MenuGroup>
 
             <MenuGroup title="Hành Động">

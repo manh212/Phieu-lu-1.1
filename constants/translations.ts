@@ -610,9 +610,9 @@ export const VIETNAMESE_TRANSLATIONS = {
   loadCurrentConfigPresetName: "Nạp Cấu hình Hiện tại của Game",
   savePresetModalTitle: "Lưu Cấu Hình AI Hiện Tại",
   presetNameLabel: "Tên Preset (Bắt buộc)",
-  presetDescriptionLabel: "Mô tả (Tùy chọn)",
   presetNamePlaceholder: "Vd: Kể chuyện Sáng tạo, Logic Thực tế",
-  presetDescriptionPlaceholder: "Vd: Preset này tập trung vào mô tả chi tiết, ít hành động...",
+  // FIX: Add missing key 'presetDescriptionLabel'
+  presetDescriptionLabel: "Mô tả Preset",
   presetSavedSuccess: (name: string) => `Đã lưu thành công preset "${name}"!`,
   presetNameRequiredError: "Tên preset không được để trống.",
   presetNameExistsError: (name: string) => `Tên preset "${name}" đã tồn tại. Vui lòng chọn tên khác.`,
@@ -627,12 +627,31 @@ export const VIETNAMESE_TRANSLATIONS = {
   confirmPresetDelete: (presetName: string) => `Bạn có chắc chắn muốn xóa preset "${presetName}" không? Hành động này không thể hoàn tác.`,
   presetDeletedSuccess: (presetName: string) => `Đã xóa thành công preset "${presetName}".`,
   presetExportedSuccess: (presetName: string) => `Đã xuất thành công preset "${presetName}".`,
-  presetImportedSuccess: (count: number) => `Đã nhập thành công ${count} preset.`,
   presetImportError: (error: string) => `Lỗi khi nhập preset: ${error}`,
   noPresetsAvailable: "Chưa có preset nào được lưu.",
   selectPresetToManage: "Chọn một preset từ danh sách để quản lý.",
   renamePresetModalTitle: "Đổi tên Preset",
   newPresetNameLabel: "Tên mới cho Preset",
+  // FIX: Add the missing translation key for the preset description placeholder.
+  presetDescriptionPlaceholder: "Mô tả ngắn gọn về preset (ví dụ: dùng cho thể loại kinh dị, tập trung vào mô tả chi tiết).",
+
+  // Living World Settings
+  livingWorldSettings: "Cài đặt Thế giới sống",
+  livingWorldSettingsSaved: "Cài đặt Thế giới sống đã được lưu thành công!",
+  livingWorldEnableLabel: "Bật/Tắt Hệ Thống Thế Giới Sống",
+  livingWorldEnableDescription: "Bật để cho phép các NPC, phe phái và sự kiện trong thế giới tự vận động và phát triển theo thời gian. Tắt tính năng này có thể cải thiện hiệu suất nhưng sẽ làm giảm sự năng động của thế giới.",
+  livingWorldNpcDevLabel: "Cho Phép NPC Tự Tu Luyện/Phát Triển",
+  livingWorldNpcDevDescription: "Cho phép các nhân vật khác trong thế giới tự mạnh lên. Cẩn thận, kẻ thù của bạn sẽ không đứng yên chờ bạn!",
+  livingWorldNpcDevSpeedLabel: "Tốc Độ Phát Triển Của NPC",
+  livingWorldNpcDevSpeedDescription: "Tăng tốc độ có thể khiến các NPC mạnh lên nhanh chóng, thay đổi đáng kể sự cân bằng của game.",
+  livingWorldNpcAutonomyLabel: "Cho Phép NPC Tự Đưa Ra Quyết Định",
+  livingWorldNpcAutonomyDescription: "Kích hoạt 'bộ não' cho các NPC, giúp họ tự theo đuổi mục tiêu riêng. Điều này có thể tạo ra các sự kiện bất ngờ.",
+  livingWorldNpcAutonomyFreqLabel: "Tần Suất 'Suy Nghĩ' Của NPC",
+  livingWorldNpcAutonomyFreqDescription: "Điều chỉnh tần suất NPC thực hiện các hành động tự chủ. Tần suất cao hơn sẽ khiến thế giới thay đổi nhanh hơn.",
+  livingWorldNpcAutonomyScopeLabel: "Phạm Vi Hành Động Của NPC",
+  livingWorldNpcAutonomyScopeDescription: "Cho phép NPC du hành xa hay chỉ hoạt động trong khu vực của họ? 'Toàn bộ thế giới' có thể dẫn đến những cuộc gặp gỡ bất ngờ ở những nơi xa xôi.",
+  livingWorldDynamicEventsLabel: "Cho Phép Các Sự Kiện Động Tự Nảy Sinh",
+  livingWorldDynamicEventsDescription: "Để thế giới tự tạo ra những câu chuyện và xung đột mới. Các sự kiện này có thể là cơ hội hoặc thách thức cho bạn.",
 };
 
 export const VIETNAMESE = VIETNAMESE_TRANSLATIONS;

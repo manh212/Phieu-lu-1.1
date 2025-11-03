@@ -1,11 +1,27 @@
 // types/setup.ts
-// FIX: Changed barrel file imports to direct file imports to break circular dependencies.
+// FIX: Changed barrel file imports to direct file imports to break circular dependency.
 // FIX: Corrected import path for GenreType and CustomGenreType.
 import type { NsfwDescriptionStyle, ViolenceLevel, StoryTone, LocationTypeValues, FactionAlignmentValues } from './enums/world';
 import type { GenreType, CustomGenreType, ItemCategoryValues, EquipmentRarity, EquipmentTypeValues, PotionTypeValues, MaterialTypeValues, CongPhapType, ProfessionType, SkillTypeValues, CongPhapGrade, LinhKiCategory, LinhKiActivationType, ProfessionGrade } from './enums/item';
 import type { TuChatTier } from './enums/character';
 import type { PlayerStats } from './entities/character';
 import type { WorldDate } from './entities/world';
+
+export interface LivingWorldSettings {
+  isEnabled: boolean;
+  npcAutoDevelopment: {
+    enabled: boolean;
+    speed: 'Rất Chậm' | 'Chậm' | 'Bình Thường' | 'Nhanh' | 'Rất Nhanh';
+  };
+  npcAutonomy: {
+    enabled: boolean;
+    frequency: 'Thấp' | 'Vừa' | 'Cao';
+    scope: 'Khu vực hiện tại' | 'Toàn bộ thế giới';
+  };
+  dynamicEvents: {
+    enabled: boolean;
+  };
+}
 
 export interface StartingSkill {
   id?: string;
@@ -100,6 +116,7 @@ export interface WorldSettings {
   yeuThuRealmSystem: string;
   canhGioiKhoiDau: string; startingDate: WorldDate; playerAvatarUrl?: string;
   writingStyleGuide?: string;
+  livingWorldSettings?: LivingWorldSettings;
 }
 
 export interface GeneratedWorldElements {

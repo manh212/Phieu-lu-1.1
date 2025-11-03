@@ -1,6 +1,6 @@
 // src/constants/world.ts
 // FIX: Correct import path for types
-import type { WorldSettings, GenreType, CustomGenreType, WorldDate } from '@/types/index';
+import type { WorldSettings, GenreType, CustomGenreType, WorldDate, LivingWorldSettings } from '@/types/index';
 import { GENRE_VALUES_FOR_TYPE } from '@/types/index';
 // FIX: Correct import path for types
 import * as GameTemplates from '@/types/index';
@@ -20,10 +20,21 @@ if (GENRE_VALUES_FOR_TYPE[GENRE_VALUES_FOR_TYPE.length -1] !== CUSTOM_GENRE_VALU
   );
 }
 
-// NSFW, Violence, and Story Tone constants are now in nsfw.ts
-// For example:
-// import { DEFAULT_NSFW_DESCRIPTION_STYLE, DEFAULT_VIOLENCE_LEVEL, DEFAULT_STORY_TONE } from './nsfw';
-// These are imported and re-exported via the main constants.ts
+export const DEFAULT_LIVING_WORLD_SETTINGS: LivingWorldSettings = {
+  isEnabled: false,
+  npcAutoDevelopment: {
+    enabled: true,
+    speed: 'Bình Thường',
+  },
+  npcAutonomy: {
+    enabled: true,
+    frequency: 'Vừa',
+    scope: 'Khu vực hiện tại',
+  },
+  dynamicEvents: {
+    enabled: true,
+  },
+};
 
 export const DEFAULT_WORLD_SETTINGS: WorldSettings = {
     saveGameName: "",
@@ -71,6 +82,7 @@ export const DEFAULT_WORLD_SETTINGS: WorldSettings = {
     canhGioiKhoiDau: "Phàm Nhân Nhất Trọng",
     startingDate: { day: 1, month: 1, year: 1, hour: 8, minute: 0 },
     playerAvatarUrl: undefined,
+    livingWorldSettings: DEFAULT_LIVING_WORLD_SETTINGS,
 };
 
 export const ALL_FACTION_ALIGNMENTS = Object.values(GameTemplates.FactionAlignment);

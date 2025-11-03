@@ -14,6 +14,7 @@ export enum GameScreen {
   ApiUsage = 'ApiUsage',
   ParameterSettings = 'ParameterSettings',
   RAGMemoryViewer = 'RAGMemoryViewer',
+  LivingWorldSettings = 'LivingWorldSettings',
 }
 
 export type PlayerActionInputType = 'action' | 'story';
