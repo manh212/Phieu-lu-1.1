@@ -94,7 +94,7 @@ interface AIContextScreenProps {
 }
 
 const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
-    const { knowledgeBase, setKnowledgeBase, showNotification, aiPresets, saveNewAIPreset, renameAIPreset, deleteAIPreset, importAIPresets } = useGame();
+    const { knowledgeBase, setKnowledgeBase, showNotification, aiPresets, saveNewAIPreset } = useGame();
     
     const [promptStructure, setPromptStructure] = useState<PromptBlock[]>([]);
     const [rulebook, setRulebook] = useState<AIRulebook>(DEFAULT_AI_RULEBOOK);
@@ -109,6 +109,8 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
     const [previewPromptContent, setPreviewPromptContent] = useState('');
     const [isExplorerOpen, setIsExplorerOpen] = useState(false);
     const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+    const [viewFilter, setViewFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
+
 
     // NEW: State for "move mode"
     const [moveModeState, setMoveModeState] = useState<{ sourceIndex: number } | null>(null);
@@ -251,7 +253,7 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                 showNotification(`Đã nạp preset "${presetName}".`, 'info');
             }
         }
-        setHasChanges(true); // FIX: Mark changes as true when a preset is loaded
+        setHasChanges(true);
     };
 
     const handleSaveChangesAsPreset = (name: string, description: string) => {
@@ -280,7 +282,6 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
     };
 
     const buildPreviewPrompt = (structure: PromptBlock[], rules: AIRulebook, worldConfig: WorldSettings | null): string => {
-        // This function remains the same as before
         const finalPromptParts: string[] = [];
         if (!worldConfig) return "Lỗi: Không có cấu hình thế giới để tạo bản xem trước.";
         const interpolatePreview = (text: string): string => {
@@ -324,7 +325,7 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
         }
         return finalPromptParts.join('\n\n');
     };
-    
+
     const handlePreviewClick = () => {
         const content = buildPreviewPrompt(promptStructure, rulebook, knowledgeBase.worldConfig);
         setPreviewPromptContent(content);
@@ -340,6 +341,17 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
         return [...options, ...savedPresets];
     }, [aiPresets, hasChanges]);
 
+    const filteredPromptStructure = useMemo(() => {
+        switch (viewFilter) {
+            case 'enabled':
+                return promptStructure.filter(block => block.enabled);
+            case 'disabled':
+                return promptStructure.filter(block => !block.enabled);
+            case 'all':
+            default:
+                return promptStructure;
+        }
+    }, [promptStructure, viewFilter]);
 
     return (
         <>
@@ -347,15 +359,33 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                 <div className="flex flex-col h-[70vh]">
                     <div className="flex-shrink-0 bg-gray-800 p-3 rounded-lg border border-gray-700 space-y-3 mb-4">
                        <p className="text-sm text-gray-300">Quản lý và chuyển đổi giữa các cấu hình prompt đã lưu.</p>
-                       <InputField
-                            label="Cấu hình đang dùng:"
-                            id="preset-selector"
-                            type="select"
-                            value={selectedPresetName}
-                            onChange={handlePresetChange}
-                            options={presetOptions.map(opt => ({ value: opt.value, label: opt.label }))}
-                       />
-                       <div className="flex gap-2">
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                            <InputField
+                                label="Cấu hình đang dùng:"
+                                id="preset-selector"
+                                type="select"
+                                value={selectedPresetName}
+                                onChange={handlePresetChange}
+                                options={presetOptions.map(opt => ({ value: opt.value, label: opt.label }))}
+                                className="!mb-0"
+                            />
+                            <div>
+                                <label htmlFor="view-filter" className="block text-sm font-medium text-gray-300 mb-1">
+                                    Bộ lọc Hiển thị
+                                </label>
+                                <select
+                                    id="view-filter"
+                                    value={viewFilter}
+                                    onChange={(e) => setViewFilter(e.target.value as any)}
+                                    className="w-full p-2 text-sm bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-100 h-9"
+                                >
+                                    <option value="all">Tất cả mục</option>
+                                    <option value="enabled">Chỉ mục đã bật</option>
+                                    <option value="disabled">Chỉ mục đã tắt</option>
+                                </select>
+                            </div>
+                        </div>
+                       <div className="flex gap-2 pt-2 border-t border-gray-700">
                            <Button variant="secondary" size="sm" onClick={() => setIsSaveModalOpen(true)} disabled={!hasChanges}>
                                {VIETNAMESE.savePresetButton}
                            </Button>
@@ -366,16 +396,18 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                     </div>
 
                     <div className="flex-grow overflow-y-auto custom-scrollbar -mx-6 px-6 pb-4 space-y-2">
-                        {promptStructure.map((block, index) => {
+                        {filteredPromptStructure.map((block) => {
+                            const originalIndex = promptStructure.findIndex(b => b.id === block.id);
+                            if (originalIndex === -1) return null;
+
                             if (block.type === 'header') {
-                                // Headers are now removed as per the new request.
                                 return null;
                             }
 
                             const hasConditions = block.conditions && block.conditions.length > 0;
                             
                             if (moveModeState) {
-                                const isSource = moveModeState.sourceIndex === index;
+                                const isSource = moveModeState.sourceIndex === originalIndex;
                                 return (
                                     <div key={block.id} className={`p-2 rounded-lg transition-colors ${ isSource ? 'bg-indigo-700 ring-2 ring-indigo-400' : 'bg-gray-800' }`}>
                                         {isSource ? (
@@ -386,7 +418,7 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                                         ) : (
                                             <div className="flex items-center justify-between p-1">
                                                 <span className="text-gray-400 truncate">{block.label}</span>
-                                                <Button size="sm" variant="secondary" onClick={() => handleCompleteMove(index)} disabled={!block.isMovable}>
+                                                <Button size="sm" variant="secondary" onClick={() => handleCompleteMove(originalIndex)} disabled={!block.isMovable}>
                                                     Di chuyển đến đây
                                                 </Button>
                                             </div>
@@ -396,15 +428,10 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                             }
 
                             return (
-                                <div key={block.id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg transition-colors hover:bg-gray-800/80 group border border-transparent hover:border-gray-700">
-                                    <h2 className="text-base font-semibold text-gray-200 truncate flex-grow mr-4" title={`${block.label}: ${block.description}`}>
+                                <div key={block.id}>
+                                    <h2 className="text-base font-semibold text-gray-200 truncate flex-grow mr-4" title={block.label}>
                                         <label htmlFor={`toggle-${block.id}`} className="cursor-pointer flex items-center gap-2">
-                                            <span>
-                                                {block.label}
-                                                <span className="text-xs text-gray-400 font-normal ml-2">
-                                                    - {block.description}
-                                                </span>
-                                            </span>
+                                            <span>{block.label}</span>
                                             {hasConditions && (
                                                 <div title={formatConditionsForTooltip(block.conditions!)} className="flex-shrink-0">
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-cyan-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V17a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4.586L3.293 6.707A1 1 0 013 6V3zm3.146 5.854l4-4 .708.708-4 4-.708-.708zm4.708-3.146l-4 4-.708-.708 4-4 .708.708z" clipRule="evenodd" /></svg>
@@ -412,24 +439,26 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                                             )}
                                         </label>
                                     </h2>
-                                    
-                                    <div className="flex items-center flex-shrink-0 ml-auto gap-2">
-                                        <button
-                                            onClick={() => block.isMovable && handleInitiateMove(index)}
-                                            disabled={!block.isMovable}
-                                            className="p-1 text-gray-500 hover:text-white cursor-grab disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-indigo-400 rounded opacity-50 group-hover:opacity-100 focus:opacity-100"
-                                            aria-label={`Di chuyển ${block.label}`}
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
-                                            </svg>
-                                        </button>
-                                        {block.isEditable && (
-                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(block)} className="!py-1 !px-2 text-xs border border-gray-600 opacity-50 group-hover:opacity-100 focus:opacity-100" title={`Chỉnh sửa ${block.label}`}>Sửa</Button>
-                                        )}
-                                        <div className="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" id={`toggle-${block.id}`} checked={block.enabled} onChange={() => handleToggle(block.id)} className="sr-only peer"/>
-                                            <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg transition-colors hover:bg-gray-800/80 group border border-transparent hover:border-gray-700">
+                                        <p className="text-xs text-gray-400 font-normal">{block.description}</p>
+                                        <div className="flex items-center flex-shrink-0 ml-auto gap-2">
+                                            <button
+                                                onClick={() => block.isMovable && handleInitiateMove(originalIndex)}
+                                                disabled={!block.isMovable}
+                                                className="p-1 text-gray-500 hover:text-white cursor-grab disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-indigo-400 rounded opacity-50 group-hover:opacity-100 focus:opacity-100"
+                                                aria-label={`Di chuyển ${block.label}`}
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+                                                </svg>
+                                            </button>
+                                            {block.isEditable && (
+                                                <Button variant="ghost" size="sm" onClick={() => handleEdit(block)} className="!py-1 !px-2 text-xs border border-gray-600 opacity-50 group-hover:opacity-100 focus:opacity-100" title={`Chỉnh sửa ${block.label}`}>Sửa</Button>
+                                            )}
+                                            <div className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" id={`toggle-${block.id}`} checked={block.enabled} onChange={() => handleToggle(block.id)} className="sr-only peer"/>
+                                                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
