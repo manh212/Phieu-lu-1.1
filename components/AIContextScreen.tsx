@@ -1,5 +1,5 @@
 // components/AIContextScreen.tsx
-import React, { useState, useRef, useEffect, useMemo, ChangeEvent, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo, ChangeEvent } from 'react';
 import { AIRulebook, AIPreset, PromptBlock, WorldSettings, PromptCondition, ConditionElement, PromptConditionGroup } from '../types/index';
 import Button from './ui/Button';
 import { useGame } from '../hooks/useGame';
@@ -16,8 +16,6 @@ import { getApiSettings } from '../services';
 import { getSeason, getTimeOfDayContext, interpolate } from '../utils/gameLogicUtils';
 import VariableExplorer from './ai/VariableExplorer';
 import FunctionFilterLibrary from './ai/FunctionFilterLibrary';
-import ToggleSwitch from './ui/ToggleSwitch';
-
 
 const formatConditionsForTooltip = (conditions: ConditionElement[], isGroup: boolean = false, groupLogic: 'AND' | 'OR' = 'OR'): string => {
     if (!conditions || conditions.length === 0) return isGroup ? "" : "Không có điều kiện.";
@@ -112,31 +110,10 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
     const [isExplorerOpen, setIsExplorerOpen] = useState(false);
     const [isLibraryOpen, setIsLibraryOpen] = useState(false);
     const [viewFilter, setViewFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
-    const [focusOnElementId, setFocusOnElementId] = useState<string | null>(null);
 
 
     // NEW: State for "move mode"
     const [moveModeState, setMoveModeState] = useState<{ sourceIndex: number } | null>(null);
-
-    useEffect(() => {
-        if (focusOnElementId) {
-            const elementToFocus = document.getElementById(focusOnElementId);
-            if (elementToFocus) {
-                elementToFocus.focus();
-            }
-            setFocusOnElementId(null); // Reset after focusing
-        }
-    }, [focusOnElementId]);
-
-    const handleCancelMove = useCallback(() => {
-        if (moveModeState) {
-            const blockId = promptStructure[moveModeState.sourceIndex]?.id;
-            setMoveModeState(null);
-            if (blockId) {
-                setFocusOnElementId(`move-button-${blockId}`);
-            }
-        }
-    }, [moveModeState, promptStructure]);
 
     useEffect(() => {
         const initialStructure = knowledgeBase.promptStructure || DEFAULT_PROMPT_STRUCTURE;
@@ -154,6 +131,7 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
         setHasChanges(false);
     }, []); // Empty dependency array is the key fix.
 
+    // NEW: Effect to handle Escape key for canceling move mode
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape' && moveModeState) {
@@ -162,7 +140,7 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [moveModeState, handleCancelMove]);
+    }, [moveModeState]);
 
     const markChanges = () => {
         if (!hasChanges) {
@@ -173,34 +151,32 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
     const handleToggle = (id: string) => {
         setPromptStructure(prev => prev.map(block => block.id === id ? { ...block, enabled: !block.enabled } : block));
         markChanges();
-        setFocusOnElementId(`toggle-${id}`);
     };
     
     // NEW: "Move Mode" handlers
     const handleInitiateMove = (index: number) => {
         setMoveModeState({ sourceIndex: index });
-        setTimeout(() => setFocusOnElementId('cancel-move-button'), 0);
+    };
+
+    const handleCancelMove = () => {
+        setMoveModeState(null);
     };
 
     const handleCompleteMove = (targetIndex: number) => {
         if (moveModeState === null) return;
         const { sourceIndex } = moveModeState;
-        const movedItem = promptStructure[sourceIndex];
 
         if (sourceIndex === targetIndex) {
             setMoveModeState(null); // Clicked on itself, cancel.
-            if(movedItem) setFocusOnElementId(`move-button-${movedItem.id}`);
             return;
         }
         
-        let newStructure = [...promptStructure];
-        const [reorderedItem] = newStructure.splice(sourceIndex, 1);
-        newStructure.splice(targetIndex, 0, reorderedItem);
-        setPromptStructure(newStructure);
-        
-        if (movedItem) {
-            setFocusOnElementId(`move-button-${movedItem.id}`);
-        }
+        setPromptStructure(prev => {
+            const items = [...prev];
+            const [reorderedItem] = items.splice(sourceIndex, 1);
+            items.splice(targetIndex, 0, reorderedItem);
+            return items;
+        });
 
         setMoveModeState(null);
         markChanges();
@@ -438,15 +414,20 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                                 options={presetOptions.map(opt => ({ value: opt.value, label: opt.label }))}
                                 className="!mb-0"
                             />
-                            <div role="radiogroup" aria-labelledby="view-filter-label">
-                                <label id="view-filter-label" className="block text-sm font-medium text-gray-300 mb-1">
+                            <div>
+                                <label htmlFor="view-filter" className="block text-sm font-medium text-gray-300 mb-1">
                                     Bộ lọc Hiển thị
                                 </label>
-                                <div className="flex bg-gray-900 rounded-lg p-1">
-                                    <Button id="filter-all-button" role="radio" aria-checked={viewFilter === 'all'} size="sm" variant={viewFilter === 'all' ? 'primary' : 'ghost'} onClick={() => { setViewFilter('all'); setFocusOnElementId('filter-all-button'); }} className="!py-1 !px-3 flex-1">Tất cả</Button>
-                                    <Button id="filter-enabled-button" role="radio" aria-checked={viewFilter === 'enabled'} size="sm" variant={viewFilter === 'enabled' ? 'primary' : 'ghost'} onClick={() => { setViewFilter('enabled'); setFocusOnElementId('filter-enabled-button'); }} className="!py-1 !px-3 flex-1">Đã bật</Button>
-                                    <Button id="filter-disabled-button" role="radio" aria-checked={viewFilter === 'disabled'} size="sm" variant={viewFilter === 'disabled' ? 'primary' : 'ghost'} onClick={() => { setViewFilter('disabled'); setFocusOnElementId('filter-disabled-button'); }} className="!py-1 !px-3 flex-1">Đã tắt</Button>
-                                </div>
+                                <select
+                                    id="view-filter"
+                                    value={viewFilter}
+                                    onChange={(e) => setViewFilter(e.target.value as any)}
+                                    className="w-full p-2 text-sm bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-100 h-9"
+                                >
+                                    <option value="all">Tất cả mục</option>
+                                    <option value="enabled">Chỉ mục đã bật</option>
+                                    <option value="disabled">Chỉ mục đã tắt</option>
+                                </select>
                             </div>
                         </div>
                        <div className="flex gap-2 pt-2 border-t border-gray-700">
@@ -462,22 +443,14 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                        </div>
                     </div>
 
-                    {moveModeState !== null && (
-                        <div className="sticky top-0 z-10 bg-indigo-900/80 backdrop-blur-sm p-3 rounded-lg border border-indigo-500 mb-2 flex items-center justify-between" aria-live="polite">
-                            <p className="text-white font-semibold">
-                                Đang di chuyển: <span className="italic">"{promptStructure[moveModeState.sourceIndex]?.label}"</span>. Chọn vị trí mới.
-                            </p>
-                            <Button id="cancel-move-button" variant="danger" size="sm" onClick={handleCancelMove}>
-                                Hủy Di Chuyển
-                            </Button>
-                        </div>
-                    )}
-                    
                     <div className="flex-grow overflow-y-auto custom-scrollbar -mx-6 px-6 pb-4 space-y-2">
                         {filteredPromptStructure.map((block) => {
                             const originalIndex = promptStructure.findIndex(b => b.id === block.id);
                             if (originalIndex === -1) return null;
-                            if (block.type === 'header') return null;
+
+                            if (block.type === 'header') {
+                                return null;
+                            }
 
                             const hasConditions = block.conditions && block.conditions.length > 0;
                             const content = block.type === 'custom'
@@ -487,15 +460,20 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                             if (moveModeState) {
                                 const isSource = moveModeState.sourceIndex === originalIndex;
                                 return (
-                                    <div key={block.id} className={`p-2 rounded-lg transition-colors ${ isSource ? 'bg-indigo-700 ring-2 ring-indigo-400 opacity-50' : 'bg-gray-800' }`}>
-                                        <div className="flex items-center justify-between p-1">
-                                            <span className="text-gray-400 truncate">{block.label}</span>
-                                            {!isSource && block.isMovable && (
-                                                <Button id={`move-here-button-${block.id}`} size="sm" variant="secondary" onClick={() => handleCompleteMove(originalIndex)} aria-label={`Di chuyển khối đã chọn đến vị trí này, trước khối ${block.label}`}>
+                                    <div key={block.id} className={`p-2 rounded-lg transition-colors ${ isSource ? 'bg-indigo-700 ring-2 ring-indigo-400' : 'bg-gray-800' }`}>
+                                        {isSource ? (
+                                            <div className="flex items-center text-white p-2">
+                                                <span className="font-bold">Đang di chuyển:</span>
+                                                <span className="ml-2 italic truncate">{block.label}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-between p-1">
+                                                <span className="text-gray-400 truncate">{block.label}</span>
+                                                <Button size="sm" variant="secondary" onClick={() => handleCompleteMove(originalIndex)} disabled={!block.isMovable}>
                                                     Di chuyển đến đây
                                                 </Button>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             }
@@ -505,14 +483,14 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                                     <div className="flex items-start justify-between">
                                         <div className="flex-grow mr-4">
                                             <h2 className="text-base font-semibold text-gray-200" title={block.label}>
-                                                <div className="cursor-pointer flex items-center gap-2">
+                                                <label htmlFor={`toggle-${block.id}`} className="cursor-pointer flex items-center gap-2">
                                                     <span>{block.label}</span>
                                                     {hasConditions && (
                                                         <div title={formatConditionsForTooltip(block.conditions!)} className="flex-shrink-0">
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-cyan-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V17a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4.586L3.293 6.707A1 1 0 013 6V3zm3.146 5.854l4-4 .708.708-4 4-.708-.708zm4.708-3.146l-4 4-.708-.708 4-4 .708.708z" clipRule="evenodd" /></svg>
                                                         </div>
                                                     )}
-                                                </div>
+                                                </label>
                                             </h2>
                                             {content && (
                                                 <pre className="mt-1 p-2 bg-gray-900/40 border border-gray-700/50 rounded text-xs text-gray-300 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto custom-scrollbar">
@@ -521,22 +499,21 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                                             )}
                                         </div>
                                         <div className="flex items-center flex-shrink-0 ml-auto gap-2">
-                                            <Button
-                                                id={`move-button-${block.id}`}
+                                            <button
                                                 onClick={() => block.isMovable && handleInitiateMove(originalIndex)}
                                                 disabled={!block.isMovable}
                                                 className="p-1 text-gray-500 hover:text-white cursor-grab disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-indigo-400 rounded opacity-50 group-hover:opacity-100 focus:opacity-100"
-                                                aria-label={`Di chuyển khối ${block.label}`}
-                                                title={`Di chuyển khối ${block.label}`}
+                                                aria-label={`Di chuyển ${block.label}`}
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" /></svg>
-                                            </Button>
-                                            <Button id={`edit-button-${block.id}`} variant="ghost" size="sm" onClick={() => handleEdit(block)} className="!py-1 !px-2 text-xs border border-gray-600 opacity-50 group-hover:opacity-100 focus:opacity-100" title={`Chỉnh sửa ${block.label}`}>Sửa</Button>
-                                            <ToggleSwitch
-                                                id={`toggle-${block.id}`}
-                                                checked={block.enabled}
-                                                onChange={() => handleToggle(block.id)}
-                                            />
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+                                                </svg>
+                                            </button>
+                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(block)} className="!py-1 !px-2 text-xs border border-gray-600 opacity-50 group-hover:opacity-100 focus:opacity-100" title={`Chỉnh sửa ${block.label}`}>Sửa</Button>
+                                            <div className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" id={`toggle-${block.id}`} checked={block.enabled} onChange={() => handleToggle(block.id)} className="sr-only peer"/>
+                                                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -550,6 +527,13 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                     </div>
                 </div>
 
+                {moveModeState !== null && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4">
+                        <Button variant="danger" onClick={handleCancelMove} className="w-full shadow-lg">
+                            Hủy Di Chuyển
+                        </Button>
+                    </div>
+                )}
                 <div className="mt-6 pt-4 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-2">
                     <div className="flex gap-2">
                         <Button variant="ghost" onClick={handlePreviewClick}>
