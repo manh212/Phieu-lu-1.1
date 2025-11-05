@@ -221,6 +221,7 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
             isEditable: true,
             isMovable: true,
             content: '',
+            includeLabelInPrompt: true,
         };
         setEditingCustomBlock(newBlock);
     };

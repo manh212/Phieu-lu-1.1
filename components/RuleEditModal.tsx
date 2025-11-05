@@ -7,6 +7,7 @@ import InputField from './ui/InputField';
 import { VIETNAMESE } from '../constants';
 import { CONDITION_TEMPLATES, cloneTemplateAndAssignNewIds } from '../constants/conditionTemplates';
 import { copyToClipboard, pasteFromClipboard, isClipboardEmpty, interpolate } from '../utils/gameLogicUtils';
+import ToggleSwitch from './ui/ToggleSwitch';
 
 
 interface RuleEditModalProps {
@@ -87,6 +88,7 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({ isOpen, onClose, block, k
   
   const [editedLabel, setEditedLabel] = useState(block.label);
   const [editedContent, setEditedContent] = useState(currentContent);
+  const [editedIncludeLabel, setEditedIncludeLabel] = useState(block.includeLabelInPrompt ?? true);
   const [conditions, setConditions] = useState<ConditionElement[]>([]);
   const [previewContent, setPreviewContent] = useState(''); // NEW: For live preview
 
@@ -98,6 +100,7 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({ isOpen, onClose, block, k
       setActiveTab('content');
       setEditedLabel(block.label);
       setEditedContent(currentContent);
+      setEditedIncludeLabel(block.includeLabelInPrompt ?? true);
 
       const rawConditions = block.conditions || [];
       const migratedConditions = rawConditions.map(c => {
@@ -168,7 +171,7 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({ isOpen, onClose, block, k
   };
 
   const handleSave = () => {
-    const updatedBlock = { ...block, label: editedLabel, conditions: conditions };
+    const updatedBlock = { ...block, label: editedLabel, conditions: conditions, includeLabelInPrompt: editedIncludeLabel };
     onSave(updatedBlock, editedContent);
   };
 
@@ -202,6 +205,17 @@ const RuleEditModal: React.FC<RuleEditModalProps> = ({ isOpen, onClose, block, k
             {activeTab === 'content' && (
                  <div className="space-y-4">
                      <InputField label="Tiêu đề quy tắc" id="rule-editor-label" value={editedLabel} onChange={(e) => { setEditedLabel(e.target.value); handleAnyChange(); }} />
+                     <div className="flex justify-between items-center bg-gray-900/40 p-3 rounded-md border border-gray-700/50">
+                        <label htmlFor="include-label-toggle" className="text-sm font-medium text-gray-300">
+                            Gửi kèm tiêu đề vào prompt?
+                            <p className="text-xs text-gray-400 mt-1">Bật để gửi `**Tiêu đề:**` trước nội dung. Tắt để chỉ gửi nội dung.</p>
+                        </label>
+                        <ToggleSwitch
+                            id="include-label-toggle"
+                            checked={editedIncludeLabel}
+                            onChange={(checked) => { setEditedIncludeLabel(checked); handleAnyChange(); }}
+                        />
+                     </div>
                     <div>
                         <div className="flex justify-between items-center mb-1">
                             <label htmlFor="rule-editor-content" className="block text-sm font-medium text-gray-300">Nội dung quy tắc</label>

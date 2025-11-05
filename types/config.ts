@@ -40,6 +40,7 @@ export interface PromptBlock {
     content?: string; // The actual text content, mainly for 'custom' type blocks
     rulebookKey?: keyof AIRulebook; // Link to the specific rule in the AIRulebook object
     conditions?: ConditionElement[]; // NEW: Array of activation conditions (can be nested)
+    includeLabelInPrompt?: boolean; // NEW: The user's requested feature
 }
 
 

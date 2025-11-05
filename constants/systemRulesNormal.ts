@@ -285,20 +285,20 @@ Nhiệm vụ của bạn là cung cấp tổng cộng 5-6 lựa chọn hành đ�
     writingStyleGuidance: `**HƯỚNG DẪN BẮT CHƯỚC VĂN PHONG (CỰC KỲ QUAN TRỌNG):**\n"""\n{{WRITING_STYLE_GUIDE}}\n"""`,
 
     // NEW: Templates for previously hardcoded sections
-    coreContextTemplate: `**BỐI CẢNH CỐT LÕI (CORE CONTEXT):**\n\`\`\`json\n{{CORE_CONTEXT_JSON}}\n\`\`\``,
-    conversationalContextTemplate: `**BỐI CẢNH HỘI THOẠI (CONVERSATIONAL CONTEXT):**\n- **Tóm tắt trang trước:**\n{{PREVIOUS_PAGE_SUMMARIES}}\n- **Diễn biến gần nhất:**\n{{LAST_NARRATION}}\n- **Diễn biến trang này:**\n{{CURRENT_PAGE_LOG}}`,
-    playerActionGuidanceTemplate: `**HƯỚNG DẪN TỪ NGƯỜI CHƠI (CHO LƯỢT TIẾP THEO):**\n- Loại: {{PLAYER_ACTION_TYPE}}\n- Nội dung: "{{PLAYER_ACTION_CONTENT}}"`,
-    worldEventGuidanceWrapper: `**{{BLOCK_LABEL}} (CỰC KỲ QUAN TRỌNG):**\nBạn đang ở một địa điểm có sự kiện. Hãy tuân thủ nghiêm ngặt các quy tắc sau:\n{{EVENT_DETAILS}}`,
+    coreContextTemplate: `\`\`\`json\n{{CORE_CONTEXT_JSON}}\n\`\`\``,
+    conversationalContextTemplate: `- **Tóm tắt trang trước:**\n{{PREVIOUS_PAGE_SUMMARIES}}\n- **Diễn biến gần nhất:**\n{{LAST_NARRATION}}\n- **Diễn biến trang này:**\n{{CURRENT_PAGE_LOG}}`,
+    playerActionGuidanceTemplate: `- Loại: {{PLAYER_ACTION_TYPE}}\n- Nội dung: "{{PLAYER_ACTION_CONTENT}}"`,
+    worldEventGuidanceWrapper: `(CỰC KỲ QUAN TRỌNG)\nBạn đang ở một địa điểm có sự kiện. Hãy tuân thủ nghiêm ngặt các quy tắc sau:\n{{EVENT_DETAILS}}`,
     worldEventGuidanceUpcoming: `- **Sự kiện "{{EVENT_TITLE}}" SẮP DIỄN RA ({{TIME_DIFFERENCE}}).**\n  - **QUY TẮC:** **TUYỆT ĐỐI KHÔNG** bắt đầu sự kiện này.\n  - **NHIỆM VỤ:** Hãy mô tả không khí chuẩn bị cho sự kiện. Cung cấp các lựa chọn cho người chơi để chuẩn bị hoặc chờ đợi.`,
     worldEventGuidanceOngoing: `- **Sự kiện "{{EVENT_TITLE}}" ĐANG DIỄN RA ({{TIME_DIFFERENCE}}).**\n  - **QUY TẮC:** **BẮT BUỘC** phải mô tả sự kiện đang diễn ra.\n  - **NHIỆM VỤ:** Cung cấp các lựa chọn để người chơi có thể tham gia hoặc tương tác trực tiếp với sự kiện.`,
     worldEventGuidanceFinished: `- **Sự kiện "{{EVENT_TITLE}}" ĐÃ KẾT THÚC ({{TIME_DIFFERENCE}}).**\n  - **QUY TẮC:** **TUYỆT ĐỐI KHÔNG** mô tả sự kiện này đang diễn ra. **KHÔNG** cung cấp lựa chọn để tham gia.\n  - **NHIỆM VỤ:** Hãy mô tả tàn dư hoặc hậu quả của sự kiện. Ví dụ: "khu vực quảng trường vẫn còn bừa bộn sau đại hội", "dân chúng vẫn đang bàn tán về kết quả trận chiến".`,
-    responseLengthGuidanceTemplate: `**ĐỘ DÀI PHẢN HỒI MONG MUỐN:** {{RESPONSE_LENGTH_TEXT}}.`,
+    responseLengthGuidanceTemplate: `{{RESPONSE_LENGTH_TEXT}}.`,
     // NEW WRAPPERS AND SEPARATOR
     blockSeparator: '\n\n',
-    ragContextWrapper: `**{{BLOCK_LABEL}}:**\n\`\`\`\n{{RAG_CONTENT}}\n\`\`\``,
-    stagedActionsContextWrapper: `**{{BLOCK_LABEL}}:**\n\`\`\`json\n{{STAGED_ACTIONS_JSON}}\n\`\`\``,
-    userPromptsWrapper: `**{{BLOCK_LABEL}} (QUY TẮC BẮT BUỘC):**\n{{USER_PROMPTS_LIST}}`,
-    narrativeDirectiveWrapper: `**{{BLOCK_LABEL}} (BẮT BUỘC CHO LƯỢT NÀY):**\n{{NARRATIVE_DIRECTIVE_CONTENT}}`,
+    ragContextWrapper: `\`\`\`\n{{RAG_CONTENT}}\n\`\`\``,
+    stagedActionsContextWrapper: `\`\`\`json\n{{STAGED_ACTIONS_JSON}}\n\`\`\``,
+    userPromptsWrapper: `(QUY TẮC BẮT BUỘC)\n{{USER_PROMPTS_LIST}}`,
+    narrativeDirectiveWrapper: `(BẮT BUỘC CHO LƯỢT NÀY)\n{{NARRATIVE_DIRECTIVE_CONTENT}}`,
 };
 
 /**

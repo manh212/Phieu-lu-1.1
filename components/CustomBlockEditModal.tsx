@@ -1,12 +1,12 @@
 // components/CustomBlockEditModal.tsx
 import React, { useState, useEffect } from 'react';
-// FIX: Changed import to a direct path to avoid circular dependencies with the types barrel file.
 import { PromptBlock, KnowledgeBase } from '../types/index';
 import Modal from './ui/Modal';
 import Button from './ui/Button';
 import InputField from './ui/InputField';
 import { VIETNAMESE } from '../constants';
 import { interpolate } from '../utils/gameLogicUtils';
+import ToggleSwitch from './ui/ToggleSwitch';
 
 
 interface CustomBlockEditModalProps {
@@ -31,7 +31,8 @@ const CustomBlockEditModal: React.FC<CustomBlockEditModalProps> = ({ isOpen, onC
 
   useEffect(() => {
     if (block) {
-      setEditedBlock(JSON.parse(JSON.stringify(block)));
+      const blockWithDefaults = { includeLabelInPrompt: true, ...block };
+      setEditedBlock(JSON.parse(JSON.stringify(blockWithDefaults)));
     }
   }, [block]);
   
@@ -80,6 +81,17 @@ const CustomBlockEditModal: React.FC<CustomBlockEditModalProps> = ({ isOpen, onC
           value={editedBlock.label}
           onChange={(e) => handleFieldChange('label', e.target.value)}
         />
+        <div className="flex justify-between items-center bg-gray-900/40 p-3 rounded-md border border-gray-700/50">
+            <label htmlFor="custom-include-label-toggle" className="text-sm font-medium text-gray-300">
+                Gửi kèm tiêu đề vào prompt?
+                <p className="text-xs text-gray-400 mt-1">Bật để gửi `**Tiêu đề:**` trước nội dung. Tắt để chỉ gửi nội dung.</p>
+            </label>
+            <ToggleSwitch
+                id="custom-include-label-toggle"
+                checked={editedBlock.includeLabelInPrompt ?? true} // Default to true if undefined
+                onChange={(checked) => handleFieldChange('includeLabelInPrompt', checked)}
+            />
+        </div>
         <InputField
           label="Mô tả"
           id="custom-block-description"

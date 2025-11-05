@@ -1,3 +1,5 @@
+// prompts/continuePrompt.ts
+
 
 
 import type { KnowledgeBase, PlayerActionInputType, ResponseLength, GameMessage, AIContextConfig, WorldSettings, PromptBlock, PromptCondition, ConditionElement, PromptConditionGroup } from '@/types/index';
@@ -176,103 +178,90 @@ export const generateContinuePrompt = (
     for (const block of promptStructure) {
         if (!block.enabled) continue;
         
-        // --- NEW: Conditional Activation Logic (Recursive) ---
         if (block.conditions && block.conditions.length > 0) {
             const conditionsMet = evaluateConditions(block.conditions, knowledgeBase, prevStates, newConditionStates);
             if (!conditionsMet) {
                 continue;
             }
         }
-        // --- END: Conditional Activation Logic ---
 
+        let finalBlockContent = '';
 
-        let blockContent = '';
+        if (block.type === 'header') {
+            finalBlockContent = `\n---\n**${block.label}**`;
+        } else { // 'system' or 'custom'
+            let rawContent = '';
+            if (block.type === 'custom') {
+                rawContent = block.content || '';
+            } else if (block.type === 'system' && block.rulebookKey && aiRulebook[block.rulebookKey]) {
+                rawContent = aiRulebook[block.rulebookKey];
+            }
 
-        switch (block.type) {
-            case 'header':
-                blockContent = `\n---\n**${block.label}**`;
-                break;
-            
-            case 'custom':
-                if (block.content !== undefined && block.content !== null) {
-                    blockContent = `**${block.label}:**\n${interpolate(block.content, knowledgeBase)}`;
-                }
-                break;
-
-            case 'system':
-                if (block.rulebookKey && aiRulebook[block.rulebookKey]) {
-                    let ruleText = aiRulebook[block.rulebookKey];
-                    const playerRaceSystem = worldConfig.raceCultivationSystems.find(s => s.raceName === (worldConfig.playerRace || 'Nhân Tộc'));
-                    const realmProgressionList = (playerRaceSystem?.realmSystem || '').split(' - ').map(s => s.trim()).filter(Boolean);
-
-                    // A single, powerful replacement function for all simple placeholders
-                    const replaceAllPlaceholders = (text: string) => {
-                        return text
-                            .replace(/\{\{\s*BLOCK_LABEL\s*\}\}/g, block.label)
-                            .replace(/\{\{\s*RAG_CONTENT\s*\}\}/g, retrievedContext || "Không có.")
-                            .replace(/\{\{\s*CORE_CONTEXT_JSON\s*\}\}/g, JSON.stringify({
-                                playerInfo: { name: worldConfig.playerName, status: playerStats },
-                                worldState: { theme: worldConfig.theme, worldDate: worldDate, currentLocation: discoveredLocations.find(l => l.id === knowledgeBase.currentLocationId) }
-                            }, null, 2))
-                            .replace(/\{\{\s*PREVIOUS_PAGE_SUMMARIES\s*\}\}/g, previousPageSummaries.length > 0 ? previousPageSummaries.join("\n\n") : "Không có.")
-                            .replace(/\{\{\s*LAST_NARRATION\s*\}\}/g, lastNarrationFromPreviousPage || "Chưa có.")
-                            .replace(/\{\{\s*CURRENT_PAGE_LOG\s*\}\}/g, currentPageMessagesLog || "Chưa có.")
-                            .replace(/\{\{\s*STAGED_ACTIONS_JSON\s*\}\}/g, (stagedActions && Object.keys(stagedActions).length > 0) ? JSON.stringify(stagedActions, null, 2) : "{}")
-                            .replace(/\{\{\s*USER_PROMPTS_LIST\s*\}\}/g, (userPrompts && userPrompts.length > 0) ? userPrompts.map(p => `- ${p}`).join('\n') : "Không có.")
-                            .replace(/\{\{\s*NARRATIVE_DIRECTIVE_CONTENT\s*\}\}/g, narrativeDirective || "Không có.")
-                            .replace(/\{\{\s*PLAYER_ACTION_TYPE\s*\}\}/g, inputType === 'action' ? 'Hành động trực tiếp' : 'Gợi ý câu chuyện')
-                            .replace(/\{\{\s*PLAYER_ACTION_CONTENT\s*\}\}/g, playerActionText)
-                            .replace(/\{\{\s*RESPONSE_LENGTH_TEXT\s*\}\}/g, responseLength === 'short' ? 'Ngắn' : responseLength === 'medium' ? 'Trung bình' : responseLength === 'long' ? 'Dài' : 'Mặc định')
-                            .replace(/\{\{\s*WRITING_STYLE_GUIDE\s*\}\}/g, worldConfig.writingStyleGuide || 'Không có hướng dẫn văn phong.')
-                            .replace(/\{\{\s*PLAYER_NAME\s*\}\}/g, worldConfig.playerName || 'Người chơi')
-                            .replace(/\{\{\s*CURRENCY_NAME\s*\}\}/g, worldConfig.currencyName || 'Tiền tệ')
-                            .replace(/\{\{\s*MAIN_REALMS\s*\}\}/g, realmProgressionList.join(' | '))
-                            .replace(/\{\{\s*SEASON_CONTEXT\s*\}\}/g, getSeason(worldDate))
-                            .replace(/\{\{\s*TIME_OF_DAY_CONTEXT\s*\}\}/g, getTimeOfDayContext(worldDate));
-                    };
-
-                    blockContent = replaceAllPlaceholders(ruleText);
-
-                    // Special handling for worldEventGuidance as it has sub-templates
-                    if (block.id === 'worldEventGuidance') {
-                        const currentLocationId = knowledgeBase.currentLocationId;
-                        const relevantEvents = (knowledgeBase.gameEvents || []).filter(event =>
-                            event.locationId === currentLocationId && 
-                            (event.status === 'Sắp diễn ra' || event.status === 'Đang diễn ra' || event.status === 'Đã kết thúc') &&
-                            !event.isCancelled
-                        );
+            if (rawContent) {
+                // First, replace all non-KB placeholders that are not part of Dao-Script
+                let contentAfterPlaceholders = rawContent
+                    .replace(/\{\{\s*RAG_CONTENT\s*\}\}/g, retrievedContext || "Không có.")
+                    .replace(/\{\{\s*PREVIOUS_PAGE_SUMMARIES\s*\}\}/g, previousPageSummaries.length > 0 ? previousPageSummaries.join("\n\n") : "Không có.")
+                    .replace(/\{\{\s*LAST_NARRATION\s*\}\}/g, lastNarrationFromPreviousPage || "Chưa có.")
+                    .replace(/\{\{\s*CURRENT_PAGE_LOG\s*\}\}/g, currentPageMessagesLog || "Chưa có.")
+                    .replace(/\{\{\s*STAGED_ACTIONS_JSON\s*\}\}/g, (stagedActions && Object.keys(stagedActions).length > 0) ? JSON.stringify(stagedActions, null, 2) : "{}")
+                    .replace(/\{\{\s*USER_PROMPTS_LIST\s*\}\}/g, (userPrompts && userPrompts.length > 0) ? userPrompts.map(p => `- ${p}`).join('\n') : "Không có.")
+                    .replace(/\{\{\s*NARRATIVE_DIRECTIVE_CONTENT\s*\}\}/g, narrativeDirective || "Không có.")
+                    .replace(/\{\{\s*PLAYER_ACTION_TYPE\s*\}\}/g, inputType === 'action' ? 'Hành động trực tiếp' : 'Gợi ý câu chuyện')
+                    .replace(/\{\{\s*PLAYER_ACTION_CONTENT\s*\}\}/g, playerActionText)
+                    .replace(/\{\{\s*RESPONSE_LENGTH_TEXT\s*\}\}/g, responseLength === 'short' ? 'Ngắn' : responseLength === 'medium' ? 'Trung bình' : responseLength === 'long' ? 'Dài' : 'Mặc định');
                 
-                        if (relevantEvents.length > 0) {
-                            const eventDetails = relevantEvents.map(event => {
-                                const timeDiff = getWorldDateDifferenceString(event.startDate, event.endDate, knowledgeBase.worldDate);
-                                let template = '';
-                                if (event.status === 'Sắp diễn ra' && aiRulebook.worldEventGuidanceUpcoming) {
-                                    template = aiRulebook.worldEventGuidanceUpcoming;
-                                } else if (event.status === 'Đang diễn ra' && aiRulebook.worldEventGuidanceOngoing) {
-                                    template = aiRulebook.worldEventGuidanceOngoing;
-                                } else if (event.status === 'Đã kết thúc' && aiRulebook.worldEventGuidanceFinished) {
-                                    template = aiRulebook.worldEventGuidanceFinished;
-                                }
-                                return template
-                                    .replace(/\{\{\s*EVENT_TITLE\s*\}\}/g, event.title)
-                                    .replace(/\{\{\s*TIME_DIFFERENCE\s*\}\}/g, timeDiff);
-                            }).join('\n');
-                            
-                            if (eventDetails) {
-                                blockContent = blockContent.replace('{{EVENT_DETAILS}}', eventDetails);
-                            } else {
-                                blockContent = '';
+                // Special handling for worldEventGuidance
+                if (block.id === 'worldEventGuidance') {
+                    const currentLocationId = knowledgeBase.currentLocationId;
+                    const relevantEvents = (knowledgeBase.gameEvents || []).filter(event =>
+                        event.locationId === currentLocationId && 
+                        (event.status === 'Sắp diễn ra' || event.status === 'Đang diễn ra' || event.status === 'Đã kết thúc') &&
+                        !event.isCancelled
+                    );
+            
+                    if (relevantEvents.length > 0) {
+                        const eventDetails = relevantEvents.map(event => {
+                            const timeDiff = getWorldDateDifferenceString(event.startDate, event.endDate, knowledgeBase.worldDate);
+                            let template = '';
+                            if (event.status === 'Sắp diễn ra' && aiRulebook.worldEventGuidanceUpcoming) {
+                                template = aiRulebook.worldEventGuidanceUpcoming;
+                            } else if (event.status === 'Đang diễn ra' && aiRulebook.worldEventGuidanceOngoing) {
+                                template = aiRulebook.worldEventGuidanceOngoing;
+                            } else if (event.status === 'Đã kết thúc' && aiRulebook.worldEventGuidanceFinished) {
+                                template = aiRulebook.worldEventGuidanceFinished;
                             }
+                            return template
+                                .replace(/\{\{\s*EVENT_TITLE\s*\}\}/g, event.title)
+                                .replace(/\{\{\s*TIME_DIFFERENCE\s*\}\}/g, timeDiff);
+                        }).join('\n');
+                        
+                        if (eventDetails) {
+                            contentAfterPlaceholders = contentAfterPlaceholders.replace('{{EVENT_DETAILS}}', eventDetails);
                         } else {
-                           blockContent = ''; // No relevant events, so don't include the block.
+                            contentAfterPlaceholders = ''; // No details could be generated, clear the block
                         }
+                    } else {
+                       contentAfterPlaceholders = ''; // No relevant events, so don't include the block content.
                     }
                 }
-                break;
+                
+                // Then, interpolate Dao-Script variables from the KnowledgeBase
+                const interpolatedContent = interpolate(contentAfterPlaceholders, knowledgeBase);
+
+                if (interpolatedContent.trim()) {
+                    // Finally, prepend the label if needed
+                    if (block.includeLabelInPrompt === false) { // Explicitly check for false
+                        finalBlockContent = interpolatedContent;
+                    } else { // Default to true for backward compatibility and normal behavior
+                        finalBlockContent = `**${block.label}:**\n${interpolatedContent}`;
+                    }
+                }
+            }
         }
         
-        if (blockContent) {
-            finalPromptParts.push(blockContent);
+        if (finalBlockContent) {
+            finalPromptParts.push(finalBlockContent);
         }
     }
 
