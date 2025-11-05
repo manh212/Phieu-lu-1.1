@@ -15,6 +15,14 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null); // To store the element that opened the modal
 
+  // Use a ref to hold the latest onClose callback. This prevents the main effect
+  // from re-running every time the parent component re-renders and creates a new
+  // onClose function instance. This is key to preventing focus jumps on internal state changes.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     const focusableElementsSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
     
@@ -44,7 +52,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
 
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        // Call the latest onClose function via the ref.
+        onCloseRef.current();
       }
     };
 
@@ -54,11 +63,15 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       
       // A short delay allows the modal to fully render and transition before we manage focus
       setTimeout(() => {
-        const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(focusableElementsSelector);
-        if (focusableElements && focusableElements.length > 0) {
-          (focusableElements[0] as HTMLElement).focus();
-        } else {
-          (modalRef.current as HTMLElement)?.focus();
+        // This logic now ONLY runs when the modal is first opened, not on re-renders of its children.
+        // It also checks if focus isn't already inside the modal, preventing it from stealing focus.
+        if (modalRef.current && !modalRef.current.contains(document.activeElement)) {
+            const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(focusableElementsSelector);
+            if (focusableElements && focusableElements.length > 0) {
+              (focusableElements[0] as HTMLElement).focus();
+            } else {
+              (modalRef.current as HTMLElement)?.focus();
+            }
         }
         // Add tab trapping listener after initial focus is set
         modalRef.current?.addEventListener('keydown', handleKeyDown);
@@ -69,11 +82,15 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
     return () => {
       document.removeEventListener('keydown', handleEscKey);
       modalRef.current?.removeEventListener('keydown', handleKeyDown);
-      if (triggerRef.current) {
-        triggerRef.current.focus(); // Restore focus to the element that opened the modal
+      // Check if trigger element still exists before restoring focus
+      if (triggerRef.current && document.body.contains(triggerRef.current)) {
+        triggerRef.current.focus(); 
       }
     };
-  }, [isOpen, onClose]);
+    // The dependency array is now only `isOpen`. The effect for focus management
+    // will now correctly run ONLY when the modal opens or closes, not on every
+    // re-render caused by internal state changes in its children.
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
