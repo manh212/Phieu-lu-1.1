@@ -16,6 +16,7 @@ import { getApiSettings } from '../services';
 import { getSeason, getTimeOfDayContext, interpolate } from '../utils/gameLogicUtils';
 import VariableExplorer from './ai/VariableExplorer';
 import FunctionFilterLibrary from './ai/FunctionFilterLibrary';
+import ToggleSwitch from './ui/ToggleSwitch';
 
 const formatConditionsForTooltip = (conditions: ConditionElement[], isGroup: boolean = false, groupLogic: 'AND' | 'OR' = 'OR'): string => {
     if (!conditions || conditions.length === 0) return isGroup ? "" : "Không có điều kiện.";
@@ -37,7 +38,9 @@ const formatConditionsForTooltip = (conditions: ConditionElement[], isGroup: boo
             'quest_status': 'Trạng thái nhiệm vụ',
             'world_hour': 'Giờ trong ngày',
             'world_season': 'Mùa trong năm',
-            'npc_affinity': 'Thiện cảm với NPC'
+            'npc_affinity': 'Thiện cảm với NPC',
+            'player_in_combat': 'Đang chiến đấu',
+            'location_is_safe': 'Là nơi an toàn',
         };
         const opMap: Record<PromptCondition['operator'], string> = {
             'IS': 'LÀ',
@@ -148,8 +151,8 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
         }
     };
 
-    const handleToggle = (id: string) => {
-        setPromptStructure(prev => prev.map(block => block.id === id ? { ...block, enabled: !block.enabled } : block));
+    const handleToggle = (id: string, isChecked: boolean) => {
+        setPromptStructure(prev => prev.map(block => block.id === id ? { ...block, enabled: isChecked } : block));
         markChanges();
     };
     
@@ -483,16 +486,16 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                                 <div key={block.id} className="p-3 bg-gray-800/50 rounded-lg transition-colors hover:bg-gray-800/80 group border border-transparent hover:border-gray-700">
                                     <div className="flex items-start justify-between">
                                         <div className="flex-grow mr-4">
-                                            <h2 className="text-base font-semibold text-gray-200" title={block.label}>
-                                                <label htmlFor={`toggle-${block.id}`} className="cursor-pointer flex items-center gap-2">
-                                                    <span>{block.label}</span>
-                                                    {hasConditions && (
-                                                        <div title={formatConditionsForTooltip(block.conditions!)} className="flex-shrink-0">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-cyan-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V17a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4.586L3.293 6.707A1 1 0 013 6V3zm3.146 5.854l4-4 .708.708-4 4-.708-.708zm4.708-3.146l-4 4-.708-.708 4-4 .708.708z" clipRule="evenodd" /></svg>
-                                                        </div>
-                                                    )}
-                                                </label>
-                                            </h2>
+                                            <div className="cursor-pointer flex items-center gap-2" onClick={() => handleToggle(block.id, !block.enabled)}>
+                                                <h2 className="text-base font-semibold text-gray-200" title={block.label}>
+                                                    {block.label}
+                                                </h2>
+                                                {hasConditions && (
+                                                    <div title={formatConditionsForTooltip(block.conditions!)} className="flex-shrink-0">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-cyan-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V17a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4.586L3.293 6.707A1 1 0 013 6V3zm3.146 5.854l4-4 .708.708-4 4-.708-.708zm4.708-3.146l-4 4-.708-.708 4-4 .708.708z" clipRule="evenodd" /></svg>
+                                                    </div>
+                                                )}
+                                            </div>
                                             {content && (
                                                 <pre className="mt-1 p-2 bg-gray-900/40 border border-gray-700/50 rounded text-xs text-gray-300 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto custom-scrollbar">
                                                     {content}
@@ -511,10 +514,11 @@ const AIContextScreen: React.FC<AIContextScreenProps> = ({ onClose }) => {
                                                 </svg>
                                             </button>
                                             <Button variant="ghost" size="sm" onClick={() => handleEdit(block)} className="!py-1 !px-2 text-xs border border-gray-600 opacity-50 group-hover:opacity-100 focus:opacity-100" title={`Chỉnh sửa ${block.label}`}>Sửa</Button>
-                                            <div className="relative inline-flex items-center cursor-pointer">
-                                                <input type="checkbox" id={`toggle-${block.id}`} checked={block.enabled} onChange={() => handleToggle(block.id)} className="sr-only peer"/>
-                                                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                            </div>
+                                            <ToggleSwitch
+                                                id={`toggle-${block.id}`}
+                                                checked={block.enabled}
+                                                onChange={(isChecked) => handleToggle(block.id, isChecked)}
+                                            />
                                         </div>
                                     </div>
                                 </div>
