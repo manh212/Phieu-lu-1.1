@@ -103,6 +103,7 @@ export interface GameContextType {
     messageIdBeingEdited: string | null;
     aiPresets: AIPresetCollection; // NEW
     isStrictMode: boolean; // NEW: The synchronized strict mode state
+    cancelAllActiveQuests: () => void; // NEW
 
     currentPageMessagesLog: string;
     previousPageSummaries: string[];
@@ -760,6 +761,28 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCurrentScreen(GameScreen.Gameplay);
     }, [gameData, setCurrentScreen]);
 
+    const cancelAllActiveQuests = useCallback(() => {
+        gameData.setKnowledgeBase(prevKb => {
+            const activeQuestsCount = prevKb.allQuests.filter(q => q.status === 'active').length;
+
+            if (activeQuestsCount === 0) {
+                showNotification("Không có nhiệm vụ nào đang làm để hủy.", 'info');
+                return prevKb;
+            }
+
+            if (!window.confirm(`Bạn có chắc chắn muốn hủy và xóa TẤT CẢ ${activeQuestsCount} nhiệm vụ đang làm không? Hành động này không thể hoàn tác.`)) {
+                return prevKb;
+            }
+
+            const newKb = JSON.parse(JSON.stringify(prevKb));
+            const remainingQuests = newKb.allQuests.filter((q: Quest) => q.status !== 'active');
+            newKb.allQuests = remainingQuests;
+
+            showNotification(`Đã xóa ${activeQuestsCount} nhiệm vụ đang làm.`, 'success');
+            return newKb;
+        });
+    }, [gameData.setKnowledgeBase, showNotification]);
+
 
     const lastPageNumberForPrompt = (gameData.knowledgeBase.currentPageHistory?.length || 1) - 1;
     let lastNarrationFromPreviousPage: string | undefined = undefined;
@@ -1110,6 +1133,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         importAIPresets,
         ...allActions, onQuit, startQuickPlay, resetCopilotConversation, isCurrentlyActivePage, gameplayScrollPosition, justLoadedGame,
         onGoToPrevPage, onGoToNextPage, onJumpToPage,
+        cancelAllActiveQuests,
     };
 
     return <GameContext.Provider value={contextValue}>{children}</GameContext.Provider>;

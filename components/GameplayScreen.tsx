@@ -331,7 +331,12 @@ export const GameplayScreen: React.FC = () => {
                 <CharacterSidePanel knowledgeBase={game.knowledgeBase} onItemClick={(item) => game.openEntityModal('item', item)} onSkillClick={(skill) => game.openEntityModal('skill', skill)} onPlayerAvatarUploadRequest={game.onUpdatePlayerAvatar} isUploadingPlayerAvatar={game.isUploadingAvatar} />
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isQuestsPanelOpen} onClose={() => setIsQuestsPanelOpen(false)} title={VIETNAMESE.questsPanelTitle} position="right">
-                <QuestsSidePanel quests={game.knowledgeBase.allQuests} onQuestClick={(quest) => game.openEntityModal('quest', quest)} onQuestEditClick={(quest) => game.openEntityModal('quest', quest, true)}/>
+                <QuestsSidePanel 
+                    quests={game.knowledgeBase.allQuests} 
+                    onQuestClick={(quest) => game.openEntityModal('quest', quest)} 
+                    onQuestEditClick={(quest) => game.openEntityModal('quest', quest, true)}
+                    onCancelAllActiveQuests={game.cancelAllActiveQuests}
+                />
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isWorldPanelOpen} onClose={() => setIsWorldPanelOpen(false)} title={VIETNAMESE.worldPanelTitle} position="right">
                 <WorldSidePanel 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Quest } from '@/types/index';
 import { VIETNAMESE } from '@/constants';
 import Button from '../ui/Button';
@@ -7,11 +7,13 @@ interface QuestsDisplayPanelProps {
   quests: Quest[];
   onQuestClick: (quest: Quest) => void;
   onQuestEditClick: (quest: Quest) => void;
+  onCancelAllActiveQuests: () => void;
 }
 
-const QuestsDisplayPanel: React.FC<QuestsDisplayPanelProps> = React.memo(({ quests, onQuestClick, onQuestEditClick }) => {
+const QuestsDisplayPanel: React.FC<QuestsDisplayPanelProps> = React.memo(({ quests, onQuestClick, onQuestEditClick, onCancelAllActiveQuests }) => {
   const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'failed'>('active');
   const filteredQuests = quests.filter(q => q.status === activeTab);
+  const activeQuestsCount = useMemo(() => quests.filter(q => q.status === 'active').length, [quests]);
 
   const renderQuestList = (questsToRender: Quest[]) => {
     if (questsToRender.length === 0) {
@@ -61,24 +63,36 @@ const QuestsDisplayPanel: React.FC<QuestsDisplayPanelProps> = React.memo(({ ques
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex border-b border-gray-700 mb-2" role="tablist" aria-label="Quest Status">
-        {(['active', 'completed', 'failed'] as const).map(tab => (
-          <button
-            key={tab}
-            id={`quest-tab-${tab}`}
-            role="tab"
-            aria-controls="quest-panel"
-            aria-selected={activeTab === tab}
-            className={`py-2 px-3 sm:px-4 text-xs sm:text-sm font-medium flex-1 ${
-              activeTab === tab
-                ? 'border-b-2 border-indigo-500 text-indigo-400'
-                : 'text-gray-400 hover:text-indigo-300'
-            }`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab === 'active' ? VIETNAMESE.activeQuestsTab : tab === 'completed' ? VIETNAMESE.completedQuestsTab : VIETNAMESE.failedQuestsTab}
-          </button>
-        ))}
+      <div className="flex items-center border-b border-gray-700 mb-2">
+        <div className="flex flex-grow" role="tablist" aria-label="Quest Status">
+            {(['active', 'completed', 'failed'] as const).map(tab => (
+            <button
+                key={tab}
+                id={`quest-tab-${tab}`}
+                role="tab"
+                aria-controls="quest-panel"
+                aria-selected={activeTab === tab}
+                className={`py-2 px-3 sm:px-4 text-xs sm:text-sm font-medium ${
+                activeTab === tab
+                    ? 'border-b-2 border-indigo-500 text-indigo-400'
+                    : 'text-gray-400 hover:text-indigo-300'
+                }`}
+                onClick={() => setActiveTab(tab)}
+            >
+                {tab === 'active' ? VIETNAMESE.activeQuestsTab : tab === 'completed' ? VIETNAMESE.completedQuestsTab : VIETNAMESE.failedQuestsTab}
+            </button>
+            ))}
+        </div>
+        <Button
+            variant="danger"
+            size="sm"
+            className="!py-1 !px-2 text-xs ml-auto flex-shrink-0"
+            onClick={onCancelAllActiveQuests}
+            disabled={activeQuestsCount === 0}
+            title="Hủy và xóa tất cả các nhiệm vụ đang hoạt động"
+        >
+            Hủy Tất Cả
+        </Button>
       </div>
       <div id="quest-panel" role="tabpanel" tabIndex={0} aria-labelledby={`quest-tab-${activeTab}`} className="flex-grow overflow-y-auto custom-scrollbar">
         {renderQuestList(filteredQuests)}
