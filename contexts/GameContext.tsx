@@ -1,6 +1,6 @@
-import React, { createContext, ReactNode, useRef, useState, useCallback, useEffect } from 'react';
+import React, { createContext, ReactNode, useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import * as jsonpatch from 'fast-json-patch';
-import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction, CombatLogContent, YeuThu, Companion, Faction, WorldLoreEntry, VectorMetadata, Quest, AIPresetCollection, AIPreset } from '@/types/index';
+import { GameScreen, KnowledgeBase, GameMessage, WorldSettings, PlayerStats, ApiConfig, SaveGameData, StorageType, SaveGameMeta, RealmBaseStatDefinition, TurnHistoryEntry, StyleSettings, PlayerActionInputType, EquipmentSlotId, Item as ItemType, NPC, GameLocation, ResponseLength, StorageSettings, FindLocationParams, Skill, Prisoner, Wife, Slave, CombatEndPayload, AuctionSlave, CombatDispositionMap, NpcAction, CombatLogContent, YeuThu, Companion, Faction, WorldLoreEntry, VectorMetadata, Quest, AIPresetCollection, AIPreset, PromptBlock } from '@/types/index';
 import { INITIAL_KNOWLEDGE_BASE, VIETNAMESE, APP_VERSION, MAX_AUTO_SAVE_SLOTS, TURNS_PER_PAGE, DEFAULT_TIERED_STATS, KEYFRAME_INTERVAL, EQUIPMENT_SLOTS_CONFIG, DEFAULT_WORLD_SETTINGS, DEFAULT_PLAYER_STATS } from '@/constants/index';
 import { saveGameToIndexedDB, loadGamesFromIndexedDB, loadSpecificGameFromIndexedDB, deleteGameFromIndexedDB, importGameToIndexedDB, resetDBConnection as resetIndexedDBConnection } from '../services/indexedDBService';
 import { getAIPresets, saveAIPresets } from '../services/presetService';
@@ -102,6 +102,7 @@ export interface GameContextType {
     totalPages: number;
     messageIdBeingEdited: string | null;
     aiPresets: AIPresetCollection; // NEW
+    isStrictMode: boolean; // NEW: The synchronized strict mode state
 
     currentPageMessagesLog: string;
     previousPageSummaries: string[];
@@ -134,6 +135,7 @@ export interface GameContextType {
     deleteAIPreset: (presetName: string) => void; // NEW
     renameAIPreset: (oldName: string, newName: string) => boolean; // NEW
     importAIPresets: (importedPresets: AIPreset[]) => void; // NEW
+    toggleStrictMode: () => void; // NEW: The function to toggle strict mode globally
     [key: string]: any; // Index signature to allow dynamic action properties
 }
 
@@ -836,6 +838,32 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         gameData.setCurrentPageDisplay(clamp(page, 1, gameData.totalPages));
     }, [gameData, isSummarizingNextPageTransition]);
     
+    // NEW: Centralized Strict Mode logic
+    const isStrictMode = useMemo(() => {
+        const structure = gameData.knowledgeBase.promptStructure || [];
+        const strictModeBlock = structure.find(b => b.id === 'strictModeGuidance');
+        return strictModeBlock ? strictModeBlock.enabled : false; // default to false if not found
+    }, [gameData.knowledgeBase.promptStructure]);
+
+    const toggleStrictMode = useCallback(() => {
+        gameData.setKnowledgeBase(prevKb => {
+            const newKb = JSON.parse(JSON.stringify(prevKb));
+            const structure = newKb.promptStructure || [];
+            const strictModeBlockIndex = structure.findIndex((b: PromptBlock) => b.id === 'strictModeGuidance');
+
+            if (strictModeBlockIndex > -1) {
+                structure[strictModeBlockIndex].enabled = !structure[strictModeBlockIndex].enabled;
+                const enabled = structure[strictModeBlockIndex].enabled;
+                showNotification(`Chế độ Nghiêm ngặt đã được ${enabled ? 'BẬT' : 'TẮT'}.`, 'info');
+            } else {
+                console.warn("toggleStrictMode: 'strictModeGuidance' block not found in promptStructure.");
+            }
+            
+            newKb.promptStructure = structure;
+            return newKb;
+        });
+    }, [gameData.setKnowledgeBase, showNotification]);
+
 
     const gameActions = useGameActions({
         ...gameData,
@@ -1030,17 +1058,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         resetApiError,
         setApiErrorWithTimeout,
         sentPromptsLog: gameData.sentPromptsLog,
-// FIX: The property 'sentCopilotPromptsLog' does not exist on type 'UseCopilotActionsProps'. Removed the incorrect property.
         setSentCopilotPromptsLog: gameData.setSentCopilotPromptsLog,
     });
 
     const allActions = { ...setupActions, ...mainGameLoopActions, ...auctionActions, ...cultivationActions, ...characterActions, ...postCombatActions, ...livingWorldActions, ...copilotActions, ...gameActions, handleProcessDebugTags };
     
-    // FIX: Moved handleArchitectQuery and applyArchitectChanges to after `allActions` is defined.
-    // This resolves the "used before declaration" error.
     const handleArchitectQuery = useCallback(async (userQuestion: string, modelOverride: string, isActionModus: boolean, useGoogleSearch: boolean) => {
-        // This function now uses the generic copilot query handler but provides the architect-specific state.
-        // It's designed to be used by the text-based architect chat.
         await copilotActions.handleCopilotQuery(
             userQuestion,
             gameData.aiArchitectMessages, // Pass architect history
@@ -1053,10 +1076,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [copilotActions, gameData.aiArchitectMessages, gameData.setAiArchitectMessages]);
 
     const applyArchitectChanges = useCallback((tags: string[], messageId: string) => {
-        // Use the debug tag processor, now correctly referenced via allActions.
         allActions.handleProcessDebugTags('', tags.join('\n'));
     
-        // Mark the message as applied in the architect chat history
         gameData.setAiArchitectMessages(prev =>
             prev.map(msg =>
                 msg.id === messageId ? { ...msg, applied: true } : msg
@@ -1080,6 +1101,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setStyleSettings, openEntityModal, closeModal, closeEconomyModal, closeSlaveMarketModal,
         setIsStyleSettingsModalOpen, setIsAiContextModalOpen, setActiveEconomyModal, setActiveSlaveMarketModal,
         handleUpdateEntity, handlePinEntity,
+        isStrictMode, // NEW
+        toggleStrictMode, // NEW
         // NEW: Expose preset actions
         saveNewAIPreset,
         deleteAIPreset,

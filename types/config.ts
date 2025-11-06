@@ -68,7 +68,7 @@ export interface AIRulebook {
     worldProgressionRules: string;
     specialEventRules: string;
     cultivationRules: string;
-    // NEW: Keys for refactored rules
+    // NEWLY ADDED RULES
     difficultyEasy: string;
     difficultyNormal: string;
     difficultyHard: string;
@@ -78,10 +78,11 @@ export interface AIRulebook {
     nsfwGoiCam: string;
     nsfwManhBao: string;
     nsfwTuyChinh: string;
-    // NEW: Keys for hardcoded system rules now made editable
+    // NEWLY MOVED FROM HARDCODE
     strictModeGuidance: string;
     aiProcessingGuidance: string;
     writingStyleGuidance: string;
+    aiWritingStyle: string;
 
     // NEW: Templates for previously hardcoded sections
     coreContextTemplate: string;

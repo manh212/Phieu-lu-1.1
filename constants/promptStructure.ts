@@ -48,7 +48,7 @@ export const DEFAULT_PROMPT_STRUCTURE: PromptBlock[] = [
         label: "Hướng Dẫn Chế Độ Nghiêm Ngặt",
         description: "Gửi quy tắc về hành động lớn/nhỏ khi chế độ này được bật.",
         type: 'system',
-        enabled: true, isEditable: true, isMovable: true,
+        enabled: false, isEditable: true, isMovable: true,
         rulebookKey: 'strictModeGuidance'
     },
     {
@@ -98,6 +98,16 @@ export const DEFAULT_PROMPT_STRUCTURE: PromptBlock[] = [
         type: 'system',
         enabled: true, isEditable: true, isMovable: true,
         rulebookKey: 'writingStyleGuidance'
+    },
+    {
+        id: 'aiWritingStyle',
+        label: "Hướng Dẫn Về Văn Phong AI",
+        description: "Chèn hướng dẫn về văn phong AI (từ tab Thế Giới).",
+        type: 'system',
+        enabled: true,
+        isEditable: true,
+        isMovable: true,
+        rulebookKey: 'aiWritingStyle'
     },
     {
         id: 'responseLengthGuidance',

@@ -1,21 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect, useState } from 'react';
 import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase, AiChoice, PlayerActionInputType, ResponseLength } from './../types/index';
 import { VIETNAMESE } from './../constants';
@@ -51,7 +33,7 @@ import Spinner from './ui/Spinner'; // Import Spinner
 
 export const GameplayScreen: React.FC = () => {
     const game = useGame(); // Get all props from context
-    const combat = useCombat(); // Get combat context
+    const combat = useCombat(); // NEW: Get combat context
     const storyLogRef = useRef<HTMLDivElement>(null);
 
     // Use custom hooks for UI state not needed globally
@@ -81,7 +63,6 @@ export const GameplayScreen: React.FC = () => {
         selectedResponseLength, setSelectedResponseLength,
         isResponseLengthDropdownOpen, setIsResponseLengthDropdownOpen, showAiSuggestions, setShowAiSuggestions,
         responseLengthDropdownRef, handleChoiceClick, handleSubmit, handleRefresh,
-        isStrictMode, setIsStrictMode
     } = usePlayerInput({
         onPlayerAction: handleActionRouter, // Use the new router function
         onRefreshChoices: game.handleRefreshChoices,
@@ -89,6 +70,7 @@ export const GameplayScreen: React.FC = () => {
         isSummarizing: game.isSummarizingOnLoad || game.isSummarizingNextPageTransition,
         isCurrentlyActivePage: game.isCurrentlyActivePage,
         messageIdBeingEdited: game.messageIdBeingEdited,
+        isStrictMode: game.isStrictMode,
     });
 
     const isLoadingUi = game.isLoadingApi || game.isUploadingAvatar || game.knowledgeBase.isWorldTicking;
@@ -327,8 +309,8 @@ export const GameplayScreen: React.FC = () => {
                             onJump={game.onJumpToPage}
                             economySubLocations={economySubLocations}
                             onEconomyLocationClick={handleEconomyLocationClick}
-                            isStrictMode={isStrictMode}
-                            setIsStrictMode={setIsStrictMode}
+                            isStrictMode={game.isStrictMode}
+                            onToggleStrictMode={game.toggleStrictMode}
                         />
                     </div>
                  )}
@@ -352,7 +334,6 @@ export const GameplayScreen: React.FC = () => {
                 <QuestsSidePanel quests={game.knowledgeBase.allQuests} onQuestClick={(quest) => game.openEntityModal('quest', quest)} onQuestEditClick={(quest) => game.openEntityModal('quest', quest, true)}/>
             </OffCanvasPanel>
              <OffCanvasPanel isOpen={isWorldPanelOpen} onClose={() => setIsWorldPanelOpen(false)} title={VIETNAMESE.worldPanelTitle} position="right">
-                {/* FIX: Pass all required on...Click and on...EditClick props to WorldSidePanel. */}
                 <WorldSidePanel 
                     knowledgeBase={game.knowledgeBase}
                     onNpcClick={(npc) => game.openEntityModal('npc', npc)}

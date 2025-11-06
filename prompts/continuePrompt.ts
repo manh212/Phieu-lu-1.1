@@ -174,10 +174,43 @@ export const generateContinuePrompt = (
     const newConditionStates: Record<string, boolean> = {};
     const prevStates = previousConditionStates || {};
 
+    // --- START: CONSTRUCT CORE CONTEXT (for legacy {{CORE_CONTEXT_JSON}}) ---
+    const coreContext = {
+        playerInfo: {
+            name: worldConfig?.playerName,
+            gender: worldConfig?.playerGender,
+            race: worldConfig?.playerRace,
+            personality: worldConfig?.playerPersonality,
+            backstory: worldConfig?.playerBackstory,
+            goal: worldConfig?.playerGoal,
+            status: playerStats
+        },
+        playerAssets: {
+            inventory: knowledgeBase.inventory,
+            equippedItems: knowledgeBase.equippedItems,
+            skills: knowledgeBase.playerSkills,
+        },
+        worldState: {
+            theme: worldConfig?.theme,
+            writingStyle: worldConfig?.writingStyle,
+            worldDate: worldDate,
+            currentLocation: knowledgeBase.discoveredLocations.find(l => l.id === knowledgeBase.currentLocationId) || null,
+            isCultivationEnabled: worldConfig?.isCultivationEnabled,
+            realmProgressionSystemForPlayerRace: worldConfig?.raceCultivationSystems.find(s => s.raceName === (worldConfig.playerRace || 'Nhân Tộc'))?.realmSystem,
+        }
+    };
+    // --- END: CONSTRUCT CORE CONTEXT ---
+
+
     // --- Iterate through the Prompt Structure ---
     for (const block of promptStructure) {
         if (!block.enabled) continue;
         
+        // **BUG FIX & NEW LOGIC**: If strict mode is NOT active, skip the strict mode guidance block.
+        if (block.id === 'strictModeGuidance' && !isStrictMode) {
+            continue;
+        }
+
         if (block.conditions && block.conditions.length > 0) {
             const conditionsMet = evaluateConditions(block.conditions, knowledgeBase, prevStates, newConditionStates);
             if (!conditionsMet) {
@@ -211,6 +244,19 @@ export const generateContinuePrompt = (
                     .replace(/\{\{\s*PLAYER_ACTION_CONTENT\s*\}\}/g, playerActionText)
                     .replace(/\{\{\s*RESPONSE_LENGTH_TEXT\s*\}\}/g, responseLength === 'short' ? 'Ngắn' : responseLength === 'medium' ? 'Trung bình' : responseLength === 'long' ? 'Dài' : 'Mặc định');
                 
+                // NEW: Handle legacy placeholders before Dao-Script interpolation
+                const playerRaceSystem = worldConfig?.raceCultivationSystems.find(s => s.raceName === (worldConfig.playerRace || 'Nhân Tộc'));
+                const mainRealms = (playerRaceSystem?.realmSystem || knowledgeBase.realmProgressionList.join(' - ')).split(' - ').map(s => s.trim()).filter(Boolean);
+
+                contentAfterPlaceholders = contentAfterPlaceholders
+                    .replace(/\{\{\s*CORE_CONTEXT_JSON\s*\}\}/g, JSON.stringify(coreContext, null, 2))
+                    .replace(/\{\{\s*WRITING_STYLE_GUIDE\s*\}\}/g, worldConfig?.writingStyleGuide || "")
+                    .replace(/\{\{\s*CURRENCY_NAME\s*\}\}/g, worldConfig?.currencyName || "Tiền")
+                    .replace(/\{\{\s*MAIN_REALMS\s*\}\}/g, mainRealms.join(' | '))
+                    .replace(/\{\{\s*SEASON_CONTEXT\s*\}\}/g, getSeason(worldDate))
+                    .replace(/\{\{\s*TIME_OF_DAY_CONTEXT\s*\}\}/g, getTimeOfDayContext(worldDate))
+                    .replace(/\{\{\s*PLAYER_NAME\s*\}\}/g, worldConfig?.playerName || 'Người chơi');
+
                 // Special handling for worldEventGuidance
                 if (block.id === 'worldEventGuidance') {
                     const currentLocationId = knowledgeBase.currentLocationId;

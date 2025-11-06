@@ -13,15 +13,15 @@ interface UsePlayerInputProps {
   isSummarizing: boolean;
   isCurrentlyActivePage: boolean;
   messageIdBeingEdited: string | null;
+  isStrictMode: boolean;
 }
 
-export const usePlayerInput = ({ onPlayerAction, onRefreshChoices, isLoading, isSummarizing, isCurrentlyActivePage, messageIdBeingEdited }: UsePlayerInputProps) => {
+export const usePlayerInput = ({ onPlayerAction, onRefreshChoices, isLoading, isSummarizing, isCurrentlyActivePage, messageIdBeingEdited, isStrictMode }: UsePlayerInputProps) => {
   const [playerInput, setPlayerInput] = useState('');
   const [currentActionType, setCurrentActionType] = useState<PlayerActionInputType>('action');
   const [selectedResponseLength, setSelectedResponseLength] = useState<ResponseLength>('default');
   const [isResponseLengthDropdownOpen, setIsResponseLengthDropdownOpen] = useState(false);
   const [showAiSuggestions, setShowAiSuggestions] = useState(true);
-  const [isStrictMode, setIsStrictMode] = useState(false); // NEW: State for strict mode
 
   const responseLengthDropdownRef = useRef<HTMLDivElement | null>(null);
   
@@ -35,10 +35,10 @@ export const usePlayerInput = ({ onPlayerAction, onRefreshChoices, isLoading, is
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (playerInput.trim() && !isLoading && !isSummarizing && isCurrentlyActivePage && !messageIdBeingEdited) {
-      onPlayerAction(playerInput.trim(), false, currentActionType, selectedResponseLength, isStrictMode); // Pass isStrictMode
+      onPlayerAction(playerInput.trim(), false, currentActionType, selectedResponseLength, isStrictMode);
       setPlayerInput('');
     }
-  }, [playerInput, isLoading, isSummarizing, isCurrentlyActivePage, messageIdBeingEdited, onPlayerAction, currentActionType, selectedResponseLength, isStrictMode]); // Add isStrictMode
+  }, [playerInput, isLoading, isSummarizing, isCurrentlyActivePage, messageIdBeingEdited, onPlayerAction, currentActionType, selectedResponseLength, isStrictMode]);
 
   const handleRefresh = useCallback(() => {
     if (!isLoading && !isSummarizing && isCurrentlyActivePage) {
@@ -59,8 +59,6 @@ export const usePlayerInput = ({ onPlayerAction, onRefreshChoices, isLoading, is
     setIsResponseLengthDropdownOpen,
     showAiSuggestions,
     setShowAiSuggestions,
-    isStrictMode, // Expose state
-    setIsStrictMode, // Expose setter
     responseLengthDropdownRef,
     handleChoiceClick,
     handleSubmit,

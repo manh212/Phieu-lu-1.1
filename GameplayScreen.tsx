@@ -14,6 +14,9 @@
 
 
 
+
+
+
 import React, { useRef, useEffect, useCallback, useMemo, useLayoutEffect, useState } from 'react';
 import { GameScreen, GameMessage, StyleSettings, StyleSettingProperty, GameLocation, KnowledgeBase, AiChoice, PlayerActionInputType, ResponseLength } from './../types/index';
 import { VIETNAMESE } from './../constants';
@@ -74,12 +77,12 @@ export const GameplayScreen: React.FC = () => {
         }
     }, [combat, game.handlePlayerAction]);
 
+    // FIX: Removed isStrictMode and setIsStrictMode from destructuring as they are not returned by usePlayerInput.
     const {
         playerInput, setPlayerInput, currentActionType, setCurrentActionType,
         selectedResponseLength, setSelectedResponseLength,
         isResponseLengthDropdownOpen, setIsResponseLengthDropdownOpen, showAiSuggestions, setShowAiSuggestions,
         responseLengthDropdownRef, handleChoiceClick, handleSubmit, handleRefresh,
-        isStrictMode, setIsStrictMode
     } = usePlayerInput({
         onPlayerAction: handleActionRouter, // Use the new router function
         onRefreshChoices: game.handleRefreshChoices,
@@ -87,6 +90,8 @@ export const GameplayScreen: React.FC = () => {
         isSummarizing: game.isSummarizingOnLoad || game.isSummarizingNextPageTransition,
         isCurrentlyActivePage: game.isCurrentlyActivePage,
         messageIdBeingEdited: game.messageIdBeingEdited,
+        // FIX: Added the required isStrictMode prop, sourcing it from the global game context.
+        isStrictMode: game.isStrictMode,
     });
 
     const isLoadingUi = game.isLoadingApi || game.isUploadingAvatar || game.knowledgeBase.isWorldTicking;
@@ -325,8 +330,9 @@ export const GameplayScreen: React.FC = () => {
                             onJump={game.onJumpToPage}
                             economySubLocations={economySubLocations}
                             onEconomyLocationClick={handleEconomyLocationClick}
-                            isStrictMode={isStrictMode}
-                            setIsStrictMode={setIsStrictMode}
+                            // FIX: Pass the global strict mode state and toggle function from the game context.
+                            isStrictMode={game.isStrictMode}
+                            onToggleStrictMode={game.toggleStrictMode}
                         />
                     </div>
                  )}
@@ -376,6 +382,7 @@ export const GameplayScreen: React.FC = () => {
                 kb={game.knowledgeBase} 
                 sentPromptsLog={game.sentPromptsLog} 
                 rawAiResponsesLog={game.rawAiResponsesLog} 
+                aiThinkingLog={game.aiThinkingLog}
                 sentEconomyPromptsLog={game.sentEconomyPromptsLog} 
                 receivedEconomyResponsesLog={game.receivedEconomyResponsesLog} 
                 sentGeneralSubLocationPromptsLog={game.sentGeneralSubLocationPromptsLog} 

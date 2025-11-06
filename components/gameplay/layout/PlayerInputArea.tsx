@@ -33,7 +33,7 @@ interface PlayerInputAreaProps {
   economySubLocations: GameLocation[];
   onEconomyLocationClick: (location: GameLocation) => void;
   isStrictMode: boolean;
-  setIsStrictMode: (isStrict: boolean) => void;
+  onToggleStrictMode: () => void;
 }
 
 const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
@@ -65,7 +65,7 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
   economySubLocations,
   onEconomyLocationClick,
   isStrictMode,
-  setIsStrictMode,
+  onToggleStrictMode,
 }) => {
     const [isPaginationMenuOpen, setIsPaginationMenuOpen] = useState(false);
     const paginationMenuRef = useRef<HTMLDivElement | null>(null);
@@ -217,7 +217,7 @@ const PlayerInputArea: React.FC<PlayerInputAreaProps> = ({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => setIsStrictMode(!isStrictMode)}
+                    onClick={onToggleStrictMode}
                     disabled={isLoadingUi || isSummarizingUi || !isCurrentlyActivePage || !!messageIdBeingEdited}
                     title={isStrictMode ? "Tắt Chế độ Nghiêm ngặt (AI sẽ diễn giải và hành động tự do hơn)" : "Bật Chế độ Nghiêm ngặt (AI chỉ thực hiện hành động vật lý bạn yêu cầu)"}
                     className={`h-full px-3 transition-colors ${isStrictMode ? 'bg-blue-600 text-white border-blue-500' : 'text-gray-400'}`}

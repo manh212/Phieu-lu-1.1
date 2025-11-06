@@ -282,7 +282,12 @@ Nhiệm vụ của bạn là cung cấp tổng cộng 5-6 lựa chọn hành đ�
     // NEWLY MOVED FROM HARDCODE
     strictModeGuidance: `**Hướng Dẫn Chế Độ Nghiêm Ngặt (ƯU TIÊN TUYỆT ĐỐI):**\nChế độ Nghiêm ngặt: Bạn là một AI kể chuyện vật lý. Khi người chơi đưa ra một hành động, bạn CHỈ được mô tả kết quả vật lý trực tiếp của hành động đó. TUYỆT ĐỐI KHÔNG được tự ý thêm vào các hành động phụ, các đoạn hội thoại, hoặc suy nghĩ nội tâm của nhân vật chính mà không được yêu cầu. Ví dụ: nếu người chơi nhập 'Mở cửa', bạn chỉ mô tả hành động mở cửa và những gì họ thấy sau đó, không được tự ý cho họ 'bước vào phòng'.`,
     aiProcessingGuidance: `**Hướng Dẫn Xử Lý Dành Cho AI:**\nXử lý nội dung trên như một hành động mà nhân vật chính ({{PLAYER_NAME}}) đang thực hiện. Mô tả kết quả của hành động này và các diễn biến tiếp theo một cách chi tiết và hấp dẫn, dựa trên TOÀN BỘ BỐI CẢNH.`,
-    writingStyleGuidance: `**HƯỚNG DẪN BẮT CHƯỚC VĂN PHONG (CỰC KỲ QUAN TRỌNG):**\n"""\n{{WRITING_STYLE_GUIDE}}\n"""`,
+    writingStyleGuidance: `**HƯỚNG DẪN BẮT CHƯỚC VĂN PHONG (CỰC KỲ QUAN TRỌNG):**\n"""\n{{ knowledgeBase.worldConfig.writingStyleGuide }}\n"""`,
+    aiWritingStyle: `**HƯỚNG DẪN VỀ VĂN PHONG CỦA AI (QUAN TRỌNG):**
+Hãy tuân thủ nghiêm ngặt văn phong sau đây khi kể chuyện:
+"""
+{{ knowledgeBase.worldConfig.writingStyle }}
+"""`,
 
     // NEW: Templates for previously hardcoded sections
     coreContextTemplate: `\`\`\`json\n{{CORE_CONTEXT_JSON}}\n\`\`\``,
